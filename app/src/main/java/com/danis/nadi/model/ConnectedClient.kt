@@ -6,5 +6,7 @@ data class ConnectedClient(
     val joinedAt: Long,
     val lastSeenAt: Long,
     val userAgent: String,
-    val ipAddress: String
+    val ipAddress: String,
+    val nim: String = "",
+    val name: String = ""
 )

@@ -6,6 +6,7 @@ import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.RoomStatus
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
+import com.danis.nadi.security.IdentityValidator
 import com.danis.nadi.security.TokenGenerator
 
 class RoomManager(
@@ -125,6 +126,74 @@ class RoomManager(
         client
     }
 
+    fun touchIdentifiedClient(
+        clientId: String,
+        nim: String,
+        name: String,
+        userAgent: String,
+        ipAddress: String
+    ): ConnectedClient? = synchronized(lock) {
+        val current = session ?: return@synchronized null
+        if (current.status != RoomStatus.ACTIVE) return@synchronized null
+
+        val identity = IdentityValidator.validate(nim, name) ?: return@synchronized null
+        val now = clock()
+        pruneStaleClients(now)
+        val cleanClientId = clientId.cleanClientId().ifBlank { tokenGenerator.newSessionId(12) }
+        val existingIndex = clients.indexOfFirst { it.clientId == cleanClientId }
+        val client = if (existingIndex >= 0) {
+            val existing = clients[existingIndex]
+            existing.copy(
+                lastSeenAt = now,
+                userAgent = userAgent,
+                ipAddress = ipAddress
+            )
+        } else {
+            ConnectedClient(
+                clientId = cleanClientId,
+                displayName = identity.displayName,
+                joinedAt = now,
+                lastSeenAt = now,
+                userAgent = userAgent,
+                ipAddress = ipAddress,
+                nim = identity.nim,
+                name = identity.name
+            )
+        }
+        if (existingIndex >= 0) {
+            clients[existingIndex] = client
+        } else {
+            clients.add(client)
+        }
+        client
+    }
+
+    fun clientById(clientId: String?): ConnectedClient? = synchronized(lock) {
+        val cleanClientId = clientId.orEmpty().cleanClientId()
+        if (cleanClientId.isBlank()) return@synchronized null
+        clients.firstOrNull { it.clientId == cleanClientId }
+    }
+
+    fun touchKnownClient(
+        clientId: String?,
+        userAgent: String,
+        ipAddress: String
+    ): ConnectedClient? = synchronized(lock) {
+        val cleanClientId = clientId.orEmpty().cleanClientId()
+        if (cleanClientId.isBlank()) return@synchronized null
+        val now = clock()
+        pruneStaleClients(now)
+        val existingIndex = clients.indexOfFirst { it.clientId == cleanClientId }
+        if (existingIndex < 0) return@synchronized null
+        val client = clients[existingIndex].copy(
+            lastSeenAt = now,
+            userAgent = userAgent,
+            ipAddress = ipAddress
+        )
+        clients[existingIndex] = client
+        client
+    }
+
     fun addTransfer(item: TransferItem): TransferItem = synchronized(lock) {
         transfers.removeAll { it.transferId == item.transferId }
         transfers.add(0, item)
@@ -139,6 +208,10 @@ class RoomManager(
         transfers.filter { it.direction == TransferDirection.UPLOAD }
     }
 
+    fun chatAttachments(): List<TransferItem> = synchronized(lock) {
+        transfers.filter { it.direction == TransferDirection.CHAT_ATTACHMENT }
+    }
+
     fun transferById(transferId: String): TransferItem? = synchronized(lock) {
         transfers.firstOrNull { it.transferId == transferId }
     }
@@ -146,17 +219,22 @@ class RoomManager(
     fun addMessage(
         senderId: String,
         senderName: String,
-        text: String
+        text: String,
+        attachment: TransferItem? = null
     ): ChatMessage? = synchronized(lock) {
         val cleanText = text.trim().take(1000)
-        if (cleanText.isBlank()) return@synchronized null
+        if (cleanText.isBlank() && attachment == null) return@synchronized null
         val message = ChatMessage(
             messageId = tokenGenerator.newSessionId(16),
             senderId = senderId.trim().ifBlank { "unknown" },
             senderName = senderName.trim().ifBlank { "Nadi" },
-            text = cleanText,
+            text = cleanText.ifBlank { attachment?.fileName ?: "" },
             createdAt = clock(),
-            status = "sent"
+            status = "sent",
+            attachmentTransferId = attachment?.transferId,
+            attachmentFileName = attachment?.fileName,
+            attachmentMimeType = attachment?.mimeType,
+            attachmentSizeBytes = attachment?.sizeBytes ?: -1L
         )
         messages.add(message)
         trimMessages()
@@ -192,6 +270,10 @@ class RoomManager(
         if (overflow > 0) {
             messages.subList(0, overflow).clear()
         }
+    }
+
+    private fun String.cleanClientId(): String {
+        return trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(64)
     }
 
     private companion object {

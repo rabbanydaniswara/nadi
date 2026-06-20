@@ -45,11 +45,20 @@ object BrowserClientAssets {
                 }
                 input[type=text] { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
                 progress { width: 100%; height: 10px; accent-color: var(--green); }
-                .file-row, .message { border-top: 1px solid var(--line); padding: 12px 0; }
-                .file-row:first-child, .message:first-child { border-top: 0; }
+                .file-row { border-top: 1px solid var(--line); padding: 12px 0; }
+                .file-row:first-child { border-top: 0; }
+                .message {
+                  width: fit-content; max-width: 100%; margin-top: 10px; padding: 10px 12px;
+                  border: 1px solid var(--line); border-radius: 8px 8px 8px 2px; background: var(--mist);
+                }
+                .message strong { display: block; color: var(--green); font-size: 13px; }
+                .message p { margin: 6px 0 0; color: var(--ink); }
+                .identity { margin-top: 14px; }
+                .identity-summary { margin-top: 10px; font-weight: 800; color: var(--green); }
                 .muted { color: var(--soft); }
                 .error { color: var(--error); font-weight: 800; }
                 .success { color: var(--success); font-weight: 800; }
+                .hidden { display: none; }
                 button:disabled { opacity: .55; cursor: not-allowed; }
                 a { color: var(--green); font-weight: 800; }
                 code { word-break: break-all; color: var(--green); font-weight: 700; }
@@ -71,6 +80,16 @@ object BrowserClientAssets {
                   <p class="label">Akses belum valid</p>
                   <p>Scan QR dari host Nadi atau buka URL yang dibagikan dari ruang aktif.</p>
                 </section>
+                <section id="identityCard" class="card identity">
+                  <p class="label">Identitas peserta</p>
+                  <h2>Masuk dengan NIM dan Nama</h2>
+                  <p class="muted">Identitas ini akan melekat pada chat dan file selama room berjalan.</p>
+                  <input id="nimInput" type="text" inputmode="text" autocomplete="off" placeholder="NIM">
+                  <input id="nameInput" type="text" autocomplete="name" style="margin-top:8px" placeholder="Nama lengkap">
+                  <button id="saveIdentityButton" style="margin-top:10px">Masuk ke room</button>
+                  <p id="identityStatus" class="muted"></p>
+                  <p id="identitySummary" class="identity-summary hidden"></p>
+                </section>
                 <section class="grid">
                   <article class="card"><p class="label">Status</p><p id="status" class="value">Memeriksa...</p></article>
                   <article class="card"><p class="label">Host</p><p id="hostName" class="value">-</p></article>
@@ -78,11 +97,11 @@ object BrowserClientAssets {
                 </section>
                 <section class="grid">
                   <article class="card">
-                    <h2>Ambil file</h2>
+                    <h2>File Room: ambil file</h2>
                     <div id="files"><p class="muted">Belum ada file dari host.</p></div>
                   </article>
                   <article class="card">
-                    <h2>Kirim file ke host</h2>
+                    <h2>File Room: kirim file</h2>
                     <input id="uploadInput" type="file">
                     <button id="uploadButton" style="margin-top:10px">Kirim file</button>
                     <p id="uploadStatus" class="muted"></p>
@@ -91,9 +110,11 @@ object BrowserClientAssets {
                   <article class="card">
                     <h2>Chat lokal</h2>
                     <div id="messages"><p class="muted">Belum ada pesan.</p></div>
-                    <input id="senderName" type="text" style="margin-top:10px" placeholder="Nama kamu">
-                    <input id="chatInput" type="text" style="margin-top:8px" placeholder="Tulis pesan">
+                    <input id="chatInput" type="text" style="margin-top:10px" placeholder="Tulis pesan">
                     <button id="sendButton" style="margin-top:10px">Kirim</button>
+                    <input id="chatAttachmentInput" type="file" style="margin-top:10px" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip">
+                    <button id="sendAttachmentButton" style="margin-top:10px">Kirim lampiran chat</button>
+                    <p id="attachmentStatus" class="muted"></p>
                   </article>
                 </section>
                 <p>URL room: <code id="currentUrl"></code></p>
@@ -101,13 +122,73 @@ object BrowserClientAssets {
               <script>
                 const params = new URLSearchParams(window.location.search);
                 const token = params.get("token") || "";
+                const clientIdKey = "nadiClientId";
+                const clientNimKey = "nadiClientNim";
                 const clientNameKey = "nadiClientName";
-                const senderName = document.getElementById("senderName");
-                senderName.value = localStorage.getItem(clientNameKey) || "Browser";
+                const nimInput = document.getElementById("nimInput");
+                const nameInput = document.getElementById("nameInput");
+                const identityStatus = document.getElementById("identityStatus");
+                const identitySummary = document.getElementById("identitySummary");
+                const attachmentStatus = document.getElementById("attachmentStatus");
+                nimInput.value = localStorage.getItem(clientNimKey) || "";
+                nameInput.value = localStorage.getItem(clientNameKey) || "";
                 let latestMessageAt = 0;
                 let seenMessages = new Set();
                 document.getElementById("currentUrl").textContent = window.location.href;
 
+                function clientId() {
+                  let id = localStorage.getItem(clientIdKey) || "";
+                  if (!id) {
+                    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ("client-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+                    localStorage.setItem(clientIdKey, id);
+                  }
+                  return id;
+                }
+                function hasIdentity() {
+                  return Boolean(localStorage.getItem(clientNimKey) && localStorage.getItem(clientNameKey));
+                }
+                function clientQuery() {
+                  return "clientId=" + encodeURIComponent(clientId());
+                }
+                function updateIdentityUi(locked) {
+                  const nim = localStorage.getItem(clientNimKey) || "";
+                  const name = localStorage.getItem(clientNameKey) || "";
+                  const complete = Boolean(nim && name) && !locked;
+                  document.getElementById("identityCard").style.display = complete ? "none" : "block";
+                  identitySummary.textContent = complete ? (nim + " - " + name) : "";
+                  identitySummary.className = complete ? "identity-summary" : "identity-summary hidden";
+                  document.querySelectorAll("button").forEach(button => {
+                    if (button.id !== "saveIdentityButton") button.disabled = !complete;
+                  });
+                }
+                async function registerIdentity() {
+                  if (!token) { showLocked(); return; }
+                  const nim = nimInput.value.trim().replace(/\s+/g, "");
+                  const name = nameInput.value.trim().replace(/\s+/g, " ");
+                  if (nim.length < 3 || name.length < 2) {
+                    identityStatus.textContent = "Isi NIM dan nama lengkap terlebih dahulu.";
+                    identityStatus.className = "error";
+                    return;
+                  }
+                  const body = new URLSearchParams({ clientId: clientId(), nim, name });
+                  const response = await fetch("/api/identity?token=" + encodeURIComponent(token), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body
+                  });
+                  if (!response.ok) {
+                    identityStatus.textContent = "Identitas belum valid. Periksa NIM dan nama.";
+                    identityStatus.className = "error";
+                    return;
+                  }
+                  const payload = await response.json();
+                  localStorage.setItem(clientNimKey, payload.client.nim);
+                  localStorage.setItem(clientNameKey, payload.client.name);
+                  identityStatus.textContent = "Identitas tersimpan untuk room ini.";
+                  identityStatus.className = "success";
+                  updateIdentityUi(false);
+                  refreshRoom(); refreshFiles(); refreshChat();
+                }
                 function esc(value) {
                   return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[ch]));
                 }
@@ -126,7 +207,7 @@ object BrowserClientAssets {
                 async function refreshRoom() {
                   if (!token) { showLocked(); return; }
                   try {
-                    const response = await fetch("/api/room?token=" + encodeURIComponent(token) + "&name=" + encodeURIComponent(senderName.value));
+                    const response = await fetch("/api/room?token=" + encodeURIComponent(token) + "&" + clientQuery());
                     if (!response.ok) { showLocked(); return; }
                     const room = await response.json();
                     document.getElementById("roomName").textContent = room.roomName;
@@ -135,7 +216,7 @@ object BrowserClientAssets {
                     document.getElementById("hostName").textContent = room.hostName;
                     document.getElementById("clientCount").textContent = room.clientCount + " terhubung";
                     document.getElementById("locked").style.display = "none";
-                    document.querySelectorAll("button").forEach(button => button.disabled = false);
+                    updateIdentityUi(room.identityRequired);
                   } catch (error) {
                     document.getElementById("status").textContent = "Terputus";
                     document.getElementById("roomCopy").textContent = "Koneksi lokal ke host terputus. Pastikan perangkat masih berada di jaringan yang sama.";
@@ -143,7 +224,11 @@ object BrowserClientAssets {
                 }
                 async function refreshFiles() {
                   if (!token) return;
-                  const response = await fetch("/api/files?token=" + encodeURIComponent(token));
+                  if (!hasIdentity()) {
+                    document.getElementById("files").innerHTML = `<p class="muted">Isi identitas dulu untuk melihat file room.</p>`;
+                    return;
+                  }
+                  const response = await fetch("/api/files?token=" + encodeURIComponent(token) + "&" + clientQuery());
                   if (!response.ok) return;
                   const payload = await response.json();
                   const files = payload.files || [];
@@ -167,7 +252,7 @@ object BrowserClientAssets {
                   progress.style.display = "block";
                   progress.value = 0;
                   try {
-                    const response = await fetch("/api/download/" + encodeURIComponent(id) + "?token=" + encodeURIComponent(token));
+                    const response = await fetch("/api/download/" + encodeURIComponent(id) + "?token=" + encodeURIComponent(token) + "&" + clientQuery());
                     if (!response.ok) throw new Error("download_failed");
                     const total = Number(response.headers.get("content-length") || 0);
                     const reader = response.body && response.body.getReader ? response.body.getReader() : null;
@@ -220,6 +305,7 @@ object BrowserClientAssets {
                   const progress = document.getElementById("uploadProgress");
                   if (!input.files.length) { status.textContent = "Pilih file dulu."; return; }
                   const data = new FormData();
+                  data.append("clientId", clientId());
                   data.append("file", input.files[0], input.files[0].name);
                   status.textContent = "Mengirim 0%...";
                   progress.style.display = "block";
@@ -248,7 +334,8 @@ object BrowserClientAssets {
                 }
                 async function refreshChat() {
                   if (!token) return;
-                  const response = await fetch("/api/chat?token=" + encodeURIComponent(token) + "&after=" + latestMessageAt);
+                  if (!hasIdentity()) return;
+                  const response = await fetch("/api/chat?token=" + encodeURIComponent(token) + "&" + clientQuery() + "&after=" + latestMessageAt);
                   if (!response.ok) return;
                   const payload = await response.json();
                   const holder = document.getElementById("messages");
@@ -259,7 +346,10 @@ object BrowserClientAssets {
                     latestMessageAt = Math.max(latestMessageAt, message.createdAt);
                     const div = document.createElement("div");
                     div.className = "message";
-                    div.innerHTML = `<strong>${'$'}{esc(message.senderName)}</strong><p>${'$'}{esc(message.text)}</p>`;
+                    const attachment = message.attachmentTransferId
+                      ? `<p><a href="/api/download/${'$'}{encodeURIComponent(message.attachmentTransferId)}?token=${'$'}{encodeURIComponent(token)}&${'$'}{clientQuery()}">Lampiran: ${'$'}{esc(message.attachmentFileName)}</a></p>`
+                      : "";
+                    div.innerHTML = `<strong>${'$'}{esc(message.senderName)}</strong><p>${'$'}{esc(message.text)}</p>${'$'}{attachment}`;
                     holder.appendChild(div);
                   }
                   if (!seenMessages.size) holder.innerHTML = `<p class="muted">Belum ada pesan.</p>`;
@@ -268,8 +358,13 @@ object BrowserClientAssets {
                   const input = document.getElementById("chatInput");
                   const text = input.value.trim();
                   if (!text) return;
-                  localStorage.setItem(clientNameKey, senderName.value || "Browser");
-                  const body = new URLSearchParams({ senderName: senderName.value || "Browser", text });
+                  if (!hasIdentity()) {
+                    identityStatus.textContent = "Isi identitas dulu sebelum chat.";
+                    identityStatus.className = "error";
+                    updateIdentityUi(true);
+                    return;
+                  }
+                  const body = new URLSearchParams({ clientId: clientId(), text });
                   const response = await fetch("/api/chat?token=" + encodeURIComponent(token), {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -280,6 +375,43 @@ object BrowserClientAssets {
                     refreshChat();
                   }
                 }
+                function sendChatAttachment() {
+                  const input = document.getElementById("chatAttachmentInput");
+                  if (!hasIdentity()) {
+                    attachmentStatus.textContent = "Isi identitas dulu sebelum mengirim lampiran.";
+                    attachmentStatus.className = "error";
+                    updateIdentityUi(true);
+                    return;
+                  }
+                  if (!input.files.length) {
+                    attachmentStatus.textContent = "Pilih file lampiran dulu.";
+                    attachmentStatus.className = "error";
+                    return;
+                  }
+                  const data = new FormData();
+                  data.append("clientId", clientId());
+                  data.append("text", document.getElementById("chatInput").value.trim());
+                  data.append("file", input.files[0], input.files[0].name);
+                  attachmentStatus.textContent = "Mengirim lampiran...";
+                  attachmentStatus.className = "muted";
+                  const xhr = new XMLHttpRequest();
+                  xhr.open("POST", "/api/chat-attachment?token=" + encodeURIComponent(token));
+                  xhr.onload = () => {
+                    const ok = xhr.status >= 200 && xhr.status < 300;
+                    attachmentStatus.textContent = ok ? "Lampiran terkirim di chat." : "Lampiran ditolak. Gunakan gambar/dokumen kecil.";
+                    attachmentStatus.className = ok ? "success" : "error";
+                    if (ok) {
+                      input.value = "";
+                      document.getElementById("chatInput").value = "";
+                      refreshChat();
+                    }
+                  };
+                  xhr.onerror = () => {
+                    attachmentStatus.textContent = "Jaringan lokal terputus saat mengirim lampiran.";
+                    attachmentStatus.className = "error";
+                  };
+                  xhr.send(data);
+                }
                 function showLocked() {
                   document.getElementById("locked").style.display = "block";
                   document.getElementById("status").textContent = "Terkunci";
@@ -287,8 +419,10 @@ object BrowserClientAssets {
                   document.getElementById("roomCopy").textContent = "Link ini tidak lagi valid. Minta QR atau URL terbaru dari host Nadi.";
                   document.querySelectorAll("button").forEach(button => button.disabled = true);
                 }
+                document.getElementById("saveIdentityButton").addEventListener("click", registerIdentity);
                 document.getElementById("uploadButton").addEventListener("click", uploadFile);
                 document.getElementById("sendButton").addEventListener("click", sendChat);
+                document.getElementById("sendAttachmentButton").addEventListener("click", sendChatAttachment);
                 document.getElementById("chatInput").addEventListener("keydown", event => { if (event.key === "Enter") sendChat(); });
                 refreshRoom(); refreshFiles(); refreshChat();
                 window.setInterval(refreshRoom, 4000);

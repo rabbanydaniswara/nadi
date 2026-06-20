@@ -4,6 +4,44 @@ Catatan hasil smoke test manual. Update file ini setiap kali build kandidat diuj
 
 ---
 
+## Identity, Chat Attachment, and File Room Verification
+
+```text
+Date: 2026-06-21
+Commit: this commit
+Tester: Codex
+Host device: 69019f47
+APK: app/build/outputs/apk/debug/app-debug.apk
+```
+
+Automated:
+
+- [x] `./gradlew :app:testDebugUnitTest`
+- [x] `./gradlew :app:assembleDebug`
+
+Device and local room smoke:
+
+- [x] APK install and launch succeeded on the test device
+- [x] Final debug APK reinstall and launch succeeded after the last UI polish
+- [x] Local room started from Android UI
+- [x] Hotspot mode became active and showed hotspot SSID/password plus Wi-Fi QR
+- [x] Host UI showed one connected identified client after browser/API smoke
+- [x] `/api/chat` rejected an unregistered client with `403 identity_required`
+- [x] `/api/identity` accepted NIM and Nama, then locked the client identity for room use
+- [x] `/api/chat` accepted a text message from the identified client
+- [x] `/api/upload` accepted a separate File Room upload from the identified client
+- [x] `/api/chat-attachment` accepted a small allowed attachment and linked it to chat metadata
+
+Notes:
+
+```text
+QA was kept to the available test environment, as requested.
+The Codex in-app browser runtime could not be started in this session because the runtime returned a sandbox metadata error before any page interaction.
+The same room page was still checked through the forwarded local URL and returned HTTP 200 with the expected identity, NIM/Nama, File Room, and chat attachment UI text.
+```
+
+---
+
 ## Latest Local Verification
 
 ```text

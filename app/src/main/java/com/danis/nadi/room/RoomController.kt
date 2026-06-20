@@ -97,6 +97,11 @@ class RoomController(context: Context) {
         historyStore.clear()
     }
 
+    fun currentRoomFolderPath(folderName: String = "received"): String? {
+        val roomId = roomManager.currentSession()?.sessionId ?: return null
+        return fileStore.roomFolder(roomId, folderName).absolutePath
+    }
+
     fun diagnostics(): DiagnosticSnapshot {
         val snapshot = roomManager.snapshot()
         return DiagnosticSnapshot(

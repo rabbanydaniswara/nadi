@@ -94,6 +94,83 @@ class RoomManagerTest {
     }
 
     @Test
+    fun identifiedClientKeepsLockedIdentity() {
+        var now = 1000L
+        val manager = RoomManager(clock = { now })
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        val joined = manager.touchIdentifiedClient(
+            clientId = "client-1",
+            nim = "22010001",
+            name = "Rabbany Daniswara",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+        now = 2000L
+        val changed = manager.touchIdentifiedClient(
+            clientId = "client-1",
+            nim = "99999999",
+            name = "Nama Lain",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+
+        assertEquals("22010001", joined?.nim)
+        assertEquals("Rabbany Daniswara", joined?.name)
+        assertEquals("22010001", changed?.nim)
+        assertEquals("Rabbany Daniswara", changed?.name)
+        assertEquals("22010001 - Rabbany Daniswara", manager.clientById("client-1")?.displayName)
+    }
+
+    @Test
+    fun knownClientTouchKeepsIdentityActive() {
+        var now = 1000L
+        val manager = RoomManager(
+            clock = { now },
+            activeClientTimeoutMillis = 5_000L
+        )
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+        manager.touchIdentifiedClient(
+            clientId = "client-1",
+            nim = "22010001",
+            name = "Rabbany Daniswara",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+
+        now = 5_000L
+        manager.touchKnownClient(
+            clientId = "client-1",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+        now = 9_500L
+
+        assertEquals(1, manager.snapshot().clients.size)
+        assertEquals("22010001", manager.snapshot().clients.single().nim)
+    }
+
+    @Test
+    fun invalidIdentifiedClientIsRejected() {
+        val manager = RoomManager(clock = { 1000L })
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        val client = manager.touchIdentifiedClient(
+            clientId = "client-1",
+            nim = "x",
+            name = "A",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+
+        assertNull(client)
+        assertEquals(0, manager.snapshot().clients.size)
+    }
+
+    @Test
     fun chatRetentionKeepsNewestMessagesOnly() {
         var now = 1000L
         val manager = RoomManager(

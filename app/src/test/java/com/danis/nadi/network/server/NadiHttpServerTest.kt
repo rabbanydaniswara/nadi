@@ -96,6 +96,37 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun identityEndpointRegistersStudentIdentity() {
+        val scenario = startActiveRoom(registerClient = false)
+        val body = "clientId=client-42&nim=22010042&name=${URLEncoder.encode("Rabbany Daniswara", "UTF-8")}"
+
+        val response = request(
+            url = "http://127.0.0.1:${scenario.port}/api/identity?token=${scenario.token}",
+            method = "POST",
+            body = body,
+            contentType = "application/x-www-form-urlencoded"
+        )
+
+        assertEquals(200, response.code)
+        assertTrue(response.body.contains("22010042"))
+        assertTrue(response.body.contains("Rabbany Daniswara"))
+        assertEquals("22010042 - Rabbany Daniswara", scenario.manager.clientById("client-42")?.displayName)
+    }
+
+    @Test
+    fun fileAndChatEndpointsRequireIdentity() {
+        val scenario = startActiveRoom(registerClient = false)
+
+        val files = request("http://127.0.0.1:${scenario.port}/api/files?token=${scenario.token}")
+        val chat = request("http://127.0.0.1:${scenario.port}/api/chat?token=${scenario.token}&after=0")
+
+        assertEquals(403, files.code)
+        assertEquals(403, chat.code)
+        assertTrue(files.body.contains("identity_required"))
+        assertTrue(chat.body.contains("identity_required"))
+    }
+
+    @Test
     fun fileEndpointListsSharedFiles() {
         val scenario = startActiveRoom()
         scenario.manager.addTransfer(
@@ -113,7 +144,7 @@ class NadiHttpServerTest {
             )
         )
 
-        val response = request("http://127.0.0.1:${scenario.port}/api/files?token=${scenario.token}")
+        val response = request("http://127.0.0.1:${scenario.port}/api/files?${scenario.clientQuery}")
 
         assertEquals(200, response.code)
         assertTrue(response.body.contains("materi.pdf"))
@@ -138,7 +169,7 @@ class NadiHttpServerTest {
             )
         )
 
-        val response = request("http://127.0.0.1:${scenario.port}/api/download/file-1?token=${scenario.token}")
+        val response = request("http://127.0.0.1:${scenario.port}/api/download/file-1?${scenario.clientQuery}")
 
         assertEquals(200, response.code)
         assertEquals("demo", response.body)
@@ -152,6 +183,9 @@ class NadiHttpServerTest {
         val scenario = startActiveRoom()
         val boundary = "NadiBoundary"
         val body = "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"clientId\"\r\n\r\n" +
+            "${scenario.clientId}\r\n" +
+            "--$boundary\r\n" +
             "Content-Disposition: form-data; name=\"file\"; filename=\"upload.txt\"\r\n" +
             "Content-Type: text/plain\r\n\r\n" +
             "hello upload\r\n" +
@@ -166,13 +200,14 @@ class NadiHttpServerTest {
 
         assertEquals(200, response.code)
         assertTrue(response.body.contains("upload"))
+        assertTrue(response.body.contains("22010001 - Rabbany Daniswara"))
         assertTrue(scenario.manager.receivedFiles().isNotEmpty())
     }
 
     @Test
     fun chatEndpointsSendAndListMessages() {
         val scenario = startActiveRoom()
-        val body = "senderName=Browser&text=${URLEncoder.encode("Halo host", "UTF-8")}"
+        val body = "clientId=${scenario.clientId}&text=${URLEncoder.encode("Halo host", "UTF-8")}"
 
         val send = request(
             url = "http://127.0.0.1:${scenario.port}/api/chat?token=${scenario.token}",
@@ -180,23 +215,67 @@ class NadiHttpServerTest {
             body = body,
             contentType = "application/x-www-form-urlencoded"
         )
-        val list = request("http://127.0.0.1:${scenario.port}/api/chat?token=${scenario.token}&after=0")
+        val list = request("http://127.0.0.1:${scenario.port}/api/chat?${scenario.clientQuery}&after=0")
 
         assertEquals(200, send.code)
         assertEquals(200, list.code)
         assertTrue(list.body.contains("Halo host"))
-        assertTrue(list.body.contains("Browser"))
+        assertTrue(list.body.contains("22010001 - Rabbany Daniswara"))
     }
 
-    private fun startActiveRoom(): ServerScenario {
+    @Test
+    fun chatAttachmentEndpointStoresAttachmentOutsideFileRoom() {
+        val scenario = startActiveRoom()
+        val boundary = "NadiBoundary"
+        val body = "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"clientId\"\r\n\r\n" +
+            "${scenario.clientId}\r\n" +
+            "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"text\"\r\n\r\n" +
+            "Ini lampiran tugas\r\n" +
+            "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"file\"; filename=\"catatan.pdf\"\r\n" +
+            "Content-Type: application/pdf\r\n\r\n" +
+            "pdf data\r\n" +
+            "--$boundary--\r\n"
+
+        val send = request(
+            url = "http://127.0.0.1:${scenario.port}/api/chat-attachment?token=${scenario.token}",
+            method = "POST",
+            body = body,
+            contentType = "multipart/form-data; boundary=$boundary"
+        )
+        val fileRoom = request("http://127.0.0.1:${scenario.port}/api/files?${scenario.clientQuery}")
+        val chat = request("http://127.0.0.1:${scenario.port}/api/chat?${scenario.clientQuery}&after=0")
+
+        assertEquals(200, send.code)
+        assertTrue(send.body.contains("catatan.pdf"))
+        assertTrue(send.body.contains("chat_attachment"))
+        assertTrue(fileRoom.body.contains("\"files\":[]"))
+        assertTrue(chat.body.contains("attachmentTransferId"))
+        assertEquals(1, scenario.manager.chatAttachments().size)
+        assertTrue(scenario.manager.receivedFiles().isEmpty())
+    }
+
+    private fun startActiveRoom(registerClient: Boolean = true): ServerScenario {
         val port = freePort()
         val manager = RoomManager(clock = { 1000L })
         val session = manager.startPreparing(roomName = "Kelas Lokal", hostName = "Danis")
         manager.activate("http://127.0.0.1:$port/?token=${session.token}")
+        val clientId = "client-1"
+        if (registerClient) {
+            manager.touchIdentifiedClient(
+                clientId = clientId,
+                nim = "22010001",
+                name = "Rabbany Daniswara",
+                userAgent = "JUnit Browser",
+                ipAddress = "127.0.0.1"
+            )
+        }
         server = NadiHttpServer(port, manager, FakeFileStore()).also {
             it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
         }
-        return ServerScenario(port, manager, session.token)
+        return ServerScenario(port, manager, session.token, clientId)
     }
 
     private fun request(
@@ -266,8 +345,12 @@ private class FakeFileStore : FileStore {
 private data class ServerScenario(
     val port: Int,
     val manager: RoomManager,
-    val token: String
-)
+    val token: String,
+    val clientId: String
+) {
+    val clientQuery: String
+        get() = "token=$token&clientId=$clientId"
+}
 
 private data class HttpResponse(
     val code: Int,

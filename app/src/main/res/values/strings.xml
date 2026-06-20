@@ -22,6 +22,9 @@
     <string name="room_active">Ruang Aktif</string>
     <string name="waiting_devices">Menunggu perangkat terhubung</string>
     <string name="copy_url">Salin URL</string>
+    <string name="wifi_qr_title">QR Wi-Fi Hotspot</string>
+    <string name="copy_join_instructions">Salin Instruksi Join</string>
+    <string name="open_file_room">Buka Lokasi File Room</string>
     <string name="regenerate_link">Perbarui Link</string>
     <string name="stop_room">Tutup Ruang</string>
     <string name="shared_files_empty">Belum ada file dari host. Tekan Tambah File untuk membagikan file ke browser.</string>

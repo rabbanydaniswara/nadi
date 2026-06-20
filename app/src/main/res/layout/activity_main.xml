@@ -507,6 +507,28 @@
                 android:padding="10dp" />
 
             <TextView
+                android:id="@+id/wifiQrTitleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:text="@string/wifi_qr_title"
+                android:textColor="@color/nadi_graphite"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/wifiQrImage"
+                android:layout_width="190dp"
+                android:layout_height="190dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:background="@color/white"
+                android:contentDescription="@string/wifi_qr_title"
+                android:padding="10dp"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/joinUrlText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -562,6 +584,30 @@
                 android:textColor="@color/nadi_error"
                 app:cornerRadius="10dp"
                 app:strokeColor="@color/nadi_error" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/copyJoinInstructionsButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/copy_join_instructions"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_green"
+                app:cornerRadius="10dp"
+                app:strokeColor="@color/nadi_green" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/openFileRoomButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/open_file_room"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_green"
+                app:cornerRadius="10dp"
+                app:strokeColor="@color/nadi_green" />
 
             <LinearLayout
                 android:layout_width="match_parent"

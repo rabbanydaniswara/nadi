@@ -53,13 +53,33 @@ class AndroidFileStore(
         mimeType: String?,
         inputStream: InputStream
     ): TransferItem {
-        val receivedDir = File(context.getExternalFilesDir(null), "received")
-        if (!receivedDir.exists()) {
-            receivedDir.mkdirs()
+        return saveRoomFile(
+            fileName = fileName,
+            mimeType = mimeType,
+            inputStream = inputStream,
+            roomId = null,
+            folderName = "received",
+            direction = TransferDirection.UPLOAD,
+            senderName = "Browser"
+        )
+    }
+
+    override fun saveRoomFile(
+        fileName: String,
+        mimeType: String?,
+        inputStream: InputStream,
+        roomId: String?,
+        folderName: String,
+        direction: TransferDirection,
+        senderName: String?
+    ): TransferItem {
+        val targetDir = roomDirectory(roomId, folderName)
+        if (!targetDir.exists()) {
+            targetDir.mkdirs()
         }
         val safeName = fileName.replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "upload.bin" }
-        val targetName = FileNameResolver.uniqueName(safeName) { File(receivedDir, it).exists() }
-        val targetFile = File(receivedDir, targetName)
+        val targetName = FileNameResolver.uniqueName(safeName) { File(targetDir, it).exists() }
+        val targetFile = File(targetDir, targetName)
         inputStream.use { input ->
             targetFile.outputStream().use { output ->
                 input.copyTo(output)
@@ -70,13 +90,26 @@ class AndroidFileStore(
             fileName = targetName,
             mimeType = mimeType ?: "application/octet-stream",
             sizeBytes = targetFile.length(),
-            direction = TransferDirection.UPLOAD,
+            direction = direction,
             status = TransferStatus.SUCCESS,
             progress = 100,
             createdAt = clock(),
             localUri = targetFile.absolutePath,
-            senderName = "Browser"
+            senderName = senderName ?: "Browser"
         )
+    }
+
+    fun roomFolder(roomId: String?, folderName: String): File = roomDirectory(roomId, folderName)
+
+    private fun roomDirectory(roomId: String?, folderName: String): File {
+        val safeRoomId = roomId
+            ?.replace(Regex("""[^A-Za-z0-9_-]"""), "_")
+            ?.takeIf { it.isNotBlank() }
+            ?: "legacy"
+        val safeFolder = folderName
+            .replace(Regex("""[^A-Za-z0-9_-]"""), "_")
+            .ifBlank { "received" }
+        return File(context.getExternalFilesDir(null), "rooms/$safeRoomId/$safeFolder")
     }
 
     private fun queryMetadata(uri: Uri): FileMetadata {

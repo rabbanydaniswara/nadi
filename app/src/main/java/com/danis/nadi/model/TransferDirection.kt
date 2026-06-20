@@ -3,5 +3,6 @@ package com.danis.nadi.model
 enum class TransferDirection {
     UPLOAD,
     DOWNLOAD,
-    SHARED
+    SHARED,
+    CHAT_ATTACHMENT
 }

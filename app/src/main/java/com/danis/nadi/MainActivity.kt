@@ -45,6 +45,7 @@ import com.danis.nadi.settings.NadiSettings
 import com.danis.nadi.settings.NadiSettingsStore
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var controller: RoomController
@@ -76,7 +77,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyListText: TextView
     private lateinit var recentEmptyText: TextView
     private lateinit var networkModeHelpText: TextView
+    private lateinit var wifiQrTitleText: TextView
     private lateinit var qrImage: ImageView
+    private lateinit var wifiQrImage: ImageView
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -172,7 +175,9 @@ class MainActivity : AppCompatActivity() {
         historyListText = findViewById(R.id.historyListText)
         recentEmptyText = findViewById(R.id.recentEmptyText)
         networkModeHelpText = findViewById(R.id.networkModeHelpText)
+        wifiQrTitleText = findViewById(R.id.wifiQrTitleText)
         qrImage = findViewById(R.id.qrImage)
+        wifiQrImage = findViewById(R.id.wifiQrImage)
     }
 
     private fun bindActions() {
@@ -208,6 +213,12 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.copyUrlButton).setOnClickListener {
             copyJoinUrl()
+        }
+        findViewById<MaterialButton>(R.id.copyJoinInstructionsButton).setOnClickListener {
+            copyJoinInstructions()
+        }
+        findViewById<MaterialButton>(R.id.openFileRoomButton).setOnClickListener {
+            openFileRoomLocation()
         }
         findViewById<MaterialButton>(R.id.regenerateLinkButton).setOnClickListener {
             regenerateJoinLink()
@@ -388,8 +399,36 @@ class MainActivity : AppCompatActivity() {
         } else {
             qrImage.setImageDrawable(null)
         }
+        renderWifiQr(activeRoom)
         refreshHostDashboard()
         showActiveRoom()
+    }
+
+    private fun renderWifiQr(activeRoom: ActiveRoom) {
+        val ssid = activeRoom.hotspotSsid.orEmpty()
+        if (activeRoom.mode != NetworkMode.HOTSPOT || ssid.isBlank()) {
+            wifiQrTitleText.gone()
+            wifiQrImage.gone()
+            wifiQrImage.setImageDrawable(null)
+            return
+        }
+        val password = activeRoom.hotspotPassword.orEmpty()
+        val qrSize = (190 * resources.displayMetrics.density).toInt()
+        wifiQrImage.setImageBitmap(QrCodeGenerator.generate(buildWifiQrPayload(ssid, password), qrSize))
+        wifiQrTitleText.visible()
+        wifiQrImage.visible()
+    }
+
+    private fun buildWifiQrPayload(ssid: String, password: String): String {
+        return "WIFI:T:WPA;S:${ssid.escapeWifiQr()};P:${password.escapeWifiQr()};;"
+    }
+
+    private fun String.escapeWifiQr(): String {
+        return replace("\\", "\\\\")
+            .replace(";", "\\;")
+            .replace(",", "\\,")
+            .replace(":", "\\:")
+            .replace("\"", "\\\"")
     }
 
     private fun buildStatusLine(mode: NetworkMode, clientCount: Int): String {
@@ -465,7 +504,14 @@ class MainActivity : AppCompatActivity() {
         chatMessagesText.text = if (messages.isEmpty()) {
             getString(R.string.chat_empty)
         } else {
-            messages.joinToString(separator = "\n\n") { "${it.senderName}: ${it.text}" }
+            messages.joinToString(separator = "\n\n") {
+                buildString {
+                    append(it.senderName).append(": ").append(it.text)
+                    if (!it.attachmentFileName.isNullOrBlank()) {
+                        append("\nLampiran: ").append(it.attachmentFileName)
+                    }
+                }
+            }
         }
         val recent = controller.roomManager.recentTransfers()
         val history = controller.recentHistory()
@@ -479,7 +525,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun ConnectedClient.displayLine(): String {
-        return "${displayName}\n${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
+        val identity = if (nim.isNotBlank() || name.isNotBlank()) {
+            "${nim.ifBlank { "-" }} - ${name.ifBlank { displayName }}"
+        } else {
+            displayName
+        }
+        return "$identity\n${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
     }
 
     private fun String.shortUserAgent(): String {
@@ -511,6 +562,7 @@ class MainActivity : AppCompatActivity() {
             TransferDirection.SHARED -> "Dibagikan"
             TransferDirection.UPLOAD -> "Diterima"
             TransferDirection.DOWNLOAD -> "Diunduh"
+            TransferDirection.CHAT_ATTACHMENT -> "Lampiran chat"
         }
     }
 
@@ -573,6 +625,61 @@ class MainActivity : AppCompatActivity() {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("Nadi room URL", url))
         Toast.makeText(this, "URL ruang disalin.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun copyJoinInstructions() {
+        val instructions = buildJoinInstructions()
+        if (instructions.isBlank()) return
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Instruksi join Nadi", instructions))
+        Toast.makeText(this, "Instruksi join disalin.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun buildJoinInstructions(): String {
+        val session = controller.roomManager.currentSession() ?: return ""
+        val url = session.localUrl.orEmpty()
+        return buildString {
+            append("Gabung ke room Nadi: ").append(session.roomName).append("\n")
+            when (controller.activeNetworkMode) {
+                NetworkMode.HOTSPOT -> {
+                    append("1. Sambungkan perangkat ke hotspot Nadi.\n")
+                    controller.hotspotSsid?.takeIf { it.isNotBlank() }?.let {
+                        append("Wi-Fi: ").append(it).append("\n")
+                    }
+                    controller.hotspotPassword?.takeIf { it.isNotBlank() }?.let {
+                        append("Password: ").append(it).append("\n")
+                    }
+                    append("2. Buka URL atau scan QR room.\n")
+                }
+                NetworkMode.SAME_WIFI,
+                NetworkMode.SAME_WIFI_FALLBACK -> {
+                    append("1. Pastikan perangkat berada di Wi-Fi yang sama dengan host.\n")
+                    append("2. Buka URL atau scan QR room.\n")
+                }
+            }
+            append("URL: ").append(url).append("\n")
+            append("Masukkan NIM dan Nama saat halaman Nadi terbuka.")
+        }
+    }
+
+    private fun openFileRoomLocation() {
+        val path = controller.currentRoomFolderPath() ?: return
+        val folder = File(path)
+        if (!folder.exists()) {
+            folder.mkdirs()
+        }
+        val opened = runCatching {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(Uri.fromFile(folder), "resource/folder")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        }.isSuccess
+        if (!opened) {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Lokasi File Room Nadi", path))
+            Toast.makeText(this, "Lokasi file room disalin: $path", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun regenerateJoinLink() {

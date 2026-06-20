@@ -2,6 +2,7 @@ package com.danis.nadi.network.server
 
 import com.danis.nadi.file.FileStore
 import com.danis.nadi.model.ChatMessage
+import com.danis.nadi.model.ConnectedClient
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
@@ -29,6 +30,9 @@ class NadiHttpServer(
                 session.method == Method.GET && session.uri == "/api/room" -> {
                     roomMetadata(session)
                 }
+                session.method == Method.POST && session.uri == "/api/identity" -> {
+                    registerIdentity(session)
+                }
                 session.method == Method.GET && session.uri == "/api/files" -> {
                     fileList(session)
                 }
@@ -44,6 +48,9 @@ class NadiHttpServer(
                 session.method == Method.POST && session.uri == "/api/chat" -> {
                     sendChat(session)
                 }
+                session.method == Method.POST && session.uri == "/api/chat-attachment" -> {
+                    sendChatAttachment(session)
+                }
                 else -> {
                     json(Response.Status.NOT_FOUND, """{"error":"not_found"}""")
                 }
@@ -56,8 +63,8 @@ class NadiHttpServer(
     private fun roomMetadata(session: IHTTPSession): Response {
         val token = session.parameters["token"]?.firstOrNull()
         if (!roomManager.validateToken(token)) return invalidToken()
-        roomManager.touchClient(
-            displayName = session.parameters["name"]?.firstOrNull().orEmpty(),
+        val client = roomManager.touchKnownClient(
+            clientId = session.parameters["clientId"]?.firstOrNull(),
             userAgent = session.headers["user-agent"].orEmpty(),
             ipAddress = session.remoteIpAddress.orEmpty()
         )
@@ -67,24 +74,39 @@ class NadiHttpServer(
             Response.Status.NOT_FOUND,
             """{"error":"room_not_found"}"""
         )
-        return json(Response.Status.OK, room.toJson(snapshot.clients.size))
+        return json(Response.Status.OK, room.toJson(snapshot.clients.size, identityRequired = client == null))
+    }
+
+    private fun registerIdentity(session: IHTTPSession): Response {
+        if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
+        session.parseBody(mutableMapOf())
+        val client = roomManager.touchIdentifiedClient(
+            clientId = session.parameters["clientId"]?.firstOrNull().orEmpty(),
+            nim = session.parameters["nim"]?.firstOrNull().orEmpty(),
+            name = session.parameters["name"]?.firstOrNull().orEmpty(),
+            userAgent = session.headers["user-agent"].orEmpty(),
+            ipAddress = session.remoteIpAddress.orEmpty()
+        ) ?: return json(Response.Status.BAD_REQUEST, """{"error":"invalid_identity"}""")
+        return json(Response.Status.OK, """{"client":${client.toJson()}}""")
     }
 
     private fun fileList(session: IHTTPSession): Response {
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
+        if (identifiedClient(session) == null) return identityRequired()
         val shared = roomManager.sharedFiles()
         return json(Response.Status.OK, """{"files":${shared.toFileJsonArray()}}""")
     }
 
     private fun downloadFile(session: IHTTPSession): Response {
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
+        if (identifiedClient(session) == null) return identityRequired()
         val id = session.uri.removePrefix("/api/download/").decodeUrl()
         val transfer = roomManager.transferById(id) ?: return json(
             Response.Status.NOT_FOUND,
             """{"error":"file_not_found"}"""
         )
-        if (transfer.direction != TransferDirection.SHARED) {
-            return json(Response.Status.NOT_FOUND, """{"error":"file_not_shared"}""")
+        if (transfer.direction != TransferDirection.SHARED && transfer.direction != TransferDirection.CHAT_ATTACHMENT) {
+            return json(Response.Status.NOT_FOUND, """{"error":"file_not_downloadable"}""")
         }
         val payload = fileStore.openForDownload(transfer) ?: return json(
             Response.Status.NOT_FOUND,
@@ -108,6 +130,7 @@ class NadiHttpServer(
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
         val files = mutableMapOf<String, String>()
         session.parseBody(files)
+        val client = identifiedClient(session) ?: return identityRequired()
         val tempPath = files["file"] ?: files.values.firstOrNull()
         if (tempPath.isNullOrBlank()) {
             return json(Response.Status.BAD_REQUEST, """{"error":"file_required"}""")
@@ -117,8 +140,17 @@ class NadiHttpServer(
             ?: "upload.bin"
         val mimeType = session.headers["content-type"]?.substringAfter("type=", missingDelimiterValue = "")
             ?.takeIf { it.isNotBlank() }
+        val roomId = roomManager.currentSession()?.sessionId
         val transfer = FileInputStream(File(tempPath)).use { input ->
-            fileStore.saveUpload(originalName, mimeType, input)
+            fileStore.saveRoomFile(
+                fileName = originalName,
+                mimeType = mimeType,
+                inputStream = input,
+                roomId = roomId,
+                folderName = "received",
+                direction = TransferDirection.UPLOAD,
+                senderName = client.displayName
+            )
         }
         roomManager.addTransfer(transfer)
         return json(Response.Status.OK, """{"file":${transfer.toJson()}}""")
@@ -126,6 +158,7 @@ class NadiHttpServer(
 
     private fun listChat(session: IHTTPSession): Response {
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
+        if (identifiedClient(session) == null) return identityRequired()
         val after = session.parameters["after"]?.firstOrNull()?.toLongOrNull() ?: 0L
         val messages = roomManager.messagesAfter(after)
         return json(Response.Status.OK, """{"messages":${messages.toMessageJsonArray()}}""")
@@ -134,17 +167,58 @@ class NadiHttpServer(
     private fun sendChat(session: IHTTPSession): Response {
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
         session.parseBody(mutableMapOf())
-        val senderName = session.parameters["senderName"]?.firstOrNull() ?: "Browser"
+        val client = identifiedClient(session) ?: return identityRequired()
         val text = session.parameters["text"]?.firstOrNull().orEmpty()
         val message = roomManager.addMessage(
-            senderId = "browser-${session.remoteIpAddress.orEmpty()}",
-            senderName = senderName,
+            senderId = client.clientId,
+            senderName = client.displayName,
             text = text
         ) ?: return json(Response.Status.BAD_REQUEST, """{"error":"message_required"}""")
         return json(Response.Status.OK, """{"message":${message.toJson()}}""")
     }
 
-    private fun RoomSession.toJson(clientCount: Int): String {
+    private fun sendChatAttachment(session: IHTTPSession): Response {
+        if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
+        val files = mutableMapOf<String, String>()
+        session.parseBody(files)
+        val client = identifiedClient(session) ?: return identityRequired()
+        val tempPath = files["file"] ?: files.values.firstOrNull()
+        if (tempPath.isNullOrBlank()) {
+            return json(Response.Status.BAD_REQUEST, """{"error":"file_required"}""")
+        }
+        val originalName = session.parameters["file"]?.firstOrNull()
+            ?: session.parameters["filename"]?.firstOrNull()
+            ?: "attachment.bin"
+        val tempFile = File(tempPath)
+        if (!originalName.isAllowedChatAttachmentName() || tempFile.length() > MAX_CHAT_ATTACHMENT_BYTES) {
+            return json(Response.Status.BAD_REQUEST, """{"error":"attachment_not_allowed"}""")
+        }
+        val mimeType = session.headers["content-type"]?.substringAfter("type=", missingDelimiterValue = "")
+            ?.takeIf { it.isNotBlank() }
+        val roomId = roomManager.currentSession()?.sessionId
+        val transfer = FileInputStream(tempFile).use { input ->
+            fileStore.saveRoomFile(
+                fileName = originalName,
+                mimeType = mimeType,
+                inputStream = input,
+                roomId = roomId,
+                folderName = "chat-attachments",
+                direction = TransferDirection.CHAT_ATTACHMENT,
+                senderName = client.displayName
+            )
+        }
+        roomManager.addTransfer(transfer)
+        val text = session.parameters["text"]?.firstOrNull().orEmpty()
+        val message = roomManager.addMessage(
+            senderId = client.clientId,
+            senderName = client.displayName,
+            text = text.ifBlank { "Mengirim lampiran ${transfer.fileName}" },
+            attachment = transfer
+        ) ?: return json(Response.Status.BAD_REQUEST, """{"error":"message_required"}""")
+        return json(Response.Status.OK, """{"message":${message.toJson()},"file":${transfer.toJson()}}""")
+    }
+
+    private fun RoomSession.toJson(clientCount: Int, identityRequired: Boolean): String {
         return buildString {
             append("{")
             append("\"sessionId\":\"").append(sessionId.escapeJson()).append("\",")
@@ -153,7 +227,21 @@ class NadiHttpServer(
             append("\"status\":\"").append(status.name.lowercase()).append("\",")
             append("\"localUrl\":\"").append((localUrl ?: "").escapeJson()).append("\",")
             append("\"clientCount\":").append(clientCount).append(",")
+            append("\"identityRequired\":").append(identityRequired).append(",")
             append("\"startedAt\":").append(startedAt)
+            append("}")
+        }
+    }
+
+    private fun ConnectedClient.toJson(): String {
+        return buildString {
+            append("{")
+            append("\"clientId\":\"").append(clientId.escapeJson()).append("\",")
+            append("\"nim\":\"").append(nim.escapeJson()).append("\",")
+            append("\"name\":\"").append(name.escapeJson()).append("\",")
+            append("\"displayName\":\"").append(displayName.escapeJson()).append("\",")
+            append("\"joinedAt\":").append(joinedAt).append(",")
+            append("\"lastSeenAt\":").append(lastSeenAt)
             append("}")
         }
     }
@@ -186,12 +274,26 @@ class NadiHttpServer(
             append("\"senderName\":\"").append(senderName.escapeJson()).append("\",")
             append("\"text\":\"").append(text.escapeJson()).append("\",")
             append("\"createdAt\":").append(createdAt).append(",")
-            append("\"status\":\"").append(status.escapeJson()).append("\"")
+            append("\"status\":\"").append(status.escapeJson()).append("\",")
+            append("\"attachmentTransferId\":\"").append((attachmentTransferId ?: "").escapeJson()).append("\",")
+            append("\"attachmentFileName\":\"").append((attachmentFileName ?: "").escapeJson()).append("\",")
+            append("\"attachmentMimeType\":\"").append((attachmentMimeType ?: "").escapeJson()).append("\",")
+            append("\"attachmentSizeBytes\":").append(attachmentSizeBytes)
             append("}")
         }
     }
 
     private fun invalidToken(): Response = json(Response.Status.UNAUTHORIZED, """{"error":"invalid_token"}""")
+
+    private fun identityRequired(): Response = json(Response.Status.FORBIDDEN, """{"error":"identity_required"}""")
+
+    private fun identifiedClient(session: IHTTPSession): ConnectedClient? {
+        return roomManager.touchKnownClient(
+            clientId = session.parameters["clientId"]?.firstOrNull(),
+            userAgent = session.headers["user-agent"].orEmpty(),
+            ipAddress = session.remoteIpAddress.orEmpty()
+        )
+    }
 
     private fun text(status: Response.IStatus, body: String): Response {
         return newFixedLengthResponse(status, MIME_PLAINTEXT, body)
@@ -233,4 +335,29 @@ class NadiHttpServer(
     private fun String.decodeUrl(): String = URLDecoder.decode(this, "UTF-8")
 
     private fun String.headerSafe(): String = replace("\"", "'").replace("\r", "").replace("\n", "")
+
+    private fun String.isAllowedChatAttachmentName(): Boolean {
+        val extension = substringAfterLast('.', missingDelimiterValue = "").lowercase()
+        return extension in ALLOWED_CHAT_ATTACHMENT_EXTENSIONS
+    }
+
+    private companion object {
+        const val MAX_CHAT_ATTACHMENT_BYTES = 10L * 1024L * 1024L
+        val ALLOWED_CHAT_ATTACHMENT_EXTENSIONS = setOf(
+            "jpg",
+            "jpeg",
+            "png",
+            "gif",
+            "webp",
+            "pdf",
+            "txt",
+            "doc",
+            "docx",
+            "ppt",
+            "pptx",
+            "xls",
+            "xlsx",
+            "zip"
+        )
+    }
 }
