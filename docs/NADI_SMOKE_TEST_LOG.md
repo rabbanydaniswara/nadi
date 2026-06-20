@@ -42,6 +42,14 @@ Core flow:
 - [x] Diagnostics dapat disalin
 - [x] Stop room menutup akses
 
+Browser matrix:
+
+- [x] Chrome desktop renders browser client
+- [x] Edge desktop renders browser client
+- [ ] Firefox desktop renders browser client
+- [ ] Chrome Android renders browser client
+- [ ] Safari/iOS renders browser client
+
 Notes:
 
 ```text
@@ -69,5 +77,8 @@ HTTP smoke from host machine:
 - Host share via Android file picker selected nadi_home_screenshot.png from DocumentsUI Recent.
 - /api/files returned shared file metadata for nadi_home_screenshot.png.
 - Browser download endpoint returned 101045 bytes for the host-shared file.
-Not yet covered in this run: multi-browser matrix, multi-device matrix.
+- Chrome desktop headless DOM smoke returned room name, ready state, upload section, download section, chat section, and downloadProgress.
+- Edge desktop headless DOM smoke returned room name, ready state, upload section, download section, chat section, and downloadProgress.
+- Firefox headless screenshot automation was attempted but did not produce stable evidence in this environment.
+Not yet covered in this run: Firefox desktop manual/browser evidence, Chrome Android browser evidence, Safari/iOS browser evidence, multi-device/vendor matrix.
 ```
