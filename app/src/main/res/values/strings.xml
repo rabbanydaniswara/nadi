@@ -20,6 +20,11 @@
     <string name="hotspot_permission_reason">Nadi perlu izin Wi-Fi/lokasi untuk mencoba membuat hotspot lokal. Jika tidak berhasil, mode satu Wi-Fi tetap tersedia.</string>
     <string name="back_home">Kembali</string>
     <string name="room_active">Ruang Aktif</string>
+    <string name="tab_room">Ruang</string>
+    <string name="tab_files">File</string>
+    <string name="tab_chat">Chat</string>
+    <string name="tab_participants">Peserta</string>
+    <string name="tab_history">Riwayat</string>
     <string name="waiting_devices">Menunggu perangkat terhubung</string>
     <string name="copy_url">Salin URL</string>
     <string name="wifi_qr_title">QR Wi-Fi Hotspot</string>
@@ -46,6 +51,7 @@
     <string name="diagnostics_title">Diagnostics lokal</string>
     <string name="copy_diagnostics">Salin Diagnostics</string>
     <string name="diagnostics_empty">Diagnostics akan muncul saat room aktif.</string>
+    <string name="active_room_history_title">Riwayat room aktif</string>
     <string name="history_title">Riwayat Lokal</string>
     <string name="history_copy">Metadata transfer yang pernah terjadi di perangkat ini. File tetap berada di penyimpanan lokal Nadi atau lokasi aslinya.</string>
     <string name="history_empty">Belum ada riwayat lokal tersimpan.</string>

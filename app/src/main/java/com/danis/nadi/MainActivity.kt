@@ -45,6 +45,7 @@ import com.danis.nadi.settings.NadiSettings
 import com.danis.nadi.settings.NadiSettingsStore
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -53,18 +54,29 @@ class MainActivity : AppCompatActivity() {
     private val dashboardHandler = Handler(Looper.getMainLooper())
     private var dashboardPolling = false
     private var pendingHotspotStart = false
+    private var activeRoomDestinationId = R.id.active_room_tab_room
 
     private lateinit var homePanel: LinearLayout
     private lateinit var historyPanel: LinearLayout
     private lateinit var settingsPanel: LinearLayout
     private lateinit var setupPanel: LinearLayout
     private lateinit var activeRoomPanel: LinearLayout
+    private lateinit var activeRoomNavigation: BottomNavigationView
+    private lateinit var activeRoomJoinSection: LinearLayout
+    private lateinit var activeRoomPrivacySection: LinearLayout
+    private lateinit var activeRoomParticipantsSection: LinearLayout
+    private lateinit var activeRoomSharedFilesSection: LinearLayout
+    private lateinit var activeRoomReceivedFilesSection: LinearLayout
+    private lateinit var activeRoomChatSection: LinearLayout
+    private lateinit var activeRoomDiagnosticsSection: LinearLayout
+    private lateinit var activeRoomHistorySection: LinearLayout
     private lateinit var networkModeGroup: RadioGroup
     private lateinit var defaultNetworkModeGroup: RadioGroup
     private lateinit var roomNameInput: EditText
     private lateinit var hostNameInput: EditText
     private lateinit var defaultHostNameInput: EditText
     private lateinit var hostChatInput: EditText
+    private lateinit var openFileRoomButton: MaterialButton
     private lateinit var activeStatusText: TextView
     private lateinit var activeRoomNameText: TextView
     private lateinit var activeRoomCopyText: TextView
@@ -75,6 +87,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var clientListText: TextView
     private lateinit var diagnosticsText: TextView
     private lateinit var historyListText: TextView
+    private lateinit var activeRoomHistoryText: TextView
     private lateinit var recentEmptyText: TextView
     private lateinit var networkModeHelpText: TextView
     private lateinit var wifiQrTitleText: TextView
@@ -157,12 +170,22 @@ class MainActivity : AppCompatActivity() {
         settingsPanel = findViewById(R.id.settingsPanel)
         setupPanel = findViewById(R.id.setupPanel)
         activeRoomPanel = findViewById(R.id.activeRoomPanel)
+        activeRoomNavigation = findViewById(R.id.activeRoomNavigation)
+        activeRoomJoinSection = findViewById(R.id.activeRoomJoinSection)
+        activeRoomPrivacySection = findViewById(R.id.activeRoomPrivacySection)
+        activeRoomParticipantsSection = findViewById(R.id.activeRoomParticipantsSection)
+        activeRoomSharedFilesSection = findViewById(R.id.activeRoomSharedFilesSection)
+        activeRoomReceivedFilesSection = findViewById(R.id.activeRoomReceivedFilesSection)
+        activeRoomChatSection = findViewById(R.id.activeRoomChatSection)
+        activeRoomDiagnosticsSection = findViewById(R.id.activeRoomDiagnosticsSection)
+        activeRoomHistorySection = findViewById(R.id.activeRoomHistorySection)
         networkModeGroup = findViewById(R.id.networkModeGroup)
         defaultNetworkModeGroup = findViewById(R.id.defaultNetworkModeGroup)
         roomNameInput = findViewById(R.id.roomNameInput)
         hostNameInput = findViewById(R.id.hostNameInput)
         defaultHostNameInput = findViewById(R.id.defaultHostNameInput)
         hostChatInput = findViewById(R.id.hostChatInput)
+        openFileRoomButton = findViewById(R.id.openFileRoomButton)
         activeStatusText = findViewById(R.id.activeStatusText)
         activeRoomNameText = findViewById(R.id.activeRoomNameText)
         activeRoomCopyText = findViewById(R.id.activeRoomCopyText)
@@ -173,6 +196,7 @@ class MainActivity : AppCompatActivity() {
         clientListText = findViewById(R.id.clientListText)
         diagnosticsText = findViewById(R.id.diagnosticsText)
         historyListText = findViewById(R.id.historyListText)
+        activeRoomHistoryText = findViewById(R.id.activeRoomHistoryText)
         recentEmptyText = findViewById(R.id.recentEmptyText)
         networkModeHelpText = findViewById(R.id.networkModeHelpText)
         wifiQrTitleText = findViewById(R.id.wifiQrTitleText)
@@ -217,7 +241,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.copyJoinInstructionsButton).setOnClickListener {
             copyJoinInstructions()
         }
-        findViewById<MaterialButton>(R.id.openFileRoomButton).setOnClickListener {
+        openFileRoomButton.setOnClickListener {
             openFileRoomLocation()
         }
         findViewById<MaterialButton>(R.id.regenerateLinkButton).setOnClickListener {
@@ -234,6 +258,11 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.sendHostMessageButton).setOnClickListener {
             sendHostMessage()
+        }
+        activeRoomNavigation.setOnItemSelectedListener { item ->
+            activeRoomDestinationId = item.itemId
+            showActiveRoomSection(item.itemId)
+            true
         }
         networkModeGroup.setOnCheckedChangeListener { _, checkedId ->
             networkModeHelpText.text = if (checkedId == R.id.hotspotModeRadio) {
@@ -373,6 +402,7 @@ class MainActivity : AppCompatActivity() {
         )
         requestNotificationPermissionIfNeeded()
         RoomLifecycleService.start(this)
+        activeRoomDestinationId = R.id.active_room_tab_room
         renderActiveRoom(activeRoom)
         startDashboardPolling()
     }
@@ -515,6 +545,13 @@ class MainActivity : AppCompatActivity() {
         }
         val recent = controller.roomManager.recentTransfers()
         val history = controller.recentHistory()
+        activeRoomHistoryText.text = if (recent.isNotEmpty()) {
+            recent.joinToString(separator = "\n\n") { it.displayLine() }
+        } else if (history.isNotEmpty()) {
+            history.take(8).joinToString(separator = "\n\n") { it.displayLine() }
+        } else {
+            getString(R.string.history_empty)
+        }
         recentEmptyText.text = if (recent.isNotEmpty()) {
             recent.joinToString(separator = "\n") { it.displayLine() }
         } else if (history.isNotEmpty()) {
@@ -741,6 +778,26 @@ class MainActivity : AppCompatActivity() {
         settingsPanel.gone()
         setupPanel.gone()
         activeRoomPanel.visible()
+        activeRoomNavigation.selectedItemId = activeRoomDestinationId
+        showActiveRoomSection(activeRoomDestinationId)
+    }
+
+    private fun showActiveRoomSection(destinationId: Int) {
+        val showRoom = destinationId == R.id.active_room_tab_room
+        val showFiles = destinationId == R.id.active_room_tab_files
+        val showChat = destinationId == R.id.active_room_tab_chat
+        val showParticipants = destinationId == R.id.active_room_tab_participants
+        val showHistory = destinationId == R.id.active_room_tab_history
+
+        activeRoomJoinSection.visibleIf(showRoom)
+        activeRoomPrivacySection.visibleIf(showRoom)
+        activeRoomDiagnosticsSection.visibleIf(showRoom)
+        openFileRoomButton.visibleIf(showFiles)
+        activeRoomSharedFilesSection.visibleIf(showFiles)
+        activeRoomReceivedFilesSection.visibleIf(showFiles)
+        activeRoomChatSection.visibleIf(showChat)
+        activeRoomParticipantsSection.visibleIf(showParticipants)
+        activeRoomHistorySection.visibleIf(showHistory)
     }
 
     private fun View.visible() {
@@ -749,6 +806,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun View.gone() {
         visibility = View.GONE
+    }
+
+    private fun View.visibleIf(visible: Boolean) {
+        visibility = if (visible) View.VISIBLE else View.GONE
     }
 }
 

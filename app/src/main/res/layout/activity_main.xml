@@ -496,6 +496,23 @@
                     android:textSize="15sp" />
             </LinearLayout>
 
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/activeRoomNavigation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_outline_card"
+                app:itemIconTint="@color/nadi_green"
+                app:itemTextColor="@color/nadi_green"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/menu_active_room" />
+
+            <LinearLayout
+                android:id="@+id/activeRoomJoinSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
             <ImageView
                 android:id="@+id/qrImage"
                 android:layout_width="220dp"
@@ -597,6 +614,8 @@
                 app:cornerRadius="10dp"
                 app:strokeColor="@color/nadi_green" />
 
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/openFileRoomButton"
                 style="@style/Widget.Material3.Button.OutlinedButton"
@@ -610,6 +629,7 @@
                 app:strokeColor="@color/nadi_green" />
 
             <LinearLayout
+                android:id="@+id/activeRoomPrivacySection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -636,6 +656,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/activeRoomParticipantsSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -662,6 +683,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/activeRoomSharedFilesSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
@@ -696,6 +718,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/activeRoomReceivedFilesSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -720,6 +743,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/activeRoomChatSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -766,6 +790,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/activeRoomDiagnosticsSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -802,6 +827,33 @@
                     android:textColor="@color/nadi_green"
                     app:cornerRadius="10dp"
                     app:strokeColor="@color/nadi_green" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/activeRoomHistorySection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_outline_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/active_room_history_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/activeRoomHistoryText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="@string/history_empty"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
