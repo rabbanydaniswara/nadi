@@ -4,6 +4,7 @@ Dokumen ini adalah peta perencanaan utama untuk membangun Nadi secara bertahap, 
 
 - [NADI_PROJECT_CONTEXT.md](../NADI_PROJECT_CONTEXT.md)
 - [NADI_PRD.md](../NADI_PRD.md)
+- [NADI_PRODUCT_MATURITY_PLAN.md](NADI_PRODUCT_MATURITY_PLAN.md)
 
 Tujuan dokumen ini bukan mengganti PRD, tetapi menerjemahkan PRD menjadi strategi eksekusi teknis yang dapat diikuti Codex atau developer manusia dari satu sesi kerja ke sesi berikutnya.
 
