@@ -946,11 +946,99 @@ Product success:
 
 ---
 
-## 16. Recommended MVP Definition
+## 16. Planned Product Direction - Classroom Identity, Chat, and Files
+
+Setelah MVP inti stabil, arah pengembangan berikutnya adalah menjadikan Nadi lebih cocok untuk skenario kelas/perkuliahan.
+
+### 16.1 Identitas Peserta
+
+Target:
+
+- Setiap client mengisi identitas sebelum masuk room:
+  - NIM.
+  - Nama.
+- Identitas tampil di daftar client, chat, dan metadata file.
+- Identitas dikunci selama room berjalan.
+- Perubahan identitas hanya boleh lewat flow eksplisit, misalnya keluar room lalu join ulang dengan persetujuan host.
+
+Validasi lokal yang realistis:
+
+- NIM wajib diisi dan mengikuti format yang ditentukan host/app.
+- Nama wajib diisi dan memiliki panjang wajar.
+- Host dapat melihat dan menyetujui peserta yang join.
+- Opsi lanjutan: host mengimpor/mengetik daftar NIM+Nama peserta untuk mencocokkan identitas.
+
+Non-goal:
+
+- Validasi resmi ke sistem kampus, karena Nadi tidak memakai cloud/server eksternal.
+
+### 16.2 Chat Mirip WhatsApp
+
+Target:
+
+- Chat tampil sebagai percakapan rapi dengan bubble, waktu, dan identitas pengirim.
+- Pesan teks tetap ringan.
+- Chat mendukung lampiran:
+  - Gambar.
+  - PDF/dokumen.
+  - File kecil lain sesuai policy.
+- Lampiran chat tetap tercatat sebagai bagian dari pesan, bukan sebagai file room utama.
+
+Security praktis:
+
+- Batasi ukuran lampiran chat.
+- Batasi MIME/type dasar.
+- Sanitasi nama file.
+- Simpan lampiran per room.
+- Jangan render file sebagai HTML aktif.
+
+### 16.3 File Room Terpisah Dari Chat
+
+Nadi tetap memiliki fitur file transfer khusus yang terpisah dari chat:
+
+- Area `File Room` untuk materi, dokumen, atau pengumpulan tugas.
+- Area chat untuk komunikasi dan lampiran percakapan.
+- File room punya daftar, status, ukuran, pengirim, waktu, dan aksi buka/download.
+- Lampiran chat bisa punya pintasan `Simpan ke File Room` bila nanti dibutuhkan.
+
+### 16.4 Penyimpanan Per Ruangan
+
+Target:
+
+- File disimpan per room/session.
+- Struktur lokal jelas, misalnya:
+
+```text
+Nadi/
+  rooms/
+    <room-id>/
+      shared/
+      received/
+      chat-attachments/
+```
+
+- Host dapat membuka lokasi file melalui tombol pintasan.
+- History menampilkan room, peserta, file diterima, file dibagikan, dan lampiran chat.
+- File tidak dihapus diam-diam; clear history menghapus metadata kecuali user memilih cleanup file.
+
+### 16.5 Join Lebih Mudah
+
+Target:
+
+- Tampilkan QR join URL.
+- Untuk hotspot, tampilkan juga QR Wi-Fi bila memungkinkan agar client Android bisa langsung tersambung ke SSID/password.
+- Tampilkan instruksi ringkas:
+  - Langkah 1: sambungkan ke Wi-Fi/hotspot Nadi.
+  - Langkah 2: buka/scan URL room.
+- Sediakan tombol salin instruksi join.
+- Same-Wi-Fi dan hotspot harus punya copy yang berbeda dan jelas.
+
+---
+
+## 17. Recommended MVP Definition
 
 The first shippable MVP should be:
 
 > One Android phone creates a Nadi room. A laptop connects to the phone's local network, opens the Nadi browser page, downloads one shared file, uploads one file back, and sends a chat message. All of this works without internet.
 
 Everything else should support this core flow.
-

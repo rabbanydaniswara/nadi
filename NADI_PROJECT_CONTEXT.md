@@ -201,3 +201,17 @@ Untuk pekerjaan Codex, QA cukup dilakukan pada lingkungan pengetesan yang tersed
 - Signing produksi, feedback tester, dan testing akhir rilis juga ditangani oleh owner proyek.
 
 Jika build, unit test, dan smoke test pada lingkungan test Codex sudah lulus untuk core flow Android host + browser client, hasil itu cukup sebagai gate pekerjaan Codex.
+
+## Arah Pengembangan Lanjutan
+
+Owner proyek ingin Nadi berkembang dari MVP file/chat sederhana menjadi ruang lokal yang lebih cocok untuk perkuliahan:
+
+- Chat dibuat lebih mirip WhatsApp: pesan berurutan, identitas pengirim jelas, dan mendukung lampiran gambar/dokumen di dalam chat.
+- Identitas client harus lebih formal untuk konteks kelas, minimal `NIM` dan `Nama`.
+- Identitas tidak boleh mudah berubah-ubah selama room berjalan agar pesan tidak anonim dan tidak mudah disangkal.
+- Pengiriman file utama dipisahkan dari chat. Chat boleh punya lampiran, tetapi tetap ada area khusus untuk berbagi/mengumpulkan file room.
+- File tersimpan dengan lokasi yang jelas per ruangan, dan host punya pintasan untuk membuka hasil file yang diterima/dibagikan.
+- Cara perangkat lain terkoneksi ke host/hotspot harus dibuat semudah mungkin dengan QR/instruksi yang jelas.
+- Keamanan dibuat cukup dan praktis untuk jaringan lokal: token/PIN, validasi identitas lokal, batas ukuran/jenis file, sanitasi nama file, dan kontrol host.
+
+Catatan penting: validasi identitas yang benar-benar resmi tidak mungkin dilakukan tanpa database kampus/server eksternal. Untuk Nadi local-first, validasi yang realistis adalah kombinasi format NIM, daftar peserta/roster lokal opsional, persetujuan host, dan identitas yang dikunci selama sesi room.

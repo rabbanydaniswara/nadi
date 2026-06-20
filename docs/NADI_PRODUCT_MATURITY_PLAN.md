@@ -490,6 +490,47 @@ Acceptance:
 - Browser refresh tidak membuat user tersesat.
 - Halaman tetap ringan tanpa framework besar.
 
+### 6.5 Classroom Identity, Chat, and File Room Direction
+
+Owner proyek ingin Nadi bergerak ke pengalaman kelas yang lebih jelas identitasnya:
+
+- Client mengisi NIM dan Nama sebelum masuk room.
+- Identitas melekat pada client, chat, dan file yang dikirim.
+- Identitas tidak mudah berubah-ubah selama room berjalan.
+- Host bisa melihat daftar peserta dan identitasnya.
+- Chat dibuat lebih mirip WhatsApp, tetapi tetap local-first dan ringan.
+- Chat mendukung lampiran gambar/dokumen kecil.
+- File room tetap dipisahkan dari lampiran chat.
+
+Validasi identitas harus realistis untuk aplikasi local-first:
+
+- Validasi format NIM dan nama wajib.
+- Optional roster lokal per room untuk mencocokkan NIM+Nama.
+- Optional host approval sebelum client dianggap masuk penuh.
+- Client identity token disimpan lokal di browser selama room/session.
+- True institutional verification bukan target tanpa integrasi sistem kampus.
+
+### 6.6 File Room and Storage Direction
+
+Pengiriman file harus punya ruang sendiri, terpisah dari chat:
+
+- `File Room`: materi, dokumen, pengumpulan tugas, dan file yang memang dimaksudkan untuk dibagikan/dikumpulkan.
+- `Chat Attachments`: gambar/dokumen yang menempel pada percakapan.
+- Storage disusun per room agar host mudah memahami asal file.
+- Host mendapat tombol pintasan untuk membuka folder/file hasil transfer.
+- Clear history tidak boleh menghapus file fisik tanpa konfirmasi eksplisit.
+
+Target storage:
+
+```text
+Nadi/
+  rooms/
+    <room-id>/
+      shared/
+      received/
+      chat-attachments/
+```
+
 ---
 
 ## 7. Roadmap From MVP to Mature Product
@@ -698,6 +739,8 @@ Scope:
 - Visible client list.
 - Remove/kick client bila feasible.
 - Room lock.
+- Identity lock untuk NIM+Nama selama room berjalan.
+- Optional roster/host approval untuk validasi peserta.
 - Privacy copy di settings dan active room.
 - Token handling review.
 
@@ -712,6 +755,63 @@ Acceptance gate:
 - Invalid token selalu ditolak.
 - User tahu siapa saja yang pernah join.
 - User bisa menghentikan akses dengan stop room atau regenerate token.
+- Pesan dan file memiliki identitas pengirim yang jelas.
+
+### Phase H2: Classroom Identity, Chat Attachments, and File Room
+
+Objective:
+
+Membuat Nadi terasa seperti ruang kelas lokal: peserta punya identitas jelas, chat nyaman, lampiran chat tersedia, dan pengiriman file utama tetap terpisah.
+
+Scope:
+
+- Form identitas join: NIM dan Nama.
+- Identity lock selama room aktif.
+- Optional roster lokal atau host approval.
+- Chat UI bubble dengan waktu dan pengirim.
+- Chat attachment untuk gambar/dokumen kecil.
+- File room terpisah dari chat attachment.
+- Metadata file menyimpan sender identity dan room id.
+- Storage per room dengan folder `shared`, `received`, dan `chat-attachments`.
+- Tombol pintasan buka file/folder hasil transfer.
+- Security praktis: batas ukuran, MIME allowlist sederhana, sanitasi filename, dan no active HTML rendering.
+
+Deliverables:
+
+- Model identity client.
+- UI join identity.
+- Chat attachment endpoint/UI.
+- File room UI yang terpisah dari chat.
+- Per-room storage manager.
+- Unit test untuk identity lock, file policy, dan storage path.
+
+Acceptance gate:
+
+- Client tanpa NIM/Nama valid tidak masuk room penuh.
+- Identitas tidak berubah diam-diam di tengah room.
+- Chat teks dan lampiran bekerja pada browser test yang tersedia.
+- File room tetap bisa upload/download terpisah dari chat.
+- Host bisa membuka lokasi file room.
+
+### Phase H3: Easier Join Experience
+
+Objective:
+
+Mempermudah perangkat lain terkoneksi ke host/hotspot tanpa instruksi teknis panjang.
+
+Scope:
+
+- QR join URL tetap menjadi utama.
+- Tambahkan QR Wi-Fi untuk mode hotspot bila data SSID/password tersedia.
+- Copy instruksi berbeda untuk same-Wi-Fi dan hotspot.
+- Tombol salin instruksi join.
+- Tampilan "cara bergabung" ringkas di active room.
+
+Acceptance gate:
+
+- User tahu apakah harus tersambung ke hotspot Nadi atau Wi-Fi yang sama.
+- QR join dan info jaringan terlihat jelas.
+- Instruksi join dapat disalin dan dibagikan.
 
 ### Phase I: Testing, CI, and Release Engineering
 
