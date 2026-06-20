@@ -142,6 +142,9 @@ class NadiHttpServerTest {
 
         assertEquals(200, response.code)
         assertEquals("demo", response.body)
+        assertEquals("no-store, max-age=0", response.headers["Cache-Control"])
+        assertEquals("no-cache", response.headers["Pragma"])
+        assertEquals("nosniff", response.headers["X-Content-Type-Options"])
     }
 
     @Test

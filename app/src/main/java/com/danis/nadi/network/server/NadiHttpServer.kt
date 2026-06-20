@@ -101,7 +101,7 @@ class NadiHttpServer(
             newChunkedResponse(Response.Status.OK, payload.mimeType, payload.inputStream)
         }
         response.addHeader("Content-Disposition", "attachment; filename=\"${payload.fileName.headerSafe()}\"")
-        return response
+        return response.withNoStoreHeaders()
     }
 
     private fun uploadFile(session: IHTTPSession): Response {
