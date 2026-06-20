@@ -4,6 +4,7 @@
     <string name="home_intro">Buat ruang lokal untuk berbagi file dan chat di ruangan yang sama tanpa mengandalkan internet.</string>
     <string name="start_room">Buat Ruang</string>
     <string name="join_room">Lihat Riwayat</string>
+    <string name="settings">Pengaturan</string>
     <string name="recent_transfers">Aktivitas lokal terakhir</string>
     <string name="recent_empty">Belum ada file yang mengalir. Mulai ruang pertama untuk berbagi secara lokal.</string>
     <string name="host_setup_title">Siapkan Ruang</string>
@@ -46,4 +47,11 @@
     <string name="history_copy">Metadata transfer yang pernah terjadi di perangkat ini. File tetap berada di penyimpanan lokal Nadi atau lokasi aslinya.</string>
     <string name="history_empty">Belum ada riwayat lokal tersimpan.</string>
     <string name="clear_history">Hapus Riwayat</string>
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_copy">Atur default untuk room berikutnya dan kendali data lokal. Semua pengaturan disimpan di perangkat ini.</string>
+    <string name="default_host_name">Nama host default</string>
+    <string name="default_network_mode">Mode jaringan default</string>
+    <string name="save_settings">Simpan Pengaturan</string>
+    <string name="local_data_title">Data lokal</string>
+    <string name="local_data_copy">Nadi tidak memakai cloud untuk file dan chat room. Riwayat yang disimpan hanya metadata transfer lokal.</string>
 </resources>

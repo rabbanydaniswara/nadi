@@ -41,22 +41,28 @@ import com.danis.nadi.room.RoomLifecycleState
 import com.danis.nadi.room.RoomLifecycleService
 import com.danis.nadi.room.RoomRuntime
 import com.danis.nadi.room.RoomStartResult
+import com.danis.nadi.settings.NadiSettings
+import com.danis.nadi.settings.NadiSettingsStore
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
     private lateinit var controller: RoomController
+    private lateinit var settingsStore: NadiSettingsStore
     private val dashboardHandler = Handler(Looper.getMainLooper())
     private var dashboardPolling = false
     private var pendingHotspotStart = false
 
     private lateinit var homePanel: LinearLayout
     private lateinit var historyPanel: LinearLayout
+    private lateinit var settingsPanel: LinearLayout
     private lateinit var setupPanel: LinearLayout
     private lateinit var activeRoomPanel: LinearLayout
     private lateinit var networkModeGroup: RadioGroup
+    private lateinit var defaultNetworkModeGroup: RadioGroup
     private lateinit var roomNameInput: EditText
     private lateinit var hostNameInput: EditText
+    private lateinit var defaultHostNameInput: EditText
     private lateinit var hostChatInput: EditText
     private lateinit var activeStatusText: TextView
     private lateinit var activeRoomNameText: TextView
@@ -117,6 +123,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         controller = RoomRuntime.controller(applicationContext)
+        settingsStore = NadiSettingsStore(applicationContext)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
@@ -144,11 +151,14 @@ class MainActivity : AppCompatActivity() {
     private fun bindViews() {
         homePanel = findViewById(R.id.homePanel)
         historyPanel = findViewById(R.id.historyPanel)
+        settingsPanel = findViewById(R.id.settingsPanel)
         setupPanel = findViewById(R.id.setupPanel)
         activeRoomPanel = findViewById(R.id.activeRoomPanel)
         networkModeGroup = findViewById(R.id.networkModeGroup)
+        defaultNetworkModeGroup = findViewById(R.id.defaultNetworkModeGroup)
         roomNameInput = findViewById(R.id.roomNameInput)
         hostNameInput = findViewById(R.id.hostNameInput)
+        defaultHostNameInput = findViewById(R.id.defaultHostNameInput)
         hostChatInput = findViewById(R.id.hostChatInput)
         activeStatusText = findViewById(R.id.activeStatusText)
         activeRoomNameText = findViewById(R.id.activeRoomNameText)
@@ -172,8 +182,17 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.joinRoomButton).setOnClickListener {
             showHistory()
         }
+        findViewById<MaterialButton>(R.id.settingsButton).setOnClickListener {
+            showSettings()
+        }
         findViewById<MaterialButton>(R.id.historyBackButton).setOnClickListener {
             showHome()
+        }
+        findViewById<MaterialButton>(R.id.settingsBackButton).setOnClickListener {
+            showHome()
+        }
+        findViewById<MaterialButton>(R.id.saveSettingsButton).setOnClickListener {
+            saveSettings()
         }
         findViewById<MaterialButton>(R.id.clearHistoryButton).setOnClickListener {
             controller.clearHistory()
@@ -212,6 +231,51 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.same_wifi_note)
             }
         }
+    }
+
+    private fun applySettingsToSetup() {
+        val settings = settingsStore.settings()
+        hostNameInput.setText(settings.defaultHostName)
+        val checkedId = when (settings.defaultNetworkMode) {
+            NetworkMode.HOTSPOT -> R.id.hotspotModeRadio
+            NetworkMode.SAME_WIFI,
+            NetworkMode.SAME_WIFI_FALLBACK -> R.id.sameWifiModeRadio
+        }
+        networkModeGroup.check(checkedId)
+        networkModeHelpText.text = if (checkedId == R.id.hotspotModeRadio) {
+            getString(R.string.hotspot_permission_reason)
+        } else {
+            getString(R.string.same_wifi_note)
+        }
+    }
+
+    private fun applySettingsToSettingsScreen() {
+        val settings = settingsStore.settings()
+        defaultHostNameInput.setText(settings.defaultHostName)
+        defaultNetworkModeGroup.check(
+            if (settings.defaultNetworkMode == NetworkMode.HOTSPOT) {
+                R.id.defaultHotspotModeRadio
+            } else {
+                R.id.defaultSameWifiModeRadio
+            }
+        )
+    }
+
+    private fun saveSettings() {
+        val mode = if (defaultNetworkModeGroup.checkedRadioButtonId == R.id.defaultHotspotModeRadio) {
+            NetworkMode.HOTSPOT
+        } else {
+            NetworkMode.SAME_WIFI
+        }
+        settingsStore.save(
+            NadiSettings(
+                defaultHostName = defaultHostNameInput.text?.toString().orEmpty(),
+                defaultNetworkMode = mode
+            )
+        )
+        applySettingsToSetup()
+        Toast.makeText(this, "Pengaturan disimpan.", Toast.LENGTH_SHORT).show()
+        showHome()
     }
 
     private fun startLocalRoom() {
@@ -531,6 +595,7 @@ class MainActivity : AppCompatActivity() {
     private fun showHome() {
         homePanel.visible()
         historyPanel.gone()
+        settingsPanel.gone()
         setupPanel.gone()
         activeRoomPanel.gone()
         refreshHostDashboard()
@@ -539,21 +604,34 @@ class MainActivity : AppCompatActivity() {
     private fun showHistory() {
         homePanel.gone()
         historyPanel.visible()
+        settingsPanel.gone()
         setupPanel.gone()
         activeRoomPanel.gone()
         refreshHistoryScreen()
     }
 
+    private fun showSettings() {
+        homePanel.gone()
+        historyPanel.gone()
+        settingsPanel.visible()
+        setupPanel.gone()
+        activeRoomPanel.gone()
+        applySettingsToSettingsScreen()
+    }
+
     private fun showSetup() {
         homePanel.gone()
         historyPanel.gone()
+        settingsPanel.gone()
         setupPanel.visible()
         activeRoomPanel.gone()
+        applySettingsToSetup()
     }
 
     private fun showActiveRoom() {
         homePanel.gone()
         historyPanel.gone()
+        settingsPanel.gone()
         setupPanel.gone()
         activeRoomPanel.visible()
     }

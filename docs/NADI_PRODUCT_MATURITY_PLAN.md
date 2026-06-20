@@ -8,6 +8,8 @@ Dokumen ini melengkapi:
 - [NADI_PROJECT_CONTEXT.md](../NADI_PROJECT_CONTEXT.md)
 - [NADI_IMPLEMENTATION_BLUEPRINT.md](NADI_IMPLEMENTATION_BLUEPRINT.md)
 - [NADI_QA_RELEASE_CHECKLIST.md](NADI_QA_RELEASE_CHECKLIST.md)
+- [NADI_BETA_NOTES.md](NADI_BETA_NOTES.md)
+- [NADI_SMOKE_TEST_LOG.md](NADI_SMOKE_TEST_LOG.md)
 
 Blueprint implementasi menjawab "bagaimana MVP dibangun". Dokumen ini menjawab "bagaimana MVP dipoles sampai layak menjadi produk matang".
 
