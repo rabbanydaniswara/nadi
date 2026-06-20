@@ -616,6 +616,55 @@
 
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/activeRoomFileOverviewSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_outline_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/file_room_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="@string/file_room_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/fileRoomSummaryText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/file_room_summary_empty"
+                    android:textColor="@color/nadi_graphite"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/fileRoomLocationText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/nadi_mist"
+                    android:lineSpacingExtra="3dp"
+                    android:padding="12dp"
+                    android:text="@string/file_room_location_pending"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textIsSelectable="true"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/openFileRoomButton"
                 style="@style/Widget.Material3.Button.OutlinedButton"
@@ -698,6 +747,14 @@
                     android:textColor="@color/nadi_graphite"
                     android:textStyle="bold" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/host_shared_files_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/addSharedFileButton"
                     android:layout_width="match_parent"
@@ -732,6 +789,14 @@
                     android:text="@string/host_received_files_title"
                     android:textColor="@color/nadi_graphite"
                     android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/host_received_files_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/receivedFilesText"

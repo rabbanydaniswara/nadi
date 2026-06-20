@@ -65,6 +65,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var activeRoomJoinSection: LinearLayout
     private lateinit var activeRoomPrivacySection: LinearLayout
     private lateinit var activeRoomParticipantsSection: LinearLayout
+    private lateinit var activeRoomFileOverviewSection: LinearLayout
     private lateinit var activeRoomSharedFilesSection: LinearLayout
     private lateinit var activeRoomReceivedFilesSection: LinearLayout
     private lateinit var activeRoomChatSection: LinearLayout
@@ -81,6 +82,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var activeRoomNameText: TextView
     private lateinit var activeRoomCopyText: TextView
     private lateinit var joinUrlText: TextView
+    private lateinit var fileRoomSummaryText: TextView
+    private lateinit var fileRoomLocationText: TextView
     private lateinit var sharedFilesText: TextView
     private lateinit var receivedFilesText: TextView
     private lateinit var chatMessagesText: TextView
@@ -174,6 +177,7 @@ class MainActivity : AppCompatActivity() {
         activeRoomJoinSection = findViewById(R.id.activeRoomJoinSection)
         activeRoomPrivacySection = findViewById(R.id.activeRoomPrivacySection)
         activeRoomParticipantsSection = findViewById(R.id.activeRoomParticipantsSection)
+        activeRoomFileOverviewSection = findViewById(R.id.activeRoomFileOverviewSection)
         activeRoomSharedFilesSection = findViewById(R.id.activeRoomSharedFilesSection)
         activeRoomReceivedFilesSection = findViewById(R.id.activeRoomReceivedFilesSection)
         activeRoomChatSection = findViewById(R.id.activeRoomChatSection)
@@ -190,6 +194,8 @@ class MainActivity : AppCompatActivity() {
         activeRoomNameText = findViewById(R.id.activeRoomNameText)
         activeRoomCopyText = findViewById(R.id.activeRoomCopyText)
         joinUrlText = findViewById(R.id.joinUrlText)
+        fileRoomSummaryText = findViewById(R.id.fileRoomSummaryText)
+        fileRoomLocationText = findViewById(R.id.fileRoomLocationText)
         sharedFilesText = findViewById(R.id.sharedFilesText)
         receivedFilesText = findViewById(R.id.receivedFilesText)
         chatMessagesText = findViewById(R.id.chatMessagesText)
@@ -516,6 +522,14 @@ class MainActivity : AppCompatActivity() {
             activeStatusText.text = buildStatusLine(controller.activeNetworkMode, snapshot.clients.size)
             diagnosticsText.text = controller.diagnostics().toDisplayText()
         }
+        fileRoomSummaryText.text = getString(
+            R.string.file_room_summary,
+            shared.size,
+            received.size
+        )
+        fileRoomLocationText.text = controller.currentRoomFolderPath()
+            ?.let { getString(R.string.file_room_location, it) }
+            ?: getString(R.string.file_room_location_pending)
         clientListText.text = if (snapshot.clients.isEmpty()) {
             getString(R.string.connected_devices_empty)
         } else {
@@ -792,6 +806,7 @@ class MainActivity : AppCompatActivity() {
         activeRoomJoinSection.visibleIf(showRoom)
         activeRoomPrivacySection.visibleIf(showRoom)
         activeRoomDiagnosticsSection.visibleIf(showRoom)
+        activeRoomFileOverviewSection.visibleIf(showFiles)
         openFileRoomButton.visibleIf(showFiles)
         activeRoomSharedFilesSection.visibleIf(showFiles)
         activeRoomReceivedFilesSection.visibleIf(showFiles)
