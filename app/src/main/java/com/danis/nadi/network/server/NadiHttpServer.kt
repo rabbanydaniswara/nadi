@@ -199,10 +199,20 @@ class NadiHttpServer(
 
     private fun html(status: Response.IStatus, body: String): Response {
         return newFixedLengthResponse(status, "text/html; charset=utf-8", body)
+            .withNoStoreHeaders()
     }
 
     private fun json(status: Response.IStatus, body: String): Response {
         return newFixedLengthResponse(status, "application/json; charset=utf-8", body)
+            .withNoStoreHeaders()
+    }
+
+    private fun Response.withNoStoreHeaders(): Response {
+        addHeader("Cache-Control", "no-store, max-age=0")
+        addHeader("Pragma", "no-cache")
+        addHeader("Expires", "0")
+        addHeader("X-Content-Type-Options", "nosniff")
+        return this
     }
 
     private fun String.escapeJson(): String {

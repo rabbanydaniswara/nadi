@@ -81,6 +81,21 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun browserAndApiResponsesDisableCaching() {
+        val scenario = startActiveRoom()
+
+        val browser = request("http://127.0.0.1:${scenario.port}/?token=${scenario.token}")
+        val api = request("http://127.0.0.1:${scenario.port}/api/room?token=${scenario.token}")
+
+        assertEquals("no-store, max-age=0", browser.headers["Cache-Control"])
+        assertEquals("no-cache", browser.headers["Pragma"])
+        assertEquals("nosniff", browser.headers["X-Content-Type-Options"])
+        assertEquals("no-store, max-age=0", api.headers["Cache-Control"])
+        assertEquals("no-cache", api.headers["Pragma"])
+        assertEquals("nosniff", api.headers["X-Content-Type-Options"])
+    }
+
+    @Test
     fun fileEndpointListsSharedFiles() {
         val scenario = startActiveRoom()
         scenario.manager.addTransfer(
@@ -202,6 +217,10 @@ class NadiHttpServerTest {
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         return HttpResponse(
             code = code,
+            headers = connection.headerFields
+                .filterKeys { it != null }
+                .mapKeys { it.key.orEmpty() }
+                .mapValues { it.value.firstOrNull().orEmpty() },
             body = stream.bufferedReader().use { it.readText() }
         )
     }
@@ -249,5 +268,6 @@ private data class ServerScenario(
 
 private data class HttpResponse(
     val code: Int,
+    val headers: Map<String, String>,
     val body: String
 )
