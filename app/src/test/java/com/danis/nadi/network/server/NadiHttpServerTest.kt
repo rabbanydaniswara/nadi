@@ -53,6 +53,21 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun regeneratedTokenInvalidatesOldBrowserAccess() {
+        val scenario = startActiveRoom()
+        val oldToken = scenario.token
+        val refreshed = scenario.manager.regenerateAccess { token ->
+            "http://127.0.0.1:${scenario.port}/?token=$token"
+        } ?: error("Expected refreshed session")
+
+        val oldAccess = request("http://127.0.0.1:${scenario.port}/api/room?token=$oldToken")
+        val newAccess = request("http://127.0.0.1:${scenario.port}/api/room?token=${refreshed.token}")
+
+        assertEquals(401, oldAccess.code)
+        assertEquals(200, newAccess.code)
+    }
+
+    @Test
     fun rootEndpointServesBrowserClientShell() {
         val scenario = startActiveRoom()
 

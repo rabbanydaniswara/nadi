@@ -75,6 +75,19 @@ class RoomManager(
         current != null && current.status == RoomStatus.ACTIVE && current.token == token
     }
 
+    fun regenerateAccess(localUrlForToken: (String) -> String): RoomSession? = synchronized(lock) {
+        val current = session ?: return@synchronized null
+        if (current.status != RoomStatus.ACTIVE) return@synchronized null
+        val nextToken = tokenGenerator.newToken()
+        val refreshed = current.copy(
+            token = nextToken,
+            localUrl = localUrlForToken(nextToken)
+        )
+        session = refreshed
+        clients.clear()
+        refreshed
+    }
+
     fun touchClient(
         displayName: String,
         userAgent: String,

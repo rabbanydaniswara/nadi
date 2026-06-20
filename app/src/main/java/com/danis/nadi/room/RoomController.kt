@@ -2,6 +2,7 @@ package com.danis.nadi.room
 
 import android.content.Context
 import android.net.Uri
+import com.danis.nadi.diagnostics.DiagnosticSnapshot
 import com.danis.nadi.file.AndroidFileStore
 import com.danis.nadi.history.NadiHistoryStore
 import com.danis.nadi.history.TransferHistoryItem
@@ -65,16 +66,18 @@ class RoomController(context: Context) {
         } else {
             RoomLifecycleState.STARTING_SERVER
         }
-        val port = serverPort ?: DEFAULT_PORT
-        val hostAddress = if (mode == NetworkMode.HOTSPOT) {
-            NetworkAddress.localOnlyHotspotIpv4() ?: NetworkAddress.firstLocalIpv4()
-        } else {
-            NetworkAddress.firstLocalIpv4()
-        } ?: LOOPBACK_ADDRESS
-        val joinUrl = "http://$hostAddress:$port/?token=${preparingSession.token}"
+        val joinUrl = buildJoinUrl(preparingSession.token, mode)
         val activeSession = roomManager.activate(joinUrl, ssid) ?: preparingSession.copy(localUrl = joinUrl)
         lifecycleState = RoomLifecycleState.ACTIVE
         return ActiveRoom(activeSession, mode, ssid, password)
+    }
+
+    fun regenerateAccessLink(): ActiveRoom? {
+        if (lifecycleState != RoomLifecycleState.ACTIVE) return null
+        val refreshed = roomManager.regenerateAccess { token ->
+            buildJoinUrl(token, activeNetworkMode)
+        } ?: return null
+        return ActiveRoom(refreshed, activeNetworkMode, hotspotSsid, hotspotPassword)
     }
 
     fun createSharedTransfer(uri: Uri): TransferItem {
@@ -92,6 +95,27 @@ class RoomController(context: Context) {
 
     fun clearHistory() {
         historyStore.clear()
+    }
+
+    fun diagnostics(): DiagnosticSnapshot {
+        val snapshot = roomManager.snapshot()
+        return DiagnosticSnapshot(
+            lifecycleState = lifecycleState,
+            networkMode = activeNetworkMode,
+            serverPort = serverPort,
+            joinUrl = snapshot.session?.localUrl,
+            hotspotSsid = hotspotSsid,
+            hotspotActive = activeNetworkMode == NetworkMode.HOTSPOT && hotspotSsid != null,
+            clientCount = snapshot.clients.size,
+            sharedFileCount = snapshot.transfers.count { it.direction == com.danis.nadi.model.TransferDirection.SHARED },
+            receivedFileCount = snapshot.transfers.count { it.direction == com.danis.nadi.model.TransferDirection.UPLOAD },
+            messageCount = snapshot.messages.size,
+            localAddress = if (activeNetworkMode == NetworkMode.HOTSPOT) {
+                NetworkAddress.localOnlyHotspotIpv4() ?: NetworkAddress.firstLocalIpv4()
+            } else {
+                NetworkAddress.firstLocalIpv4()
+            }
+        )
     }
 
     fun stopActiveRoom() {
@@ -127,6 +151,16 @@ class RoomController(context: Context) {
             }
         }
         return false
+    }
+
+    private fun buildJoinUrl(token: String, mode: NetworkMode): String {
+        val port = serverPort ?: DEFAULT_PORT
+        val hostAddress = if (mode == NetworkMode.HOTSPOT) {
+            NetworkAddress.localOnlyHotspotIpv4() ?: NetworkAddress.firstLocalIpv4()
+        } else {
+            NetworkAddress.firstLocalIpv4()
+        } ?: LOOPBACK_ADDRESS
+        return "http://$hostAddress:$port/?token=$token"
     }
 
     private companion object {

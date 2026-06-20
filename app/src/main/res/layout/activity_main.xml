@@ -398,16 +398,80 @@
                     android:layout_height="1dp" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/stopRoomButton"
+                    android:id="@+id/regenerateLinkButton"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="52dp"
                     android:layout_weight="1"
-                    android:text="@string/stop_room"
+                    android:text="@string/regenerate_link"
                     android:textAllCaps="false"
-                    android:textColor="@color/nadi_error"
+                    android:textColor="@color/nadi_green"
                     app:cornerRadius="10dp"
-                    app:strokeColor="@color/nadi_error" />
+                    app:strokeColor="@color/nadi_green" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/stopRoomButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/stop_room"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_error"
+                app:cornerRadius="10dp"
+                app:strokeColor="@color/nadi_error" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_outline_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/room_privacy_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/privacyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="@string/room_privacy_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_outline_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/connected_devices_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/clientListText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="@string/connected_devices_empty"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -512,6 +576,45 @@
                     android:textAllCaps="false"
                     app:backgroundTint="@color/nadi_green"
                     app:cornerRadius="10dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_outline_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diagnostics_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/diagnosticsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="@string/diagnostics_empty"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textIsSelectable="true"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/copyDiagnosticsButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/copy_diagnostics"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_green"
+                    app:cornerRadius="10dp"
+                    app:strokeColor="@color/nadi_green" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

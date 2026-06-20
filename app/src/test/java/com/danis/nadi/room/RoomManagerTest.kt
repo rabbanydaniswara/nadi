@@ -44,4 +44,19 @@ class RoomManagerTest {
         assertEquals(RoomStatus.STOPPED, stoppedAgain?.status)
         assertFalse(manager.validateToken(session.token))
     }
+
+    @Test
+    fun regenerateAccessInvalidatesPreviousToken() {
+        val manager = RoomManager(clock = { 1000L })
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        val refreshed = manager.regenerateAccess { token ->
+            "http://127.0.0.1:8080/?token=$token"
+        }
+
+        assertFalse(manager.validateToken(session.token))
+        assertTrue(manager.validateToken(refreshed?.token))
+        assertTrue(refreshed?.localUrl?.contains(refreshed.token) == true)
+    }
 }

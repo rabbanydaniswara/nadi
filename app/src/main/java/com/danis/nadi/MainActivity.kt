@@ -28,6 +28,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.danis.nadi.file.FileSizeFormatter
 import com.danis.nadi.history.TransferHistoryItem
+import com.danis.nadi.model.ConnectedClient
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
@@ -64,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sharedFilesText: TextView
     private lateinit var receivedFilesText: TextView
     private lateinit var chatMessagesText: TextView
+    private lateinit var clientListText: TextView
+    private lateinit var diagnosticsText: TextView
     private lateinit var historyListText: TextView
     private lateinit var recentEmptyText: TextView
     private lateinit var networkModeHelpText: TextView
@@ -94,6 +97,12 @@ class MainActivity : AppCompatActivity() {
             ).show()
             startLocalRoomWithMode(NetworkMode.SAME_WIFI)
         }
+    }
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        Unit
     }
 
     private val refreshRunnable = object : Runnable {
@@ -148,6 +157,8 @@ class MainActivity : AppCompatActivity() {
         sharedFilesText = findViewById(R.id.sharedFilesText)
         receivedFilesText = findViewById(R.id.receivedFilesText)
         chatMessagesText = findViewById(R.id.chatMessagesText)
+        clientListText = findViewById(R.id.clientListText)
+        diagnosticsText = findViewById(R.id.diagnosticsText)
         historyListText = findViewById(R.id.historyListText)
         recentEmptyText = findViewById(R.id.recentEmptyText)
         networkModeHelpText = findViewById(R.id.networkModeHelpText)
@@ -178,6 +189,12 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.copyUrlButton).setOnClickListener {
             copyJoinUrl()
+        }
+        findViewById<MaterialButton>(R.id.regenerateLinkButton).setOnClickListener {
+            regenerateJoinLink()
+        }
+        findViewById<MaterialButton>(R.id.copyDiagnosticsButton).setOnClickListener {
+            copyDiagnostics()
         }
         findViewById<MaterialButton>(R.id.stopRoomButton).setOnClickListener {
             stopActiveRoom()
@@ -279,6 +296,7 @@ class MainActivity : AppCompatActivity() {
             ssid = hotspotSsid,
             password = hotspotPassword
         )
+        requestNotificationPermissionIfNeeded()
         RoomLifecycleService.start(this)
         renderActiveRoom(activeRoom)
         startDashboardPolling()
@@ -363,6 +381,12 @@ class MainActivity : AppCompatActivity() {
         if (controller.lifecycleState == RoomLifecycleState.ACTIVE) {
             controller.persistRecentTransfers()
             activeStatusText.text = buildStatusLine(controller.activeNetworkMode, snapshot.clients.size)
+            diagnosticsText.text = controller.diagnostics().toDisplayText()
+        }
+        clientListText.text = if (snapshot.clients.isEmpty()) {
+            getString(R.string.connected_devices_empty)
+        } else {
+            snapshot.clients.joinToString(separator = "\n\n") { it.displayLine() }
         }
         sharedFilesText.text = if (shared.isEmpty()) {
             getString(R.string.shared_files_empty)
@@ -388,6 +412,17 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.recent_empty)
         }
+    }
+
+    private fun ConnectedClient.displayLine(): String {
+        return "${displayName}\n${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
+    }
+
+    private fun String.shortUserAgent(): String {
+        return trim()
+            .ifBlank { "Browser" }
+            .replace(Regex("""\s+"""), " ")
+            .take(80)
     }
 
     private fun refreshHistoryScreen() {
@@ -460,12 +495,37 @@ class MainActivity : AppCompatActivity() {
         }.toTypedArray()
     }
 
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val permission = Manifest.permission.POST_NOTIFICATIONS
+        if (!hasPermission(permission)) {
+            notificationPermissionLauncher.launch(permission)
+        }
+    }
+
     private fun copyJoinUrl() {
         val url = joinUrlText.text?.toString().orEmpty()
         if (url.isBlank()) return
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("Nadi room URL", url))
         Toast.makeText(this, "URL ruang disalin.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun regenerateJoinLink() {
+        val activeRoom = controller.regenerateAccessLink()
+        if (activeRoom == null) {
+            Toast.makeText(this, "Link belum bisa diperbarui.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        renderActiveRoom(activeRoom)
+        Toast.makeText(this, "Link baru dibuat. Link lama sudah ditutup.", Toast.LENGTH_LONG).show()
+    }
+
+    private fun copyDiagnostics() {
+        val diagnostics = controller.diagnostics().toDisplayText()
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Nadi diagnostics", diagnostics))
+        Toast.makeText(this, "Diagnostics disalin.", Toast.LENGTH_SHORT).show()
     }
 
     private fun showHome() {
