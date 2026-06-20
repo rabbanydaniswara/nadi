@@ -232,12 +232,17 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Menyiapkan hotspot lokal...", Toast.LENGTH_SHORT).show()
                 }
                 is HotspotState.Active -> {
-                    activateRoom(
-                        preparingSession = preparingSession,
-                        serverStart = serverStart,
-                        mode = NetworkMode.HOTSPOT,
-                        hotspotSsid = state.ssid,
-                        hotspotPassword = state.password
+                    dashboardHandler.postDelayed(
+                        {
+                            activateRoom(
+                                preparingSession = preparingSession,
+                                serverStart = serverStart,
+                                mode = NetworkMode.HOTSPOT,
+                                hotspotSsid = state.ssid,
+                                hotspotPassword = state.password
+                            )
+                        },
+                        HOTSPOT_ADDRESS_SETTLE_DELAY_MS
                     )
                 }
                 is HotspotState.Failed -> {
@@ -262,7 +267,11 @@ class MainActivity : AppCompatActivity() {
         hotspotPassword: String?
     ) {
         activeNetworkMode = mode
-        val hostAddress = NetworkAddress.firstLocalIpv4() ?: "127.0.0.1"
+        val hostAddress = if (mode == NetworkMode.HOTSPOT) {
+            NetworkAddress.localOnlyHotspotIpv4() ?: NetworkAddress.firstLocalIpv4()
+        } else {
+            NetworkAddress.firstLocalIpv4()
+        } ?: "127.0.0.1"
         val joinUrl = "http://$hostAddress:${serverStart.port}/?token=${preparingSession.token}"
         val activeSession = roomManager.activate(joinUrl, hotspotSsid) ?: preparingSession.copy(localUrl = joinUrl)
         renderActiveRoom(activeSession, mode, hotspotSsid, hotspotPassword)
@@ -466,3 +475,5 @@ private enum class NetworkMode {
     HOTSPOT,
     SAME_WIFI_FALLBACK
 }
+
+private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L

@@ -74,6 +74,7 @@ State implementasi setelah separuh roadmap pertama:
 - `assembleDebug` dan `testDebugUnitTest` sudah lulus setelah implementasi transfer/chat.
 - Native Local-only Hotspot wrapper sudah tersedia dengan permission flow dan fallback same-Wi-Fi.
 - Smoke install ke device `2203129G` awalnya sempat ditolak dengan `INSTALL_FAILED_USER_RESTRICTED`, lalu berhasil setelah izin perangkat dibuka.
+- Smoke hotspot di device `2203129G` berhasil menampilkan SSID/password dan URL pada interface hotspot `wlan1` (`10.x.x.x`), bukan IP Wi-Fi biasa.
 
 Implikasi berikutnya:
 
