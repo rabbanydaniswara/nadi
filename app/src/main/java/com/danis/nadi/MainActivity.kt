@@ -7,12 +7,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.Gravity
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
@@ -28,6 +31,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.danis.nadi.file.FileSizeFormatter
 import com.danis.nadi.history.TransferHistoryItem
+import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.model.ConnectedClient
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferDirection
@@ -47,11 +51,15 @@ import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var controller: RoomController
     private lateinit var settingsStore: NadiSettingsStore
     private val dashboardHandler = Handler(Looper.getMainLooper())
+    private val chatTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private var dashboardPolling = false
     private var pendingHotspotStart = false
     private var activeRoomDestinationId = R.id.active_room_tab_room
@@ -86,7 +94,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fileRoomLocationText: TextView
     private lateinit var sharedFilesText: TextView
     private lateinit var receivedFilesText: TextView
-    private lateinit var chatMessagesText: TextView
+    private lateinit var chatMessagesContainer: LinearLayout
     private lateinit var clientListText: TextView
     private lateinit var diagnosticsText: TextView
     private lateinit var historyListText: TextView
@@ -198,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         fileRoomLocationText = findViewById(R.id.fileRoomLocationText)
         sharedFilesText = findViewById(R.id.sharedFilesText)
         receivedFilesText = findViewById(R.id.receivedFilesText)
-        chatMessagesText = findViewById(R.id.chatMessagesText)
+        chatMessagesContainer = findViewById(R.id.chatMessagesContainer)
         clientListText = findViewById(R.id.clientListText)
         diagnosticsText = findViewById(R.id.diagnosticsText)
         historyListText = findViewById(R.id.historyListText)
@@ -500,7 +508,7 @@ class MainActivity : AppCompatActivity() {
         val text = hostChatInput.text?.toString().orEmpty()
         val hostName = controller.roomManager.currentSession()?.hostName ?: getString(R.string.host_name_default)
         val message = controller.roomManager.addMessage(
-            senderId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "host",
+            senderId = currentHostId(),
             senderName = hostName,
             text = text
         )
@@ -545,18 +553,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             received.joinToString(separator = "\n\n") { it.displayLine() }
         }
-        chatMessagesText.text = if (messages.isEmpty()) {
-            getString(R.string.chat_empty)
-        } else {
-            messages.joinToString(separator = "\n\n") {
-                buildString {
-                    append(it.senderName).append(": ").append(it.text)
-                    if (!it.attachmentFileName.isNullOrBlank()) {
-                        append("\nLampiran: ").append(it.attachmentFileName)
-                    }
-                }
-            }
-        }
+        renderChatMessages(messages)
         val recent = controller.roomManager.recentTransfers()
         val history = controller.recentHistory()
         activeRoomHistoryText.text = if (recent.isNotEmpty()) {
@@ -582,6 +579,107 @@ class MainActivity : AppCompatActivity() {
             displayName
         }
         return "$identity\n${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
+    }
+
+    private fun renderChatMessages(messages: List<ChatMessage>) {
+        chatMessagesContainer.removeAllViews()
+        if (messages.isEmpty()) {
+            chatMessagesContainer.addView(
+                TextView(this).apply {
+                    text = getString(R.string.chat_empty)
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+                    textSize = 14f
+                }
+            )
+            return
+        }
+
+        val hostId = currentHostId()
+        val hostName = controller.roomManager.currentSession()?.hostName.orEmpty()
+        messages.forEach { message ->
+            val isHost = message.senderId == hostId || message.senderName == hostName
+            chatMessagesContainer.addView(messageBubble(message, isHost))
+        }
+    }
+
+    private fun messageBubble(message: ChatMessage, isHost: Boolean): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = if (isHost) Gravity.END else Gravity.START
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 8.dp()
+            }
+        }
+
+        val bubble = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12.dp(), 9.dp(), 12.dp(), 8.dp())
+            background = chatBubbleBackground(isHost)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = if (isHost) Gravity.END else Gravity.START
+            }
+        }
+
+        bubble.addView(TextView(this).apply {
+            text = if (isHost) getString(R.string.chat_sender_you) else message.senderName
+            setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.white else R.color.nadi_green))
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            maxWidth = chatBubbleMaxWidth()
+        })
+        bubble.addView(TextView(this).apply {
+            text = message.text
+            setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.white else R.color.nadi_graphite))
+            textSize = 15f
+            maxWidth = chatBubbleMaxWidth()
+        })
+        if (!message.attachmentFileName.isNullOrBlank()) {
+            bubble.addView(TextView(this).apply {
+                text = getString(R.string.chat_attachment_line, message.attachmentFileName)
+                setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.white else R.color.nadi_deep_green))
+                textSize = 13f
+                maxWidth = chatBubbleMaxWidth()
+                setPadding(0, 6.dp(), 0, 0)
+            })
+        }
+        bubble.addView(TextView(this).apply {
+            text = chatTimeFormat.format(Date(message.createdAt))
+            setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.nadi_line else R.color.nadi_soft_ink))
+            textSize = 11f
+            gravity = Gravity.END
+            maxWidth = chatBubbleMaxWidth()
+            setPadding(0, 5.dp(), 0, 0)
+        })
+
+        row.addView(bubble)
+        return row
+    }
+
+    private fun chatBubbleBackground(isHost: Boolean): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 12.dp().toFloat()
+            if (isHost) {
+                setColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+            } else {
+                setColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_mist))
+                setStroke(1.dp(), ContextCompat.getColor(this@MainActivity, R.color.nadi_line))
+            }
+        }
+    }
+
+    private fun chatBubbleMaxWidth(): Int {
+        return (resources.displayMetrics.widthPixels * 0.72f).toInt()
+    }
+
+    private fun currentHostId(): String {
+        return Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "host"
     }
 
     private fun String.shortUserAgent(): String {
@@ -825,6 +923,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun View.visibleIf(visible: Boolean) {
         visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    private fun Int.dp(): Int {
+        return (this * resources.displayMetrics.density).toInt()
     }
 }
 

@@ -824,34 +824,52 @@
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/chatMessagesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/chat_empty"
-                    android:textColor="@color/nadi_soft_ink" />
+                    android:layout_marginTop="4dp"
+                    android:text="@string/host_chat_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="14sp" />
 
-                <EditText
-                    android:id="@+id/hostChatInput"
+                <LinearLayout
+                    android:id="@+id/chatMessagesContainer"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:backgroundTint="@color/nadi_green"
-                    android:hint="@string/host_chat_hint"
-                    android:inputType="textCapSentences"
-                    android:singleLine="true"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="15sp" />
+                    android:orientation="vertical" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/sendHostMessageButton"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/send_message"
-                    android:textAllCaps="false"
-                    app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/hostChatInput"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/nadi_green"
+                        android:hint="@string/host_chat_hint"
+                        android:inputType="textCapSentences"
+                        android:singleLine="true"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="15sp" />
+
+                    <Space
+                        android:layout_width="10dp"
+                        android:layout_height="1dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/sendHostMessageButton"
+                        android:layout_width="96dp"
+                        android:layout_height="48dp"
+                        android:text="@string/send_message"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/nadi_green"
+                        app:cornerRadius="10dp" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
