@@ -76,6 +76,8 @@ class NadiHttpServerTest {
         assertEquals(200, response.code)
         assertTrue(response.body.contains("Terhubung ke Nadi"))
         assertTrue(response.body.contains("uploadProgress"))
+        assertTrue(response.body.contains("downloadProgress"))
+        assertTrue(response.body.contains("downloadFile"))
     }
 
     @Test

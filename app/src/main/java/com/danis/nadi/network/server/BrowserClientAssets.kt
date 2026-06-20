@@ -50,6 +50,7 @@ object BrowserClientAssets {
                 .muted { color: var(--soft); }
                 .error { color: var(--error); font-weight: 800; }
                 .success { color: var(--success); font-weight: 800; }
+                button:disabled { opacity: .55; cursor: not-allowed; }
                 a { color: var(--green); font-weight: 800; }
                 code { word-break: break-all; color: var(--green); font-weight: 700; }
                 @media (max-width: 560px) {
@@ -119,6 +120,9 @@ object BrowserClientAssets {
                   while (value >= 1024 && index < units.length - 1) { value /= 1024; index++; }
                   return value.toFixed(1) + " " + units[index];
                 }
+                function safeId(value) {
+                  return String(value ?? "").replace(/[^a-zA-Z0-9_-]/g, "_");
+                }
                 async function refreshRoom() {
                   if (!token) { showLocked(); return; }
                   try {
@@ -131,8 +135,10 @@ object BrowserClientAssets {
                     document.getElementById("hostName").textContent = room.hostName;
                     document.getElementById("clientCount").textContent = room.clientCount + " terhubung";
                     document.getElementById("locked").style.display = "none";
+                    document.querySelectorAll("button").forEach(button => button.disabled = false);
                   } catch (error) {
                     document.getElementById("status").textContent = "Terputus";
+                    document.getElementById("roomCopy").textContent = "Koneksi lokal ke host terputus. Pastikan perangkat masih berada di jaringan yang sama.";
                   }
                 }
                 async function refreshFiles() {
@@ -142,8 +148,71 @@ object BrowserClientAssets {
                   const payload = await response.json();
                   const files = payload.files || [];
                   document.getElementById("files").innerHTML = files.length
-                    ? files.map(file => `<div class="file-row"><strong>${'$'}{esc(file.fileName)}</strong><p class="muted">${'$'}{formatBytes(file.sizeBytes)} - ${'$'}{esc(file.status)}</p><a href="/api/download/${'$'}{encodeURIComponent(file.transferId)}?token=${'$'}{encodeURIComponent(token)}">Download</a></div>`).join("")
+                    ? files.map(file => {
+                        const rowId = safeId(file.transferId);
+                        return `<div class="file-row"><strong>${'$'}{esc(file.fileName)}</strong><p class="muted">${'$'}{formatBytes(file.sizeBytes)} - ${'$'}{esc(file.status)}</p><button type="button" class="downloadButton" data-id="${'$'}{esc(file.transferId)}" data-name="${'$'}{esc(file.fileName)}">Download</button><p id="downloadStatus-${'$'}{rowId}" class="muted"></p><progress id="downloadProgress-${'$'}{rowId}" value="0" max="100" style="display:none"></progress></div>`;
+                      }).join("")
                     : `<p class="muted">Belum ada file dari host.</p>`;
+                  document.querySelectorAll(".downloadButton").forEach(button => {
+                    button.addEventListener("click", () => downloadFile(button.dataset.id, button.dataset.name));
+                  });
+                }
+                async function downloadFile(id, name) {
+                  const rowId = safeId(id);
+                  const status = document.getElementById("downloadStatus-" + rowId);
+                  const progress = document.getElementById("downloadProgress-" + rowId);
+                  if (!id || !status || !progress) return;
+                  status.textContent = "Menyiapkan download...";
+                  status.className = "muted";
+                  progress.style.display = "block";
+                  progress.value = 0;
+                  try {
+                    const response = await fetch("/api/download/" + encodeURIComponent(id) + "?token=" + encodeURIComponent(token));
+                    if (!response.ok) throw new Error("download_failed");
+                    const total = Number(response.headers.get("content-length") || 0);
+                    const reader = response.body && response.body.getReader ? response.body.getReader() : null;
+                    if (!reader) {
+                      const blob = await response.blob();
+                      saveBlob(blob, name || "nadi-download");
+                      progress.value = 100;
+                      status.textContent = "Download selesai.";
+                      status.className = "success";
+                      return;
+                    }
+                    const chunks = [];
+                    let received = 0;
+                    while (true) {
+                      const result = await reader.read();
+                      if (result.done) break;
+                      chunks.push(result.value);
+                      received += result.value.length;
+                      if (total > 0) {
+                        const percent = Math.round((received / total) * 100);
+                        progress.value = percent;
+                        status.textContent = "Download " + percent + "%...";
+                      } else {
+                        status.textContent = "Download " + formatBytes(received) + "...";
+                      }
+                    }
+                    const blob = new Blob(chunks);
+                    saveBlob(blob, name || "nadi-download");
+                    progress.value = 100;
+                    status.textContent = "Download selesai.";
+                    status.className = "success";
+                  } catch (error) {
+                    status.textContent = "Download gagal. Pastikan room masih aktif.";
+                    status.className = "error";
+                  }
+                }
+                function saveBlob(blob, fileName) {
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = fileName;
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
                 }
                 function uploadFile() {
                   const input = document.getElementById("uploadInput");
@@ -214,6 +283,9 @@ object BrowserClientAssets {
                 function showLocked() {
                   document.getElementById("locked").style.display = "block";
                   document.getElementById("status").textContent = "Terkunci";
+                  document.getElementById("roomName").textContent = "Akses room ditutup";
+                  document.getElementById("roomCopy").textContent = "Link ini tidak lagi valid. Minta QR atau URL terbaru dari host Nadi.";
+                  document.querySelectorAll("button").forEach(button => button.disabled = true);
                 }
                 document.getElementById("uploadButton").addEventListener("click", uploadFile);
                 document.getElementById("sendButton").addEventListener("click", sendChat);
