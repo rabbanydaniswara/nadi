@@ -15,11 +15,32 @@ Blueprint implementasi menjawab "bagaimana MVP dibangun". Dokumen ini menjawab "
 
 ---
 
+## 0. Codex QA Scope
+
+Untuk pekerjaan Codex, definisi "matang" dibatasi pada lingkungan test yang tersedia di workspace/Codex. Codex tidak perlu mengejar QA lintas vendor Android, Safari/iOS, signing produksi, feedback tester, atau testing akhir rilis.
+
+Gate Codex yang cukup:
+
+- Build/debug dan unit test lokal lulus.
+- Core flow Android host + browser client lulus pada lingkungan test yang tersedia.
+- Browser test memakai browser yang tersedia di aplikasi/lingkungan Codex.
+- Dokumentasi smoke test diperbarui bila ada evidence baru.
+
+Area berikut dimiliki owner proyek dan tidak menjadi blocker pekerjaan Codex:
+
+- Matrix vendor Android luas.
+- iOS/Safari.
+- Release signing.
+- Feedback tester.
+- Beta/public release testing akhir.
+
+---
+
 ## 1. Executive Summary
 
 Nadi sudah berada di titik MVP teknis: Android dapat menjadi host room lokal, client dapat bergabung lewat browser, file dapat diunduh dan diunggah, chat lokal berjalan, QR/URL tersedia, serta mode same-Wi-Fi dan Local-only Hotspot sudah terbukti pada perangkat nyata.
 
-Namun status ini belum sama dengan produk matang. MVP saat ini membuktikan jalur utama bekerja, tetapi masih membutuhkan pematangan pada arsitektur, tampilan, lifecycle Android, reliabilitas jaringan lokal, persistensi data, keamanan lokal, observability, QA lintas perangkat, dan kesiapan rilis.
+Namun status ini belum sama dengan produk matang. MVP saat ini membuktikan jalur utama bekerja, tetapi masih membutuhkan pematangan pada arsitektur, tampilan, lifecycle Android, reliabilitas jaringan lokal, persistensi data, keamanan lokal, observability, dan QA pada lingkungan test yang disepakati.
 
 Prioritas utama setelah MVP bukan langsung menambah fitur besar. Prioritas yang benar adalah memperkuat fondasi, memecah tanggung jawab codebase, memperjelas UI state, membuat pengalaman host dan browser terasa bersih, lalu menutup risiko nyata: app masuk background, hotspot tidak konsisten, file besar, state hilang, dan perilaku berbeda antar vendor Android.
 
@@ -72,10 +93,10 @@ Nadi dianggap matang ketika memenuhi delapan kualitas berikut:
    User tahu siapa saja yang bisa join, file apa yang dibagikan, di mana file masuk disimpan, dan bagaimana room dihentikan.
 
 7. **Tested**
-   Ada automated test untuk domain dan server, instrumentation test untuk flow penting, serta manual QA matrix lintas device/vendor/browser.
+   Ada automated test untuk domain dan server, instrumentation test untuk flow penting bila tersedia, serta manual QA pada lingkungan test Codex. Matrix lintas vendor/browser eksternal dilakukan owner proyek.
 
 8. **Releasable**
-   App memiliki release checklist, signing plan, versioning, changelog, crash/diagnostic strategy lokal, dan dokumen operasional.
+   App memiliki checklist teknis, versioning/changelog bila relevan, crash/diagnostic strategy lokal, dan dokumen operasional. Signing produksi dan keputusan rilis akhir dilakukan owner proyek.
 
 ---
 
@@ -194,7 +215,7 @@ Kondisi saat ini:
 Risiko:
 
 - Belum ada regression suite untuk flow end-to-end.
-- Belum ada matrix vendor Android, ukuran file, browser, dan network mode.
+- Matrix vendor Android luas dan testing rilis akhir berada di luar scope Codex dan akan dilakukan owner proyek.
 - Belum ada CI/release gate formal.
 
 ---
@@ -629,11 +650,11 @@ Deliverables:
 
 - Network diagnostics panel.
 - Better error messages.
-- QA matrix vendor Android.
+- Diagnostics dan QA pada lingkungan test Codex.
 
 Acceptance gate:
 
-- Minimal 3 vendor Android diuji.
+- Pengujian multi-vendor Android ditangani owner proyek.
 - Same-Wi-Fi dan hotspot punya instruksi berbeda yang jelas.
 - Port conflict ditangani.
 
@@ -660,7 +681,7 @@ Deliverables:
 
 Acceptance gate:
 
-- Chrome desktop, Edge desktop, Chrome Android, dan Safari/iOS browser check bila memungkinkan.
+- Browser check memakai browser yang tersedia di aplikasi/lingkungan Codex. Safari/iOS bukan target.
 - Refresh browser tetap dapat memuat state room.
 - Error state tidak blank.
 
@@ -704,7 +725,7 @@ Scope:
 - Lint/static checks.
 - Instrumentation test untuk flow utama.
 - Manual QA template.
-- Release signing plan.
+- Release signing plan dikelola owner proyek.
 - Versioning dan changelog.
 
 Deliverables:
@@ -728,7 +749,7 @@ Menyiapkan Nadi untuk digunakan oleh pengguna nyata terbatas.
 
 Scope:
 
-- Beta feedback form/process.
+- Beta feedback form/process dikelola owner proyek.
 - Known issues page.
 - In-app diagnostic export.
 - Performance pass.
@@ -761,7 +782,7 @@ Acceptance gate:
 - Better error states untuk hotspot/join/upload.
 - Browser client dipisah dari server Kotlin string.
 - Regression tests endpoint server.
-- Manual QA matrix lintas mode jaringan.
+- Manual QA pada mode jaringan yang tersedia di lingkungan test Codex.
 
 ### P1: Should Fix for Product Confidence
 
@@ -823,13 +844,8 @@ Instrumentation tests:
 
 Devices:
 
-- Android 8/9 low baseline if available.
-- Android 11/12 mainstream.
-- Android 13/14/15 newer devices.
-- Xiaomi/MIUI.
-- Samsung/One UI.
-- Oppo/Vivo/Realme if available.
-- Pixel/stock-like if available.
+- Device Android yang tersedia di lingkungan test Codex.
+- Matrix Android versi/vendor tambahan dilakukan owner proyek.
 
 Network modes:
 
@@ -842,11 +858,8 @@ Network modes:
 
 Browsers:
 
-- Chrome desktop.
-- Edge desktop.
-- Chrome Android.
-- Firefox desktop if available.
-- Safari/iOS if available.
+- Browser yang tersedia di aplikasi/lingkungan Codex.
+- Safari/iOS bukan target proyek ini.
 
 File sizes:
 
@@ -904,7 +917,7 @@ Before public release:
 
 - Signed release configured.
 - Crash-free beta sessions acceptable.
-- QA matrix covers target devices.
+- QA matrix target device dikelola owner proyek.
 - History and data retention behavior clear.
 - Release notes explain local-first limitation.
 - No cloud dependency in core flow.
@@ -1012,7 +1025,7 @@ Mitigation:
 
 - Foreground service keeps active room reliable.
 - History and preferences persist.
-- QA matrix has real results.
+- QA pada lingkungan Codex punya evidence; matrix vendor luas ditangani owner proyek.
 - CI build/test exists.
 - Known issues are documented.
 - Beta users can complete create/join/upload/download/chat without guidance.
@@ -1021,7 +1034,7 @@ Mitigation:
 
 - Release checklist passes.
 - User privacy and data retention are clear.
-- App has stable release signing/versioning.
+- App memiliki versioning yang jelas; release signing produksi ditangani owner proyek.
 - Regression suite protects the core flow.
 - Product copy and visual polish feel finished.
 - No critical blocker remains in P0.

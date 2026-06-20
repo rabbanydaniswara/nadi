@@ -4,6 +4,19 @@ Dokumen ini adalah gate praktis sebelum Nadi dibagikan ke tester atau dipakai di
 
 ---
 
+## 0. Scope QA Codex
+
+Untuk pekerjaan Codex, QA cukup dilakukan pada lingkungan pengetesan yang tersedia:
+
+- Gunakan browser yang tersedia di aplikasi/lingkungan Codex.
+- Tidak perlu QA Safari/iOS.
+- Tidak perlu matrix vendor Android luas.
+- Signing produksi, feedback tester, dan testing akhir rilis ditangani owner proyek.
+
+Jika automated gates dan core smoke test pada lingkungan test Codex lulus, hasil itu cukup sebagai gate pekerjaan Codex.
+
+---
+
 ## 1. Automated Gates
 
 Wajib lulus sebelum build dibagikan:
@@ -96,14 +109,12 @@ Expected:
 
 Minimal:
 
-- Chrome desktop
-- Edge desktop
-- Chrome Android
+- Browser yang tersedia di aplikasi/lingkungan Codex.
 
-Tambahan jika tersedia:
+Di luar scope Codex:
 
-- Firefox desktop
-- Safari/iOS
+- Safari/iOS.
+- Browser/device tambahan yang hanya tersedia di luar lingkungan test Codex.
 
 Expected:
 
@@ -129,16 +140,18 @@ Pastikan:
 
 ## 8. Release Candidate Notes
 
-Setiap build kandidat harus mencatat:
+Untuk pekerjaan Codex, setiap build kandidat atau smoke evidence harus mencatat yang tersedia:
 
 - Commit SHA.
-- Version name/code.
+- Version name/code bila relevan.
 - Device host yang dipakai.
 - Network mode yang lulus.
 - Browser yang lulus.
 - File terbesar yang berhasil.
 - Known issues.
-- Keputusan: lanjut beta, ulangi QA, atau blokir.
+- Keputusan teknis: core flow lulus, ulangi QA, atau blokir.
+
+Keputusan beta/public release, signing, dan feedback tester akhir ditangani owner proyek.
 
 Template:
 

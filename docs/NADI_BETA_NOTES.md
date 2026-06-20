@@ -4,6 +4,12 @@ Dokumen ini merangkum kesiapan beta Nadi dan hal yang harus dipahami tester sebe
 
 ---
 
+## Ownership Note
+
+Codex hanya bertanggung jawab pada build, unit test, dan smoke test di lingkungan test yang tersedia. Matrix vendor Android luas, iOS/Safari, signing produksi, feedback tester, dan testing akhir beta/public release ditangani owner proyek.
+
+---
+
 ## Build Identity
 
 Update setiap kali membuat build kandidat:
@@ -86,7 +92,7 @@ Screenshot/video:
 
 ## Beta Exit Criteria
 
-Beta kecil dianggap cukup untuk lanjut polish release bila:
+Beta kecil untuk owner proyek dianggap cukup untuk lanjut polish release bila:
 
 - Minimal 5 tester menyelesaikan create room, join, upload, download, dan chat.
 - Minimal 3 perangkat/vendor Android diuji.

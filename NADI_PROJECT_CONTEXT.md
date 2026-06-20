@@ -191,3 +191,13 @@ Saat membuka project Nadi di thread Codex baru, mulai dengan:
 4. Implementasi bertahap, jangan langsung semua fitur sekaligus.
 5. Jalankan build/debug otomatis.
 
+## Scope QA Untuk Codex
+
+Untuk pekerjaan Codex, QA cukup dilakukan pada lingkungan pengetesan yang tersedia di workspace/Codex:
+
+- Gunakan browser yang tersedia di aplikasi/lingkungan Codex.
+- Tidak perlu mengejar dukungan iOS atau Safari.
+- Tidak perlu melakukan matrix vendor Android luas; pengujian lintas vendor akan dilakukan manual oleh owner proyek.
+- Signing produksi, feedback tester, dan testing akhir rilis juga ditangani oleh owner proyek.
+
+Jika build, unit test, dan smoke test pada lingkungan test Codex sudah lulus untuk core flow Android host + browser client, hasil itu cukup sebagai gate pekerjaan Codex.
