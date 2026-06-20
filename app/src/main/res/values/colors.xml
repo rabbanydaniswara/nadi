@@ -2,4 +2,16 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="nadi_deep_green">#073B32</color>
+    <color name="nadi_green">#0E7A63</color>
+    <color name="nadi_teal_flow">#2DD4BF</color>
+    <color name="nadi_graphite">#111827</color>
+    <color name="nadi_soft_ink">#4B5563</color>
+    <color name="nadi_mist">#F7FAF9</color>
+    <color name="nadi_surface">#FFFFFFFF</color>
+    <color name="nadi_line">#DDE7E3</color>
+    <color name="nadi_warning">#B45309</color>
+    <color name="nadi_error">#B91C1C</color>
+    <color name="nadi_success">#047857</color>
+    <color name="nadi_chip_background">#E8F5F1</color>
 </resources>

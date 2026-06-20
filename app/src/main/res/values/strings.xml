@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">Nadi</string>
+    <string name="nadi_tagline">Tetap mengalir, meski sinyal melemah.</string>
+    <string name="home_intro">Buat ruang lokal untuk berbagi file dan chat di ruangan yang sama tanpa mengandalkan internet.</string>
+    <string name="start_room">Buat Ruang</string>
+    <string name="join_room">Gabung</string>
+    <string name="recent_transfers">Riwayat singkat</string>
+    <string name="recent_empty">Belum ada file yang mengalir. Mulai ruang pertama untuk berbagi secara lokal.</string>
+    <string name="host_setup_title">Siapkan Ruang</string>
+    <string name="host_setup_copy">Untuk tahap awal, Nadi menjalankan mode satu Wi-Fi. Perangkat lain perlu berada di jaringan yang sama.</string>
+    <string name="room_name_label">Nama ruang</string>
+    <string name="host_name_label">Nama host</string>
+    <string name="room_name_default">Nadi Room</string>
+    <string name="host_name_default">Host Nadi</string>
+    <string name="start_local_room">Mulai Ruang Lokal</string>
+    <string name="back_home">Kembali</string>
+    <string name="room_active">Ruang Aktif</string>
+    <string name="waiting_devices">Menunggu perangkat terhubung</string>
+    <string name="copy_url">Salin URL</string>
+    <string name="stop_room">Tutup Ruang</string>
+    <string name="shared_files_empty">File download akan muncul di tahap berikutnya.</string>
+    <string name="received_files_empty">File upload dari browser akan muncul di tahap berikutnya.</string>
+    <string name="chat_empty">Chat lokal akan diaktifkan setelah transfer file stabil.</string>
 </resources>

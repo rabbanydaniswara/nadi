@@ -40,7 +40,7 @@ Semua keputusan implementasi harus mendekatkan project ke flow ini.
 
 ## 2. Current State Audit
 
-Audit awal pada 2026-06-20:
+Audit awal sebelum implementasi pada 2026-06-20:
 
 - Project Android dasar sudah ada.
 - Package: `com.danis.nadi`.
@@ -52,11 +52,25 @@ Audit awal pada 2026-06-20:
 - Belum ada room state, embedded server, hotspot, QR, file transfer, chat, atau history.
 - Repo lokal saat audit tidak memiliki metadata `.git`, jadi perubahan perlu diverifikasi lewat file system dan build, bukan git status.
 
-Implikasi:
+State implementasi setelah separuh roadmap pertama:
 
-- Fase pertama harus membangun fondasi project dan shell UI.
-- Jangan mulai dari hotspot atau transfer file sebelum domain model, navigation sederhana, dan state room dasar tersedia.
-- Karena belum ada arsitektur mapan, setiap abstraksi awal harus kecil, mudah diganti, dan sesuai PRD.
+- Repo sudah terhubung ke GitHub `rabbanydaniswara/nadi.git`.
+- Phase 0 sampai Phase 4 sudah menjadi target baseline implementasi.
+- Home template sudah diganti dengan shell UI Nadi.
+- App punya panel home, setup room, dan active room.
+- Domain model dasar sudah tersedia.
+- `RoomManager` in-memory sudah menangani preparing, active, failed, dan stopped state.
+- Token generator dan PIN validator sudah tersedia.
+- Embedded server NanoHTTPD sudah melayani `/health`, `/`, dan `/api/room`.
+- `/api/room` sudah memvalidasi session token.
+- QR join URL sudah dibuat dari URL lokal bertoken.
+- Unit test tersedia untuk token, PIN, room state, dan endpoint server.
+
+Implikasi berikutnya:
+
+- Fase berikutnya harus masuk ke file download sebelum upload/chat.
+- Jangan mengubah same-Wi-Fi server menjadi hotspot-first sebelum transfer file browser stabil.
+- Abstraksi awal masih harus kecil dan mudah diganti sampai MVP end-to-end terbukti di perangkat nyata.
 
 ---
 
@@ -1014,18 +1028,19 @@ MVP is done only when all are true:
 
 ## 13. Immediate Next Plan
 
-Given the current project state, the recommended next work is:
+Given the current project state after Phase 0-4, the recommended next work is:
 
-1. Run baseline `assembleDebug`.
-2. Implement Phase 1 Brand Shell UI.
-3. Add Nadi colors and strings.
-4. Replace `Hello World` home with Nadi home.
-5. Keep UI functional but not overbuilt.
-6. Run `assembleDebug` again.
+1. Implement Phase 5 Download Flow.
+2. Add Android SAF file picker on host.
+3. Store shared file metadata in `RoomManager` or a small file repository.
+4. Add `/api/files` endpoint for browser file listing.
+5. Add `/api/download/{fileId}` endpoint with token validation and streaming.
+6. Update browser UI to show downloadable files.
+7. Run unit tests and `assembleDebug`.
 
 Expected first useful milestone:
 
-> Opening the app shows Nadi branding, the tagline, clear "Buat Ruang" and "Gabung" actions, and a calm empty recent transfer section.
+> A browser client that opens the QR URL can see a host-shared file and download it over the local server.
 
 ---
 
@@ -1036,4 +1051,3 @@ Expected first useful milestone:
 - Keep roadmap gates stricter than casual TODOs.
 - Remove obsolete assumptions after implementation proves them wrong.
 - Do not let this document become a changelog; it is a planning map.
-
