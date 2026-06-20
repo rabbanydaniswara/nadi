@@ -32,8 +32,8 @@ Core flow:
 - [x] Browser client membuka QR/URL
 - [x] `/api/room` valid token berhasil
 - [x] Invalid token ditolak
-- [ ] Host share file
-- [ ] Browser download file
+- [x] Host share file
+- [x] Browser download file
 - [x] Browser upload file
 - [x] Host menerima file
 - [x] Chat browser ke host
@@ -66,5 +66,8 @@ HTTP smoke from host machine:
 - Host-to-browser chat was sent from Android UI and appeared in /api/chat.
 - Diagnostics panel and copy button were visible in Android UI.
 - Copy diagnostics button was tapped successfully; clipboard content could not be read because this device shell does not implement `cmd clipboard get`.
-Not yet covered in this run: host share file via Android file picker, browser download of a host-shared file, multi-browser matrix, multi-device matrix.
+- Host share via Android file picker selected nadi_home_screenshot.png from DocumentsUI Recent.
+- /api/files returned shared file metadata for nadi_home_screenshot.png.
+- Browser download endpoint returned 101045 bytes for the host-shared file.
+Not yet covered in this run: multi-browser matrix, multi-device matrix.
 ```
