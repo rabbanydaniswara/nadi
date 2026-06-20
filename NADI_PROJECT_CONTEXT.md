@@ -206,11 +206,16 @@ Jika build, unit test, dan smoke test pada lingkungan test Codex sudah lulus unt
 
 Owner proyek ingin Nadi berkembang dari MVP file/chat sederhana menjadi ruang lokal yang lebih cocok untuk perkuliahan:
 
+- Rencana UI/UX pemisahan fitur utama dicatat di `docs/NADI_UI_UX_SEPARATION_PLAN.md`.
+- Arah UI berikutnya harus memisahkan menu aktif menjadi `Ruang`, `File`, `Chat`, `Peserta`, dan `Riwayat`, bukan satu dashboard panjang yang mencampur semua konteks.
 - Chat dibuat lebih mirip WhatsApp: pesan berurutan, identitas pengirim jelas, dan mendukung lampiran gambar/dokumen di dalam chat.
+- Gambar di chat harus bisa tampil sebagai preview; dokumen/ZIP/file lain tampil sebagai kartu file yang perlu didownload dulu sebelum dibuka.
 - Identitas client harus lebih formal untuk konteks kelas, minimal `NIM` dan `Nama`.
 - Identitas tidak boleh mudah berubah-ubah selama room berjalan agar pesan tidak anonim dan tidak mudah disangkal.
 - Pengiriman file utama dipisahkan dari chat. Chat boleh punya lampiran, tetapi tetap ada area khusus untuk berbagi/mengumpulkan file room.
-- File tersimpan dengan lokasi yang jelas per ruangan, dan host punya pintasan untuk membuka hasil file yang diterima/dibagikan.
+- File Room utama sebaiknya tersimpan di folder publik yang mudah ditemukan, default `Download/Nadi/<Room>/received/`, bukan hanya di `Android/data/...`.
+- Download attachment chat disimpan terpisah, default `Download/Nadi/<Room>/chat-downloads/`.
+- Settings perlu menyediakan lokasi penyimpanan File Room dan host punya tombol pintasan untuk membuka folder File Room.
 - Cara perangkat lain terkoneksi ke host/hotspot harus dibuat semudah mungkin dengan QR/instruksi yang jelas.
 - Keamanan dibuat cukup dan praktis untuk jaringan lokal: token/PIN, validasi identitas lokal, batas ukuran/jenis file, sanitasi nama file, dan kontrol host.
 

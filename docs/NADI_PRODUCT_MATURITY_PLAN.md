@@ -7,6 +7,7 @@ Dokumen ini melengkapi:
 - [NADI_PRD.md](../NADI_PRD.md)
 - [NADI_PROJECT_CONTEXT.md](../NADI_PROJECT_CONTEXT.md)
 - [NADI_IMPLEMENTATION_BLUEPRINT.md](NADI_IMPLEMENTATION_BLUEPRINT.md)
+- [NADI_UI_UX_SEPARATION_PLAN.md](NADI_UI_UX_SEPARATION_PLAN.md)
 - [NADI_QA_RELEASE_CHECKLIST.md](NADI_QA_RELEASE_CHECKLIST.md)
 - [NADI_BETA_NOTES.md](NADI_BETA_NOTES.md)
 - [NADI_SMOKE_TEST_LOG.md](NADI_SMOKE_TEST_LOG.md)
@@ -466,6 +467,8 @@ Komponen target:
 - Default host name.
 - Default network mode.
 - Storage location information.
+- Lokasi penyimpanan File Room dengan default `Download/Nadi/`.
+- Tombol pilih/ganti folder penyimpanan File Room.
 - Privacy/data retention controls.
 - About Nadi.
 - Diagnostics export untuk debugging.
@@ -518,17 +521,20 @@ Pengiriman file harus punya ruang sendiri, terpisah dari chat:
 - `Chat Attachments`: gambar/dokumen yang menempel pada percakapan.
 - Storage disusun per room agar host mudah memahami asal file.
 - Host mendapat tombol pintasan untuk membuka folder/file hasil transfer.
+- File Room utama harus mudah ditemukan di file manager, tidak hanya berada di `Android/data/...`.
+- Default storage yang direkomendasikan adalah `Download/Nadi/<Room>/received/`.
+- Download lampiran chat disimpan terpisah di `Download/Nadi/<Room>/chat-downloads/`.
+- Settings menyediakan pilihan folder penyimpanan File Room, dengan fallback yang jelas jika folder tidak tersedia.
 - Clear history tidak boleh menghapus file fisik tanpa konfirmasi eksplisit.
 
 Target storage:
 
 ```text
-Nadi/
-  rooms/
-    <room-id>/
-      shared/
+Download/
+  Nadi/
+    <room-name-or-room-id>/
       received/
-      chat-attachments/
+      chat-downloads/
 ```
 
 ---
@@ -572,6 +578,8 @@ Mengubah tampilan MVP menjadi dashboard produk yang clean dan percaya diri.
 
 Scope:
 
+- Ikuti pemisahan menu pada [NADI_UI_UX_SEPARATION_PLAN.md](NADI_UI_UX_SEPARATION_PLAN.md).
+- Gunakan active room navigation: Ruang, File, Chat, Peserta, Riwayat.
 - Redesign Home.
 - Redesign Setup Room.
 - Redesign Active Room Dashboard.
@@ -707,6 +715,7 @@ Membuat browser client terasa siap dipakai oleh mahasiswa/dosen tanpa install ap
 
 Scope:
 
+- Ikuti browser separation pada [NADI_UI_UX_SEPARATION_PLAN.md](NADI_UI_UX_SEPARATION_PLAN.md): File Room, Chat, Info.
 - Responsive layout laptop dan HP.
 - Upload progress.
 - Download state.
@@ -765,14 +774,18 @@ Membuat Nadi terasa seperti ruang kelas lokal: peserta punya identitas jelas, ch
 
 Scope:
 
+- Jadikan [NADI_UI_UX_SEPARATION_PLAN.md](NADI_UI_UX_SEPARATION_PLAN.md) sebagai source of truth UI untuk pemisahan File Room dan Chat.
 - Form identitas join: NIM dan Nama.
 - Identity lock selama room aktif.
 - Optional roster lokal atau host approval.
 - Chat UI bubble dengan waktu dan pengirim.
-- Chat attachment untuk gambar/dokumen kecil.
+- Chat attachment untuk gambar/dokumen/file kecil.
+- Preview gambar langsung di bubble chat.
+- Dokumen/ZIP/file lain tampil sebagai file card, harus didownload dulu, lalu bisa dibuka setelah download selesai.
 - File room terpisah dari chat attachment.
 - Metadata file menyimpan sender identity dan room id.
-- Storage per room dengan folder `shared`, `received`, dan `chat-attachments`.
+- Storage per room memakai folder publik yang mudah ditemukan, default `Download/Nadi/<Room>/received/` untuk File Room dan `Download/Nadi/<Room>/chat-downloads/` untuk download chat.
+- Setting folder penyimpanan File Room.
 - Tombol pintasan buka file/folder hasil transfer.
 - Security praktis: batas ukuran, MIME allowlist sederhana, sanitasi filename, dan no active HTML rendering.
 
@@ -792,6 +805,7 @@ Acceptance gate:
 - Chat teks dan lampiran bekerja pada browser test yang tersedia.
 - File room tetap bisa upload/download terpisah dari chat.
 - Host bisa membuka lokasi file room.
+- File Room yang diterima terlihat di folder publik pilihan/default.
 
 ### Phase H3: Easier Join Experience
 
@@ -1145,28 +1159,30 @@ Mitigation:
 
 The next sprint should be:
 
-**Sprint 1: Stabilization and Product Shell**
+**Sprint 1: UI/UX Separation Shell**
 
 Goals:
 
 - Keep current MVP behavior working.
-- Extract `RoomController`.
-- Introduce room lifecycle state.
-- Move browser assets out of server string.
-- Add endpoint regression tests.
-- Start Active Room dashboard redesign.
+- Lock information architecture for Room, File Room, Chat, Peserta, and Riwayat.
+- Add active room navigation shell.
+- Move existing active room content into separated destinations without changing server behavior.
+- Redesign File Room as a dedicated area.
+- Redesign Chat as a dedicated messenger-like area.
+- Keep existing build, unit test, and smoke gates.
 
 Why this order:
 
-- It protects the working MVP before visual and product expansion.
-- It makes future UI polish safer.
-- It creates a clean place for foreground service, history, and diagnostics later.
+- The current user-facing problem is not missing backend capability, but unclear product separation.
+- Navigation shell creates a clean place for future refactor, history, diagnostics, and lifecycle work.
+- It prevents File Room and Chat from continuing to evolve as one mixed dashboard.
 
 Suggested sprint output:
 
-- One refactor PR for architecture foundation.
-- One UI PR for active room dashboard polish.
-- One test PR for server and room lifecycle regression.
+- One planning/UI PR for active room navigation.
+- One UI PR for File Room separation.
+- One UI PR for Chat separation.
+- One test/smoke update for create room, identity, File Room upload, chat, and chat attachment.
 
 ---
 

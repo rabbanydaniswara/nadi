@@ -950,6 +950,8 @@ Product success:
 
 Setelah MVP inti stabil, arah pengembangan berikutnya adalah menjadikan Nadi lebih cocok untuk skenario kelas/perkuliahan.
 
+Rencana UI/UX khusus untuk memisahkan pengalaman `Ruang`, `File Room`, `Chat`, `Peserta`, dan `Riwayat` dicatat di [docs/NADI_UI_UX_SEPARATION_PLAN.md](docs/NADI_UI_UX_SEPARATION_PLAN.md). Dokumen tersebut menjadi acuan untuk tahap redesign berikutnya agar File Room dan Chat tidak lagi terasa bercampur.
+
 ### 16.1 Identitas Peserta
 
 Target:
@@ -983,6 +985,8 @@ Target:
   - PDF/dokumen.
   - File kecil lain sesuai policy.
 - Lampiran chat tetap tercatat sebagai bagian dari pesan, bukan sebagai file room utama.
+- Gambar chat ditampilkan sebagai preview di bubble.
+- Dokumen/ZIP/file lain tampil sebagai kartu file dan perlu didownload dulu sebelum bisa dibuka.
 
 Security praktis:
 
@@ -1000,23 +1004,27 @@ Nadi tetap memiliki fitur file transfer khusus yang terpisah dari chat:
 - Area chat untuk komunikasi dan lampiran percakapan.
 - File room punya daftar, status, ukuran, pengirim, waktu, dan aksi buka/download.
 - Lampiran chat bisa punya pintasan `Simpan ke File Room` bila nanti dibutuhkan.
+- File Room utama harus terasa sebagai menu dan storage yang terpisah dari attachment chat.
 
 ### 16.4 Penyimpanan Per Ruangan
 
 Target:
 
 - File disimpan per room/session.
-- Struktur lokal jelas, misalnya:
+- File Room utama disimpan di folder publik yang mudah ditemukan, bukan hanya di `Android/data/...`.
+- Default yang direkomendasikan:
 
 ```text
-Nadi/
-  rooms/
-    <room-id>/
-      shared/
+Download/
+  Nadi/
+    <room-name-or-room-id>/
       received/
-      chat-attachments/
+      chat-downloads/
 ```
 
+- `received/` untuk file utama dari File Room.
+- `chat-downloads/` untuk file dari chat yang user download.
+- Settings menyediakan `Lokasi penyimpanan File Room`, default `Download/Nadi/`, dengan opsi user memilih folder lain jika didukung Android.
 - Host dapat membuka lokasi file melalui tombol pintasan.
 - History menampilkan room, peserta, file diterima, file dibagikan, dan lampiran chat.
 - File tidak dihapus diam-diam; clear history menghapus metadata kecuali user memilih cleanup file.
