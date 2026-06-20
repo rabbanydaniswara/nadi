@@ -11,7 +11,7 @@ Date: 2026-06-20
 Commit: this commit
 Tester: Codex
 Host device: 69019f47
-Android version: not captured in this run
+Android version: 14 (Xiaomi 2203129G)
 APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
@@ -48,6 +48,7 @@ Browser matrix:
 - [x] Edge desktop renders browser client
 - [ ] Firefox desktop renders browser client
 - [x] Chrome Android renders browser client
+- [x] Firefox Android renders browser client
 - [ ] Safari/iOS renders browser client
 
 Notes:
@@ -81,5 +82,6 @@ HTTP smoke from host machine:
 - Edge desktop headless DOM smoke returned room name, ready state, upload section, download section, chat section, and downloadProgress.
 - Firefox headless screenshot automation was attempted but did not produce stable evidence in this environment.
 - Chrome Android opened the active room URL via ADB VIEW intent. UI dump returned Nadi Room, Terhubung ke Nadi, Siap, Ambil file, Kirim file ke host, and Chat lokal.
+- Firefox Android opened the active room URL via ADB VIEW intent. After closing the Firefox Translations sheet, UI dump returned Nadi Room, Terhubung ke Nadi, Siap, Ambil file, Kirim file ke host, and 2 terhubung.
 Not yet covered in this run: Firefox desktop manual/browser evidence, Safari/iOS browser evidence, multi-device/vendor matrix.
 ```
