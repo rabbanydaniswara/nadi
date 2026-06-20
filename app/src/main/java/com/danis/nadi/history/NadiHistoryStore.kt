@@ -31,6 +31,10 @@ class NadiHistoryStore(context: Context) {
         }.getOrDefault(emptyList())
     }
 
+    fun clear() {
+        preferences.edit().remove(KEY_RECENT_TRANSFERS).apply()
+    }
+
     private fun TransferHistoryItem.toJson(): JSONObject {
         return JSONObject()
             .put("transferId", transferId)

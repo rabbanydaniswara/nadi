@@ -42,7 +42,7 @@ class RoomController(context: Context) {
         val session = roomManager.startPreparing(roomName = roomName, hostName = hostName)
         lifecycleState = RoomLifecycleState.STARTING_SERVER
         val start = startServerOnAvailablePort()
-        return if (start == null) {
+        return if (!start) {
             lifecycleState = RoomLifecycleState.FAILED
             roomManager.fail()
             RoomStartResult.Failed("Ruang belum bisa dibuat. Coba tutup aplikasi lain lalu mulai lagi.")
@@ -89,6 +89,10 @@ class RoomController(context: Context) {
     }
 
     fun recentHistory(): List<TransferHistoryItem> = historyStore.recentTransfers()
+
+    fun clearHistory() {
+        historyStore.clear()
+    }
 
     fun stopActiveRoom() {
         lifecycleState = RoomLifecycleState.STOPPING

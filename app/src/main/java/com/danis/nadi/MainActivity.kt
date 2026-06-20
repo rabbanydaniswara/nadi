@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingHotspotStart = false
 
     private lateinit var homePanel: LinearLayout
+    private lateinit var historyPanel: LinearLayout
     private lateinit var setupPanel: LinearLayout
     private lateinit var activeRoomPanel: LinearLayout
     private lateinit var networkModeGroup: RadioGroup
@@ -63,6 +64,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sharedFilesText: TextView
     private lateinit var receivedFilesText: TextView
     private lateinit var chatMessagesText: TextView
+    private lateinit var historyListText: TextView
     private lateinit var recentEmptyText: TextView
     private lateinit var networkModeHelpText: TextView
     private lateinit var qrImage: ImageView
@@ -132,6 +134,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun bindViews() {
         homePanel = findViewById(R.id.homePanel)
+        historyPanel = findViewById(R.id.historyPanel)
         setupPanel = findViewById(R.id.setupPanel)
         activeRoomPanel = findViewById(R.id.activeRoomPanel)
         networkModeGroup = findViewById(R.id.networkModeGroup)
@@ -145,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         sharedFilesText = findViewById(R.id.sharedFilesText)
         receivedFilesText = findViewById(R.id.receivedFilesText)
         chatMessagesText = findViewById(R.id.chatMessagesText)
+        historyListText = findViewById(R.id.historyListText)
         recentEmptyText = findViewById(R.id.recentEmptyText)
         networkModeHelpText = findViewById(R.id.networkModeHelpText)
         qrImage = findViewById(R.id.qrImage)
@@ -155,7 +159,16 @@ class MainActivity : AppCompatActivity() {
             showSetup()
         }
         findViewById<MaterialButton>(R.id.joinRoomButton).setOnClickListener {
-            Toast.makeText(this, "Scan QR dari host Nadi untuk bergabung.", Toast.LENGTH_SHORT).show()
+            showHistory()
+        }
+        findViewById<MaterialButton>(R.id.historyBackButton).setOnClickListener {
+            showHome()
+        }
+        findViewById<MaterialButton>(R.id.clearHistoryButton).setOnClickListener {
+            controller.clearHistory()
+            refreshHostDashboard()
+            refreshHistoryScreen()
+            Toast.makeText(this, "Riwayat lokal dihapus.", Toast.LENGTH_SHORT).show()
         }
         findViewById<MaterialButton>(R.id.setupBackButton).setOnClickListener {
             showHome()
@@ -377,6 +390,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshHistoryScreen() {
+        val history = controller.recentHistory()
+        historyListText.text = if (history.isEmpty()) {
+            getString(R.string.history_empty)
+        } else {
+            history.joinToString(separator = "\n\n") { it.displayLine() }
+        }
+    }
+
     private fun TransferItem.displayLine(): String {
         return "${direction.label()} - ${fileName}\n${FileSizeFormatter.format(sizeBytes)} - ${status.label(progress)}"
     }
@@ -448,19 +470,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun showHome() {
         homePanel.visible()
+        historyPanel.gone()
         setupPanel.gone()
         activeRoomPanel.gone()
         refreshHostDashboard()
     }
 
+    private fun showHistory() {
+        homePanel.gone()
+        historyPanel.visible()
+        setupPanel.gone()
+        activeRoomPanel.gone()
+        refreshHistoryScreen()
+    }
+
     private fun showSetup() {
         homePanel.gone()
+        historyPanel.gone()
         setupPanel.visible()
         activeRoomPanel.gone()
     }
 
     private fun showActiveRoom() {
         homePanel.gone()
+        historyPanel.gone()
         setupPanel.gone()
         activeRoomPanel.visible()
     }
