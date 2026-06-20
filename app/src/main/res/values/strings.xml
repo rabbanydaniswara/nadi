@@ -13,16 +13,22 @@
     <string name="room_name_default">Nadi Room</string>
     <string name="host_name_default">Host Nadi</string>
     <string name="start_local_room">Mulai Ruang Lokal</string>
+    <string name="network_mode_label">Mode jaringan</string>
+    <string name="same_wifi_mode">Satu Wi-Fi</string>
+    <string name="hotspot_mode">Hotspot lokal</string>
+    <string name="hotspot_permission_reason">Nadi perlu izin Wi-Fi/lokasi untuk mencoba membuat hotspot lokal. Jika tidak berhasil, mode satu Wi-Fi tetap tersedia.</string>
     <string name="back_home">Kembali</string>
     <string name="room_active">Ruang Aktif</string>
     <string name="waiting_devices">Menunggu perangkat terhubung</string>
     <string name="copy_url">Salin URL</string>
     <string name="stop_room">Tutup Ruang</string>
-    <string name="shared_files_empty">File download akan muncul di tahap berikutnya.</string>
-    <string name="received_files_empty">File upload dari browser akan muncul di tahap berikutnya.</string>
+    <string name="shared_files_empty">Belum ada file dari host. Tekan Tambah File untuk membagikan file ke browser.</string>
+    <string name="received_files_empty">Belum ada file masuk dari browser.</string>
     <string name="chat_empty">Belum ada pesan di room ini.</string>
     <string name="add_shared_file">Tambah File</string>
     <string name="send_message">Kirim</string>
     <string name="host_chat_hint">Tulis pesan untuk room</string>
     <string name="same_wifi_note">Mode satu Wi-Fi aktif. Sambungkan perangkat lain ke Wi-Fi yang sama, lalu buka QR atau URL.</string>
+    <string name="hotspot_note">Hotspot lokal aktif. Sambungkan perangkat lain ke Wi-Fi Nadi, lalu buka QR atau URL.</string>
+    <string name="hotspot_fallback_note">Hotspot lokal belum tersedia di perangkat ini. Nadi memakai mode satu Wi-Fi sebagai fallback.</string>
 </resources>

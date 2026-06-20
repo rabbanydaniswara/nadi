@@ -78,6 +78,52 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun downloadEndpointStreamsSharedFile() {
+        val scenario = startActiveRoom()
+        scenario.manager.addTransfer(
+            TransferItem(
+                transferId = "file-1",
+                fileName = "materi.txt",
+                mimeType = "text/plain",
+                sizeBytes = 4,
+                direction = TransferDirection.SHARED,
+                status = TransferStatus.SUCCESS,
+                progress = 100,
+                createdAt = 1000,
+                localUri = "memory://file-1",
+                senderName = "Host"
+            )
+        )
+
+        val response = request("http://127.0.0.1:${scenario.port}/api/download/file-1?token=${scenario.token}")
+
+        assertEquals(200, response.code)
+        assertEquals("demo", response.body)
+    }
+
+    @Test
+    fun uploadEndpointStoresReceivedFile() {
+        val scenario = startActiveRoom()
+        val boundary = "NadiBoundary"
+        val body = "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"file\"; filename=\"upload.txt\"\r\n" +
+            "Content-Type: text/plain\r\n\r\n" +
+            "hello upload\r\n" +
+            "--$boundary--\r\n"
+
+        val response = request(
+            url = "http://127.0.0.1:${scenario.port}/api/upload?token=${scenario.token}",
+            method = "POST",
+            body = body,
+            contentType = "multipart/form-data; boundary=$boundary"
+        )
+
+        assertEquals(200, response.code)
+        assertTrue(response.body.contains("upload"))
+        assertTrue(scenario.manager.receivedFiles().isNotEmpty())
+    }
+
+    @Test
     fun chatEndpointsSendAndListMessages() {
         val scenario = startActiveRoom()
         val body = "senderName=Browser&text=${URLEncoder.encode("Halo host", "UTF-8")}"

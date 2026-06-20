@@ -72,12 +72,13 @@ State implementasi setelah separuh roadmap pertama:
   - Host dan browser dapat chat lewat HTTP polling.
   - Host dashboard menampilkan file dibagikan, file diterima, dan pesan terbaru.
 - `assembleDebug` dan `testDebugUnitTest` sudah lulus setelah implementasi transfer/chat.
-- Smoke install ke device `2203129G` sempat dicoba, tetapi perangkat menolak install dengan `INSTALL_FAILED_USER_RESTRICTED`.
+- Native Local-only Hotspot wrapper sudah tersedia dengan permission flow dan fallback same-Wi-Fi.
+- Smoke install ke device `2203129G` awalnya sempat ditolak dengan `INSTALL_FAILED_USER_RESTRICTED`, lalu berhasil setelah izin perangkat dibuka.
 
 Implikasi berikutnya:
 
-- Fase berikutnya harus fokus pada verifikasi perangkat nyata setelah izin install USB diaktifkan.
-- Setelah smoke device berhasil, lanjutkan Local-only Hotspot native agar tidak hanya bergantung pada same-Wi-Fi fallback.
+- Fase berikutnya harus fokus pada verifikasi perangkat nyata untuk room same-Wi-Fi dan hotspot lokal.
+- Jalankan manual browser test download/upload/chat dari perangkat kedua atau browser laptop di jaringan yang sama.
 - Abstraksi awal masih harus kecil dan mudah diganti sampai MVP end-to-end terbukti di perangkat nyata.
 
 ---
@@ -1036,15 +1037,15 @@ MVP is done only when all are true:
 
 ## 13. Immediate Next Plan
 
-Given the current project state after transfer/chat implementation, the recommended next work is:
+Given the current project state after transfer/chat and hotspot integration, the recommended next work is:
 
-1. Enable install/debug permission on the connected Android device.
-2. Install `app/build/outputs/apk/debug/app-debug.apk`.
-3. Start a Nadi room on the device.
-4. Connect a browser on the same Wi-Fi to the QR/URL.
-5. Manually verify download, upload, and chat.
-6. Implement native Local-only Hotspot mode after same-Wi-Fi smoke is proven.
-7. Add persistence/open-file polish for received files.
+1. Install `app/build/outputs/apk/debug/app-debug.apk`.
+2. Launch Nadi and start a same-Wi-Fi room.
+3. Connect a browser on the same Wi-Fi to the QR/URL.
+4. Manually verify download, upload, and chat.
+5. Repeat with Hotspot lokal mode on a supported Android device.
+6. Add persistence/open-file polish for received files.
+7. Add instrumentation tests once UI flow stabilizes.
 
 Expected first useful milestone:
 
