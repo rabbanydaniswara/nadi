@@ -20,5 +20,9 @@
     <string name="stop_room">Tutup Ruang</string>
     <string name="shared_files_empty">File download akan muncul di tahap berikutnya.</string>
     <string name="received_files_empty">File upload dari browser akan muncul di tahap berikutnya.</string>
-    <string name="chat_empty">Chat lokal akan diaktifkan setelah transfer file stabil.</string>
+    <string name="chat_empty">Belum ada pesan di room ini.</string>
+    <string name="add_shared_file">Tambah File</string>
+    <string name="send_message">Kirim</string>
+    <string name="host_chat_hint">Tulis pesan untuk room</string>
+    <string name="same_wifi_note">Mode satu Wi-Fi aktif. Sambungkan perangkat lain ke Wi-Fi yang sama, lalu buka QR atau URL.</string>
 </resources>

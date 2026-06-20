@@ -4,6 +4,7 @@ import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.model.ConnectedClient
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.RoomStatus
+import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
 import com.danis.nadi.security.TokenGenerator
 
@@ -72,6 +73,85 @@ class RoomManager(
     fun validateToken(token: String?): Boolean = synchronized(lock) {
         val current = session
         current != null && current.status == RoomStatus.ACTIVE && current.token == token
+    }
+
+    fun touchClient(
+        displayName: String,
+        userAgent: String,
+        ipAddress: String
+    ): ConnectedClient? = synchronized(lock) {
+        val current = session ?: return@synchronized null
+        if (current.status != RoomStatus.ACTIVE) return@synchronized null
+
+        val now = clock()
+        val cleanName = displayName.trim().ifBlank { "Browser" }
+        val existingIndex = clients.indexOfFirst { it.ipAddress == ipAddress && it.userAgent == userAgent }
+        val client = if (existingIndex >= 0) {
+            clients[existingIndex].copy(
+                displayName = cleanName,
+                lastSeenAt = now
+            )
+        } else {
+            ConnectedClient(
+                clientId = tokenGenerator.newSessionId(12),
+                displayName = cleanName,
+                joinedAt = now,
+                lastSeenAt = now,
+                userAgent = userAgent,
+                ipAddress = ipAddress
+            )
+        }
+        if (existingIndex >= 0) {
+            clients[existingIndex] = client
+        } else {
+            clients.add(client)
+        }
+        client
+    }
+
+    fun addTransfer(item: TransferItem): TransferItem = synchronized(lock) {
+        transfers.removeAll { it.transferId == item.transferId }
+        transfers.add(0, item)
+        item
+    }
+
+    fun sharedFiles(): List<TransferItem> = synchronized(lock) {
+        transfers.filter { it.direction == TransferDirection.SHARED }
+    }
+
+    fun receivedFiles(): List<TransferItem> = synchronized(lock) {
+        transfers.filter { it.direction == TransferDirection.UPLOAD }
+    }
+
+    fun transferById(transferId: String): TransferItem? = synchronized(lock) {
+        transfers.firstOrNull { it.transferId == transferId }
+    }
+
+    fun addMessage(
+        senderId: String,
+        senderName: String,
+        text: String
+    ): ChatMessage? = synchronized(lock) {
+        val cleanText = text.trim().take(1000)
+        if (cleanText.isBlank()) return@synchronized null
+        val message = ChatMessage(
+            messageId = tokenGenerator.newSessionId(16),
+            senderId = senderId.trim().ifBlank { "unknown" },
+            senderName = senderName.trim().ifBlank { "Nadi" },
+            text = cleanText,
+            createdAt = clock(),
+            status = "sent"
+        )
+        messages.add(message)
+        message
+    }
+
+    fun messagesAfter(after: Long): List<ChatMessage> = synchronized(lock) {
+        messages.filter { it.createdAt > after }.sortedBy { it.createdAt }
+    }
+
+    fun recentTransfers(limit: Int = 5): List<TransferItem> = synchronized(lock) {
+        transfers.sortedByDescending { it.createdAt }.take(limit)
     }
 
     fun snapshot(): RoomSnapshot = synchronized(lock) {

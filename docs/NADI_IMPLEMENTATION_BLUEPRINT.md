@@ -65,11 +65,19 @@ State implementasi setelah separuh roadmap pertama:
 - `/api/room` sudah memvalidasi session token.
 - QR join URL sudah dibuat dari URL lokal bertoken.
 - Unit test tersedia untuk token, PIN, room state, dan endpoint server.
+- Phase 5 sampai Phase 7 sudah diimplementasikan secara fungsional:
+  - Host dapat memilih file lewat Android Storage Access Framework.
+  - Browser dapat melihat file host dan mengunduhnya lewat endpoint lokal.
+  - Browser dapat upload file ke host; file disimpan di app-specific external files directory.
+  - Host dan browser dapat chat lewat HTTP polling.
+  - Host dashboard menampilkan file dibagikan, file diterima, dan pesan terbaru.
+- `assembleDebug` dan `testDebugUnitTest` sudah lulus setelah implementasi transfer/chat.
+- Smoke install ke device `2203129G` sempat dicoba, tetapi perangkat menolak install dengan `INSTALL_FAILED_USER_RESTRICTED`.
 
 Implikasi berikutnya:
 
-- Fase berikutnya harus masuk ke file download sebelum upload/chat.
-- Jangan mengubah same-Wi-Fi server menjadi hotspot-first sebelum transfer file browser stabil.
+- Fase berikutnya harus fokus pada verifikasi perangkat nyata setelah izin install USB diaktifkan.
+- Setelah smoke device berhasil, lanjutkan Local-only Hotspot native agar tidak hanya bergantung pada same-Wi-Fi fallback.
 - Abstraksi awal masih harus kecil dan mudah diganti sampai MVP end-to-end terbukti di perangkat nyata.
 
 ---
@@ -1028,19 +1036,19 @@ MVP is done only when all are true:
 
 ## 13. Immediate Next Plan
 
-Given the current project state after Phase 0-4, the recommended next work is:
+Given the current project state after transfer/chat implementation, the recommended next work is:
 
-1. Implement Phase 5 Download Flow.
-2. Add Android SAF file picker on host.
-3. Store shared file metadata in `RoomManager` or a small file repository.
-4. Add `/api/files` endpoint for browser file listing.
-5. Add `/api/download/{fileId}` endpoint with token validation and streaming.
-6. Update browser UI to show downloadable files.
-7. Run unit tests and `assembleDebug`.
+1. Enable install/debug permission on the connected Android device.
+2. Install `app/build/outputs/apk/debug/app-debug.apk`.
+3. Start a Nadi room on the device.
+4. Connect a browser on the same Wi-Fi to the QR/URL.
+5. Manually verify download, upload, and chat.
+6. Implement native Local-only Hotspot mode after same-Wi-Fi smoke is proven.
+7. Add persistence/open-file polish for received files.
 
 Expected first useful milestone:
 
-> A browser client that opens the QR URL can see a host-shared file and download it over the local server.
+> A real device can host a same-Wi-Fi Nadi room, and a browser client can download, upload, and chat through the local URL.
 
 ---
 

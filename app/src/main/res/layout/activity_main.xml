@@ -240,7 +240,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="@string/waiting_devices"
+                    android:text="@string/same_wifi_note"
                     android:textColor="@color/nadi_line"
                     android:textSize="15sp" />
             </LinearLayout>
@@ -315,10 +315,21 @@
                     android:textColor="@color/nadi_graphite"
                     android:textStyle="bold" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/addSharedFileButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/add_shared_file"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/nadi_green"
+                    app:cornerRadius="10dp" />
+
                 <TextView
+                    android:id="@+id/sharedFilesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="12dp"
                     android:text="@string/shared_files_empty"
                     android:textColor="@color/nadi_soft_ink" />
             </LinearLayout>
@@ -339,6 +350,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/receivedFilesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
@@ -362,11 +374,34 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/chatMessagesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:text="@string/chat_empty"
                     android:textColor="@color/nadi_soft_ink" />
+
+                <EditText
+                    android:id="@+id/hostChatInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:backgroundTint="@color/nadi_green"
+                    android:hint="@string/host_chat_hint"
+                    android:inputType="textCapSentences"
+                    android:singleLine="true"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="15sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/sendHostMessageButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/send_message"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/nadi_green"
+                    app:cornerRadius="10dp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
