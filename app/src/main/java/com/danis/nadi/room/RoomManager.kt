@@ -10,7 +10,8 @@ import com.danis.nadi.security.TokenGenerator
 
 class RoomManager(
     private val tokenGenerator: TokenGenerator = TokenGenerator(),
-    private val clock: () -> Long = { System.currentTimeMillis() }
+    private val clock: () -> Long = { System.currentTimeMillis() },
+    private val activeClientTimeoutMillis: Long = ACTIVE_CLIENT_TIMEOUT_MILLIS
 ) {
     private val lock = Any()
     private var session: RoomSession? = null
@@ -97,6 +98,7 @@ class RoomManager(
         if (current.status != RoomStatus.ACTIVE) return@synchronized null
 
         val now = clock()
+        pruneStaleClients(now)
         val cleanName = displayName.trim().ifBlank { "Browser" }
         val existingIndex = clients.indexOfFirst { it.ipAddress == ipAddress && it.userAgent == userAgent }
         val client = if (existingIndex >= 0) {
@@ -168,12 +170,23 @@ class RoomManager(
     }
 
     fun snapshot(): RoomSnapshot = synchronized(lock) {
+        pruneStaleClients(clock())
         RoomSnapshot(
             session = session,
             clients = clients.toList(),
             transfers = transfers.toList(),
             messages = messages.toList()
         )
+    }
+
+    private fun pruneStaleClients(now: Long) {
+        clients.removeAll { client ->
+            now >= client.lastSeenAt && now - client.lastSeenAt > activeClientTimeoutMillis
+        }
+    }
+
+    private companion object {
+        const val ACTIVE_CLIENT_TIMEOUT_MILLIS = 15_000L
     }
 }
 

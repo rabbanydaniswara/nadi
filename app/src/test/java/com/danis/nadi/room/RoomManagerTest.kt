@@ -59,4 +59,37 @@ class RoomManagerTest {
         assertTrue(manager.validateToken(refreshed?.token))
         assertTrue(refreshed?.localUrl?.contains(refreshed.token) == true)
     }
+
+    @Test
+    fun snapshotOnlyCountsRecentlySeenClients() {
+        var now = 1000L
+        val manager = RoomManager(
+            clock = { now },
+            activeClientTimeoutMillis = 5_000L
+        )
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        manager.touchClient(
+            displayName = "Browser",
+            userAgent = "Firefox",
+            ipAddress = "192.168.1.8"
+        )
+        now = 5_000L
+        manager.touchClient(
+            displayName = "Laptop",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.9"
+        )
+        now = 6_000L
+
+        assertEquals(2, manager.snapshot().clients.size)
+
+        now = 10_000L
+
+        val activeClients = manager.snapshot().clients
+
+        assertEquals(1, activeClients.size)
+        assertEquals("Laptop", activeClients.single().displayName)
+    }
 }
