@@ -92,4 +92,28 @@ class RoomManagerTest {
         assertEquals(1, activeClients.size)
         assertEquals("Laptop", activeClients.single().displayName)
     }
+
+    @Test
+    fun chatRetentionKeepsNewestMessagesOnly() {
+        var now = 1000L
+        val manager = RoomManager(
+            clock = { now },
+            maxMessages = 3
+        )
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        listOf("satu", "dua", "tiga", "empat").forEach { text ->
+            now += 1
+            manager.addMessage(
+                senderId = "browser",
+                senderName = "Browser",
+                text = text
+            )
+        }
+
+        val messages = manager.messagesAfter(0)
+
+        assertEquals(listOf("dua", "tiga", "empat"), messages.map { it.text })
+    }
 }

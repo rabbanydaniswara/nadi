@@ -11,7 +11,8 @@ import com.danis.nadi.security.TokenGenerator
 class RoomManager(
     private val tokenGenerator: TokenGenerator = TokenGenerator(),
     private val clock: () -> Long = { System.currentTimeMillis() },
-    private val activeClientTimeoutMillis: Long = ACTIVE_CLIENT_TIMEOUT_MILLIS
+    private val activeClientTimeoutMillis: Long = ACTIVE_CLIENT_TIMEOUT_MILLIS,
+    private val maxMessages: Int = MAX_MESSAGES
 ) {
     private val lock = Any()
     private var session: RoomSession? = null
@@ -158,6 +159,7 @@ class RoomManager(
             status = "sent"
         )
         messages.add(message)
+        trimMessages()
         message
     }
 
@@ -185,8 +187,16 @@ class RoomManager(
         }
     }
 
+    private fun trimMessages() {
+        val overflow = messages.size - maxMessages.coerceAtLeast(0)
+        if (overflow > 0) {
+            messages.subList(0, overflow).clear()
+        }
+    }
+
     private companion object {
         const val ACTIVE_CLIENT_TIMEOUT_MILLIS = 15_000L
+        const val MAX_MESSAGES = 200
     }
 }
 
