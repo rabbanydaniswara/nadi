@@ -26,29 +26,28 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.danis.nadi.file.AndroidFileStore
 import com.danis.nadi.file.FileSizeFormatter
+import com.danis.nadi.history.TransferHistoryItem
 import com.danis.nadi.model.RoomSession
+import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
+import com.danis.nadi.model.TransferStatus
 import com.danis.nadi.network.hotspot.HotspotState
-import com.danis.nadi.network.hotspot.LocalHotspotManager
-import com.danis.nadi.network.server.NadiHttpServer
-import com.danis.nadi.room.RoomManager
-import com.danis.nadi.util.NetworkAddress
+import com.danis.nadi.room.ActiveRoom
+import com.danis.nadi.room.NetworkMode
+import com.danis.nadi.room.RoomController
+import com.danis.nadi.room.RoomLifecycleState
+import com.danis.nadi.room.RoomLifecycleService
+import com.danis.nadi.room.RoomRuntime
+import com.danis.nadi.room.RoomStartResult
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
-import fi.iki.elonen.NanoHTTPD
-import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
-    private val roomManager = RoomManager()
-    private val fileStore by lazy { AndroidFileStore(applicationContext) }
-    private val hotspotManager by lazy { LocalHotspotManager(applicationContext) }
+    private lateinit var controller: RoomController
     private val dashboardHandler = Handler(Looper.getMainLooper())
-    private var server: NadiHttpServer? = null
     private var dashboardPolling = false
     private var pendingHotspotStart = false
-    private var activeNetworkMode = NetworkMode.SAME_WIFI
 
     private lateinit var homePanel: LinearLayout
     private lateinit var setupPanel: LinearLayout
@@ -57,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var roomNameInput: EditText
     private lateinit var hostNameInput: EditText
     private lateinit var hostChatInput: EditText
+    private lateinit var activeStatusText: TextView
     private lateinit var activeRoomNameText: TextView
     private lateinit var activeRoomCopyText: TextView
     private lateinit var joinUrlText: TextView
@@ -71,8 +71,7 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
         val uri = result.data?.data ?: return@registerForActivityResult
         persistReadPermissionIfPossible(uri, result.data)
-        val transfer = fileStore.createSharedTransfer(uri)
-        roomManager.addTransfer(transfer)
+        controller.createSharedTransfer(uri)
         refreshHostDashboard()
         Toast.makeText(this, "File siap dibagikan.", Toast.LENGTH_SHORT).show()
     }
@@ -106,6 +105,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        controller = RoomRuntime.controller(applicationContext)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
@@ -116,14 +116,17 @@ class MainActivity : AppCompatActivity() {
 
         bindViews()
         bindActions()
-        showHome()
+        val activeRoom = controller.currentActiveRoom()
+        if (activeRoom != null) {
+            renderActiveRoom(activeRoom)
+            startDashboardPolling()
+        } else {
+            showHome()
+        }
     }
 
     override fun onDestroy() {
         stopDashboardPolling()
-        hotspotManager.stop()
-        stopServer()
-        roomManager.stopRoom()
         super.onDestroy()
     }
 
@@ -135,6 +138,7 @@ class MainActivity : AppCompatActivity() {
         roomNameInput = findViewById(R.id.roomNameInput)
         hostNameInput = findViewById(R.id.hostNameInput)
         hostChatInput = findViewById(R.id.hostChatInput)
+        activeStatusText = findViewById(R.id.activeStatusText)
         activeRoomNameText = findViewById(R.id.activeRoomNameText)
         activeRoomCopyText = findViewById(R.id.activeRoomCopyText)
         joinUrlText = findViewById(R.id.joinUrlText)
@@ -196,36 +200,29 @@ class MainActivity : AppCompatActivity() {
 
     private fun startLocalRoomWithMode(mode: NetworkMode) {
         stopDashboardPolling()
-        hotspotManager.stop()
-        stopServer()
-        activeNetworkMode = mode
-        val preparingSession = roomManager.startPreparing(
+        val startResult = controller.prepareRoom(
             roomName = roomNameInput.text?.toString().orEmpty(),
-            hostName = hostNameInput.text?.toString().orEmpty()
+            hostName = hostNameInput.text?.toString().orEmpty(),
+            mode = mode
         )
-        val serverStart = startServerOnAvailablePort()
-        if (serverStart == null) {
-            roomManager.fail()
-            Toast.makeText(
-                this,
-                "Ruang belum bisa dibuat. Coba tutup aplikasi lain lalu mulai lagi.",
-                Toast.LENGTH_LONG
-            ).show()
-            showSetup()
-            return
-        }
-
-        server = serverStart.server
-        if (mode == NetworkMode.HOTSPOT) {
-            startHotspotThenActivate(preparingSession, serverStart)
-        } else {
-            activateRoom(preparingSession, serverStart, NetworkMode.SAME_WIFI, null, null)
+        when (startResult) {
+            is RoomStartResult.Failed -> {
+                Toast.makeText(this, startResult.message, Toast.LENGTH_LONG).show()
+                showSetup()
+            }
+            is RoomStartResult.Prepared -> {
+                if (mode == NetworkMode.HOTSPOT) {
+                    startHotspotThenActivate(startResult.session)
+                } else {
+                    activateRoom(startResult.session, NetworkMode.SAME_WIFI, null, null)
+                }
+            }
         }
     }
 
-    private fun startHotspotThenActivate(preparingSession: RoomSession, serverStart: ServerStart) {
+    private fun startHotspotThenActivate(preparingSession: RoomSession) {
         activeRoomCopyText.text = "Menyiapkan hotspot lokal..."
-        hotspotManager.start { state ->
+        controller.hotspotManager.start { state ->
             when (state) {
                 HotspotState.Idle -> Unit
                 HotspotState.Starting -> {
@@ -236,7 +233,6 @@ class MainActivity : AppCompatActivity() {
                         {
                             activateRoom(
                                 preparingSession = preparingSession,
-                                serverStart = serverStart,
                                 mode = NetworkMode.HOTSPOT,
                                 hotspotSsid = state.ssid,
                                 hotspotPassword = state.password
@@ -249,7 +245,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, state.message, Toast.LENGTH_LONG).show()
                     activateRoom(
                         preparingSession = preparingSession,
-                        serverStart = serverStart,
                         mode = NetworkMode.SAME_WIFI_FALLBACK,
                         hotspotSsid = null,
                         hotspotPassword = null
@@ -261,50 +256,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun activateRoom(
         preparingSession: RoomSession,
-        serverStart: ServerStart,
         mode: NetworkMode,
         hotspotSsid: String?,
         hotspotPassword: String?
     ) {
-        activeNetworkMode = mode
-        val hostAddress = if (mode == NetworkMode.HOTSPOT) {
-            NetworkAddress.localOnlyHotspotIpv4() ?: NetworkAddress.firstLocalIpv4()
-        } else {
-            NetworkAddress.firstLocalIpv4()
-        } ?: "127.0.0.1"
-        val joinUrl = "http://$hostAddress:${serverStart.port}/?token=${preparingSession.token}"
-        val activeSession = roomManager.activate(joinUrl, hotspotSsid) ?: preparingSession.copy(localUrl = joinUrl)
-        renderActiveRoom(activeSession, mode, hotspotSsid, hotspotPassword)
+        val activeRoom = controller.activatePreparedRoom(
+            preparingSession = preparingSession,
+            mode = mode,
+            ssid = hotspotSsid,
+            password = hotspotPassword
+        )
+        RoomLifecycleService.start(this)
+        renderActiveRoom(activeRoom)
         startDashboardPolling()
     }
 
-    private fun startServerOnAvailablePort(): ServerStart? {
-        val ports = listOf(8080, 8081, 8082, 8090)
-        for (port in ports) {
-            val candidate = NadiHttpServer(port, roomManager, fileStore)
-            try {
-                candidate.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
-                return ServerStart(candidate, port)
-            } catch (_: IOException) {
-                candidate.stop()
-            }
-        }
-        return null
-    }
-
-    private fun renderActiveRoom(
-        session: RoomSession,
-        mode: NetworkMode = activeNetworkMode,
-        hotspotSsid: String? = null,
-        hotspotPassword: String? = null
-    ) {
+    private fun renderActiveRoom(activeRoom: ActiveRoom) {
+        val session = activeRoom.session
         val joinUrl = session.localUrl.orEmpty()
+        val clientCount = controller.roomManager.snapshot().clients.size
+        activeStatusText.text = buildStatusLine(activeRoom.mode, clientCount)
         activeRoomNameText.text = session.roomName
-        activeRoomCopyText.text = when (mode) {
+        activeRoomCopyText.text = when (activeRoom.mode) {
             NetworkMode.HOTSPOT -> buildString {
                 append(getString(R.string.hotspot_note))
-                if (!hotspotSsid.isNullOrBlank()) append("\nWi-Fi: ").append(hotspotSsid)
-                if (!hotspotPassword.isNullOrBlank()) append("\nPassword: ").append(hotspotPassword)
+                if (!activeRoom.hotspotSsid.isNullOrBlank()) append("\nWi-Fi: ").append(activeRoom.hotspotSsid)
+                if (!activeRoom.hotspotPassword.isNullOrBlank()) append("\nPassword: ").append(activeRoom.hotspotPassword)
             }
             NetworkMode.SAME_WIFI_FALLBACK -> getString(R.string.hotspot_fallback_note)
             NetworkMode.SAME_WIFI -> getString(R.string.same_wifi_note)
@@ -318,6 +295,15 @@ class MainActivity : AppCompatActivity() {
         }
         refreshHostDashboard()
         showActiveRoom()
+    }
+
+    private fun buildStatusLine(mode: NetworkMode, clientCount: Int): String {
+        val modeLabel = when (mode) {
+            NetworkMode.HOTSPOT -> "Hotspot lokal"
+            NetworkMode.SAME_WIFI_FALLBACK -> "Satu Wi-Fi fallback"
+            NetworkMode.SAME_WIFI -> "Satu Wi-Fi"
+        }
+        return "Aktif - $modeLabel - $clientCount perangkat"
     }
 
     private fun openFilePicker() {
@@ -342,8 +328,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendHostMessage() {
         val text = hostChatInput.text?.toString().orEmpty()
-        val hostName = roomManager.currentSession()?.hostName ?: getString(R.string.host_name_default)
-        val message = roomManager.addMessage(
+        val hostName = controller.roomManager.currentSession()?.hostName ?: getString(R.string.host_name_default)
+        val message = controller.roomManager.addMessage(
             senderId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "host",
             senderName = hostName,
             text = text
@@ -357,9 +343,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshHostDashboard() {
-        val shared = roomManager.sharedFiles()
-        val received = roomManager.receivedFiles()
-        val messages = roomManager.snapshot().messages.takeLast(8)
+        val snapshot = controller.roomManager.snapshot()
+        val shared = controller.roomManager.sharedFiles()
+        val received = controller.roomManager.receivedFiles()
+        val messages = snapshot.messages.takeLast(8)
+        if (controller.lifecycleState == RoomLifecycleState.ACTIVE) {
+            controller.persistRecentTransfers()
+            activeStatusText.text = buildStatusLine(controller.activeNetworkMode, snapshot.clients.size)
+        }
         sharedFilesText.text = if (shared.isEmpty()) {
             getString(R.string.shared_files_empty)
         } else {
@@ -375,16 +366,40 @@ class MainActivity : AppCompatActivity() {
         } else {
             messages.joinToString(separator = "\n\n") { "${it.senderName}: ${it.text}" }
         }
-        val recent = roomManager.recentTransfers()
-        recentEmptyText.text = if (recent.isEmpty()) {
-            getString(R.string.recent_empty)
-        } else {
+        val recent = controller.roomManager.recentTransfers()
+        val history = controller.recentHistory()
+        recentEmptyText.text = if (recent.isNotEmpty()) {
             recent.joinToString(separator = "\n") { it.displayLine() }
+        } else if (history.isNotEmpty()) {
+            history.take(5).joinToString(separator = "\n") { it.displayLine() }
+        } else {
+            getString(R.string.recent_empty)
         }
     }
 
     private fun TransferItem.displayLine(): String {
-        return "${fileName}\n${FileSizeFormatter.format(sizeBytes)} - ${status.name.lowercase()}"
+        return "${direction.label()} - ${fileName}\n${FileSizeFormatter.format(sizeBytes)} - ${status.label(progress)}"
+    }
+
+    private fun TransferHistoryItem.displayLine(): String {
+        return "${direction.label()} - ${fileName}\n${FileSizeFormatter.format(sizeBytes)} - ${status.label(progress)} - tersimpan lokal"
+    }
+
+    private fun TransferDirection.label(): String {
+        return when (this) {
+            TransferDirection.SHARED -> "Dibagikan"
+            TransferDirection.UPLOAD -> "Diterima"
+            TransferDirection.DOWNLOAD -> "Diunduh"
+        }
+    }
+
+    private fun TransferStatus.label(progress: Int): String {
+        return when (this) {
+            TransferStatus.PENDING -> "Menunggu"
+            TransferStatus.RUNNING -> "Berjalan $progress%"
+            TransferStatus.SUCCESS -> "Selesai"
+            TransferStatus.FAILED -> "Gagal"
+        }
     }
 
     private fun startDashboardPolling() {
@@ -400,16 +415,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopActiveRoom() {
         stopDashboardPolling()
-        hotspotManager.stop()
-        stopServer()
-        roomManager.stopRoom()
+        controller.stopActiveRoom()
+        RoomLifecycleService.stop(this)
         Toast.makeText(this, "Ruang sudah ditutup.", Toast.LENGTH_SHORT).show()
         showHome()
-    }
-
-    private fun stopServer() {
-        server?.stop()
-        server = null
     }
 
     private fun hasHotspotPermissions(): Boolean {
@@ -463,17 +472,6 @@ class MainActivity : AppCompatActivity() {
     private fun View.gone() {
         visibility = View.GONE
     }
-}
-
-private data class ServerStart(
-    val server: NadiHttpServer,
-    val port: Int
-)
-
-private enum class NetworkMode {
-    SAME_WIFI,
-    HOTSPOT,
-    SAME_WIFI_FALLBACK
 }
 
 private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L

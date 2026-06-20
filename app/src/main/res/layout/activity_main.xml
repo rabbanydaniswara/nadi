@@ -225,7 +225,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:lineSpacingExtra="3dp"
-                    android:text="@string/hotspot_permission_reason"
+                    android:text="@string/same_wifi_note"
                     android:textColor="@color/nadi_soft_ink"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -362,7 +362,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Ambil file"
+                    android:text="@string/host_shared_files_title"
                     android:textColor="@color/nadi_graphite"
                     android:textStyle="bold" />
 
@@ -396,7 +396,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Kirim file"
+                    android:text="@string/host_received_files_title"
                     android:textColor="@color/nadi_graphite"
                     android:textStyle="bold" />
 
@@ -420,7 +420,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Chat lokal"
+                    android:text="@string/host_chat_title"
                     android:textColor="@color/nadi_graphite"
                     android:textStyle="bold" />
 

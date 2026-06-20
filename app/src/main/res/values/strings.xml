@@ -4,10 +4,10 @@
     <string name="home_intro">Buat ruang lokal untuk berbagi file dan chat di ruangan yang sama tanpa mengandalkan internet.</string>
     <string name="start_room">Buat Ruang</string>
     <string name="join_room">Gabung</string>
-    <string name="recent_transfers">Riwayat singkat</string>
+    <string name="recent_transfers">Aktivitas lokal terakhir</string>
     <string name="recent_empty">Belum ada file yang mengalir. Mulai ruang pertama untuk berbagi secara lokal.</string>
     <string name="host_setup_title">Siapkan Ruang</string>
-    <string name="host_setup_copy">Untuk tahap awal, Nadi menjalankan mode satu Wi-Fi. Perangkat lain perlu berada di jaringan yang sama.</string>
+    <string name="host_setup_copy">Pilih cara perangkat lain bergabung. Hotspot cocok saat tidak ada Wi-Fi stabil, satu Wi-Fi cocok saat semua perangkat sudah berada di jaringan yang sama.</string>
     <string name="room_name_label">Nama ruang</string>
     <string name="host_name_label">Nama host</string>
     <string name="room_name_default">Nadi Room</string>
@@ -31,4 +31,7 @@
     <string name="same_wifi_note">Mode satu Wi-Fi aktif. Sambungkan perangkat lain ke Wi-Fi yang sama, lalu buka QR atau URL.</string>
     <string name="hotspot_note">Hotspot lokal aktif. Sambungkan perangkat lain ke Wi-Fi Nadi, lalu buka QR atau URL.</string>
     <string name="hotspot_fallback_note">Hotspot lokal belum tersedia di perangkat ini. Nadi memakai mode satu Wi-Fi sebagai fallback.</string>
+    <string name="host_shared_files_title">File dari host</string>
+    <string name="host_received_files_title">File masuk</string>
+    <string name="host_chat_title">Chat lokal</string>
 </resources>

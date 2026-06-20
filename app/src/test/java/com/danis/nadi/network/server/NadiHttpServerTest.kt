@@ -53,6 +53,17 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun rootEndpointServesBrowserClientShell() {
+        val scenario = startActiveRoom()
+
+        val response = request("http://127.0.0.1:${scenario.port}/?token=${scenario.token}")
+
+        assertEquals(200, response.code)
+        assertTrue(response.body.contains("Terhubung ke Nadi"))
+        assertTrue(response.body.contains("uploadProgress"))
+    }
+
+    @Test
     fun fileEndpointListsSharedFiles() {
         val scenario = startActiveRoom()
         scenario.manager.addTransfer(
