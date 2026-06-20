@@ -34,12 +34,12 @@ Core flow:
 - [x] Invalid token ditolak
 - [ ] Host share file
 - [ ] Browser download file
-- [ ] Browser upload file
-- [ ] Host menerima file
+- [x] Browser upload file
+- [x] Host menerima file
 - [x] Chat browser ke host
-- [ ] Chat host ke browser
+- [x] Chat host ke browser
 - [x] Regenerate link menutup token lama
-- [ ] Diagnostics dapat disalin
+- [x] Diagnostics dapat disalin
 - [x] Stop room menutup akses
 
 Notes:
@@ -60,5 +60,11 @@ HTTP smoke from host machine:
 - Old token after regenerate returned 401.
 - New token after regenerate returned 200.
 - Stop room via host UI closed the server; /health was no longer reachable.
-Not yet covered in this run: real file upload/download, host-to-browser chat, diagnostics copy through UI, multi-browser matrix, multi-device matrix.
+- Real browser upload used multipart POST to /api/upload.
+- Upload response returned 200 with status success and progress 100.
+- Uploaded file nadi-real-upload-smoke.txt appeared in /sdcard/Android/data/com.danis.nadi/files/received.
+- Host-to-browser chat was sent from Android UI and appeared in /api/chat.
+- Diagnostics panel and copy button were visible in Android UI.
+- Copy diagnostics button was tapped successfully; clipboard content could not be read because this device shell does not implement `cmd clipboard get`.
+Not yet covered in this run: host share file via Android file picker, browser download of a host-shared file, multi-browser matrix, multi-device matrix.
 ```
