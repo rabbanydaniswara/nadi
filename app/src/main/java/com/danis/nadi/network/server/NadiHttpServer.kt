@@ -120,6 +120,12 @@ class NadiHttpServer(
         } else {
             payload.mimeType
         }
+        val previewEtag = if (preview) transfer.previewEtag() else null
+        if (previewEtag != null && session.matchesIfNoneMatch(previewEtag)) {
+            payload.inputStream.close()
+            return newFixedLengthResponse(Response.Status.NOT_MODIFIED, responseMimeType, "")
+                .withPreviewCacheHeaders(previewEtag)
+        }
         val response = if (payload.sizeBytes >= 0) {
             newFixedLengthResponse(
                 Response.Status.OK,
@@ -132,7 +138,11 @@ class NadiHttpServer(
         }
         val disposition = if (preview) "inline" else "attachment"
         response.addHeader("Content-Disposition", "$disposition; filename=\"${payload.fileName.headerSafe()}\"")
-        return response.withNoStoreHeaders()
+        return if (previewEtag != null) {
+            response.withPreviewCacheHeaders(previewEtag)
+        } else {
+            response.withNoStoreHeaders()
+        }
     }
 
     private fun uploadFile(session: IHTTPSession): Response {
@@ -322,6 +332,23 @@ class NadiHttpServer(
         addHeader("Expires", "0")
         addHeader("X-Content-Type-Options", "nosniff")
         return this
+    }
+
+    private fun Response.withPreviewCacheHeaders(etag: String): Response {
+        addHeader("Cache-Control", "public, max-age=31536000, immutable")
+        addHeader("ETag", etag)
+        addHeader("X-Content-Type-Options", "nosniff")
+        return this
+    }
+
+    private fun TransferItem.previewEtag(): String = "\"preview-$transferId-$sizeBytes\""
+
+    private fun IHTTPSession.matchesIfNoneMatch(etag: String): Boolean {
+        val header = headers["if-none-match"] ?: headers["If-None-Match"] ?: return false
+        return header.split(",").any { value ->
+            val candidate = value.trim()
+            candidate == "*" || candidate == etag
+        }
     }
 
     private fun String.escapeJson(): String {

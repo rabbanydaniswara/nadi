@@ -130,6 +130,8 @@ class MainActivity : AppCompatActivity() {
     private var webFileChooserCallback: ValueCallback<Array<Uri>>? = null
     private var chatKeyboardCompactMode = false
     private var forceChatScrollToBottom = false
+    private var lastRenderedChatRoomId: String? = null
+    private val renderedChatMessageIds = linkedSetOf<String>()
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -893,25 +895,40 @@ class MainActivity : AppCompatActivity() {
     private fun renderChatMessages(messages: List<ChatMessage>) {
         val shouldScrollToBottom = forceChatScrollToBottom || isChatMessagesWindowNearBottom()
         forceChatScrollToBottom = false
-        chatMessagesContainer.removeAllViews()
+        val roomId = controller.roomManager.currentSession()?.sessionId
+        val currentMessageIds = messages.mapTo(mutableSetOf()) { it.messageId }
+        val shouldRebuild = roomId != lastRenderedChatRoomId || !currentMessageIds.containsAll(renderedChatMessageIds)
+        if (shouldRebuild) {
+            chatMessagesContainer.removeAllViews()
+            renderedChatMessageIds.clear()
+            lastRenderedChatRoomId = roomId
+        }
         if (messages.isEmpty()) {
-            chatMessagesContainer.addView(
-                TextView(this).apply {
-                    text = getString(R.string.chat_empty)
-                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
-                    textSize = 14f
-                }
-            )
+            if (chatMessagesContainer.childCount == 0) {
+                chatMessagesContainer.addView(
+                    TextView(this).apply {
+                        text = getString(R.string.chat_empty)
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+                        textSize = 14f
+                    }
+                )
+            }
             chatMessagesScrollView.post { chatMessagesScrollView.scrollTo(0, 0) }
             return
         }
 
+        val newMessages = messages.filterNot { it.messageId in renderedChatMessageIds }
+        if (newMessages.isEmpty()) return
+        if (renderedChatMessageIds.isEmpty() && chatMessagesContainer.childCount > 0) {
+            chatMessagesContainer.removeAllViews()
+        }
         val hostId = currentHostId()
         val hostName = controller.roomManager.currentSession()?.hostName.orEmpty()
-        messages.forEach { message ->
+        newMessages.forEach { message ->
             val isHost = message.senderId == hostId || message.senderName == hostName
             val attachment = message.attachmentTransferId?.let { controller.roomManager.transferById(it) }
             chatMessagesContainer.addView(messageBubble(message, attachment, isHost))
+            renderedChatMessageIds.add(message.messageId)
         }
         if (shouldScrollToBottom) {
             chatMessagesScrollView.post { chatMessagesScrollView.fullScroll(View.FOCUS_DOWN) }
@@ -979,7 +996,7 @@ class MainActivity : AppCompatActivity() {
                     strokeColor = android.graphics.Color.parseColor(if (isHost) "#C0E8AA" else "#E5E5E5")
                     setCardBackgroundColor(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT))
                     clipToOutline = true
-                    
+
                     layoutParams = LinearLayout.LayoutParams(
                         chatBubbleMaxWidth(),
                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1031,7 +1048,7 @@ class MainActivity : AppCompatActivity() {
                 setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
                     android.graphics.Color.parseColor(if (isHost) "#CFE9BA" else "#F0F2F5")
                 ))
-                
+
                 layoutParams = LinearLayout.LayoutParams(
                     chatBubbleMaxWidth(),
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1083,7 +1100,7 @@ class MainActivity : AppCompatActivity() {
                 val extStr = message.attachmentFileName.orEmpty()
                     .substringAfterLast('.', missingDelimiterValue = "")
                     .uppercase()
-                text = listOf(extStr, sizeStr).filter { it.isNotBlank() }.joinToString(" • ")
+                text = listOf(extStr, sizeStr).filter { it.isNotBlank() }.joinToString(" - ")
                 textSize = 11f
                 setTextColor(android.graphics.Color.parseColor("#65676B"))
             }
