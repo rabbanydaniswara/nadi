@@ -35,6 +35,13 @@ object BrowserClientAssets {
                 .hero p { color: #DDE7E3; max-width: 660px; }
                 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
                 .card { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+                .client-nav {
+                  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px;
+                  background: white; border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+                }
+                .tab-button { background: transparent; color: var(--soft); border: 1px solid transparent; }
+                .tab-button.active { background: var(--green); color: white; }
+                .client-section { margin-top: 14px; }
                 .label { margin: 0 0 6px; color: var(--soft); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
                 .value { margin: 0; color: var(--ink); font-size: 20px; font-weight: 800; }
                 .locked { display: none; margin-top: 14px; border-color: #F3C7C7; background: #FFF7F7; }
@@ -95,7 +102,12 @@ object BrowserClientAssets {
                   <article class="card"><p class="label">Host</p><p id="hostName" class="value">-</p></article>
                   <article class="card"><p class="label">Perangkat</p><p id="clientCount" class="value">0 terhubung</p></article>
                 </section>
-                <section class="grid">
+                <nav class="client-nav" aria-label="Menu room">
+                  <button type="button" class="tab-button active" data-client-tab="files">File Room</button>
+                  <button type="button" class="tab-button" data-client-tab="chat">Chat</button>
+                  <button type="button" class="tab-button" data-client-tab="info">Info</button>
+                </nav>
+                <section id="clientFilesSection" class="client-section grid">
                   <article class="card">
                     <h2>File Room: ambil file</h2>
                     <div id="files"><p class="muted">Belum ada file dari host.</p></div>
@@ -107,6 +119,8 @@ object BrowserClientAssets {
                     <p id="uploadStatus" class="muted"></p>
                     <progress id="uploadProgress" value="0" max="100" style="display:none"></progress>
                   </article>
+                </section>
+                <section id="clientChatSection" class="client-section hidden">
                   <article class="card">
                     <h2>Chat lokal</h2>
                     <div id="messages"><p class="muted">Belum ada pesan.</p></div>
@@ -115,6 +129,23 @@ object BrowserClientAssets {
                     <input id="chatAttachmentInput" type="file" style="margin-top:10px" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip">
                     <button id="sendAttachmentButton" style="margin-top:10px">Kirim lampiran chat</button>
                     <p id="attachmentStatus" class="muted"></p>
+                  </article>
+                </section>
+                <section id="clientInfoSection" class="client-section grid hidden">
+                  <article class="card">
+                    <p class="label">Identitas</p>
+                    <p id="activeIdentityText" class="value">Belum masuk</p>
+                    <p class="muted">Identitas NIM dan Nama melekat pada chat serta file selama room berjalan.</p>
+                  </article>
+                  <article class="card">
+                    <p class="label">Room</p>
+                    <p id="infoRoomName" class="value">-</p>
+                    <p id="infoHostName" class="muted">Host: -</p>
+                    <p id="infoConnection" class="muted">Koneksi lokal sedang diperiksa.</p>
+                  </article>
+                  <article class="card">
+                    <p class="label">Local-first</p>
+                    <p class="muted">File Room dan Chat berjalan di jaringan lokal host. File utama ada di File Room, lampiran percakapan tetap berada di Chat.</p>
                   </article>
                 </section>
                 <p>URL room: <code id="currentUrl"></code></p>
@@ -135,6 +166,15 @@ object BrowserClientAssets {
                 let latestMessageAt = 0;
                 let seenMessages = new Set();
                 document.getElementById("currentUrl").textContent = window.location.href;
+
+                function switchClientTab(tab) {
+                  document.querySelectorAll(".tab-button").forEach(button => {
+                    button.classList.toggle("active", button.dataset.clientTab === tab);
+                  });
+                  document.getElementById("clientFilesSection").classList.toggle("hidden", tab !== "files");
+                  document.getElementById("clientChatSection").classList.toggle("hidden", tab !== "chat");
+                  document.getElementById("clientInfoSection").classList.toggle("hidden", tab !== "info");
+                }
 
                 function clientId() {
                   let id = localStorage.getItem(clientIdKey) || "";
@@ -157,6 +197,7 @@ object BrowserClientAssets {
                   document.getElementById("identityCard").style.display = complete ? "none" : "block";
                   identitySummary.textContent = complete ? (nim + " - " + name) : "";
                   identitySummary.className = complete ? "identity-summary" : "identity-summary hidden";
+                  document.getElementById("activeIdentityText").textContent = complete ? (nim + " - " + name) : "Belum masuk";
                   document.querySelectorAll("button").forEach(button => {
                     if (button.id !== "saveIdentityButton") button.disabled = !complete;
                   });
@@ -215,6 +256,9 @@ object BrowserClientAssets {
                     document.getElementById("status").textContent = room.status === "active" ? "Siap" : room.status;
                     document.getElementById("hostName").textContent = room.hostName;
                     document.getElementById("clientCount").textContent = room.clientCount + " terhubung";
+                    document.getElementById("infoRoomName").textContent = room.roomName;
+                    document.getElementById("infoHostName").textContent = "Host: " + room.hostName;
+                    document.getElementById("infoConnection").textContent = "Status: " + (room.status === "active" ? "Siap" : room.status);
                     document.getElementById("locked").style.display = "none";
                     updateIdentityUi(room.identityRequired);
                   } catch (error) {
@@ -424,6 +468,10 @@ object BrowserClientAssets {
                 document.getElementById("sendButton").addEventListener("click", sendChat);
                 document.getElementById("sendAttachmentButton").addEventListener("click", sendChatAttachment);
                 document.getElementById("chatInput").addEventListener("keydown", event => { if (event.key === "Enter") sendChat(); });
+                document.querySelectorAll(".tab-button").forEach(button => {
+                  button.addEventListener("click", () => switchClientTab(button.dataset.clientTab));
+                });
+                switchClientTab("files");
                 refreshRoom(); refreshFiles(); refreshChat();
                 window.setInterval(refreshRoom, 4000);
                 window.setInterval(refreshFiles, 4000);
