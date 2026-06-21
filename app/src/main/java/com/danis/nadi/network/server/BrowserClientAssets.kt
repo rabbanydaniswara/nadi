@@ -60,6 +60,16 @@ object BrowserClientAssets {
                 }
                 .message strong { display: block; color: var(--green); font-size: 13px; }
                 .message p { margin: 6px 0 0; color: var(--ink); }
+                .attachment-card {
+                  margin-top: 10px; padding: 10px; border: 1px solid var(--line);
+                  border-radius: 8px; background: white;
+                }
+                .attachment-card p { color: var(--soft); }
+                .attachment-actions { display: grid; gap: 8px; margin-top: 8px; }
+                .chat-image {
+                  display: block; width: min(360px, 100%); max-height: 260px;
+                  object-fit: contain; border-radius: 8px; background: #EEF6F3;
+                }
                 .identity { margin-top: 14px; }
                 .identity-summary { margin-top: 10px; font-weight: 800; color: var(--green); }
                 .muted { color: var(--soft); }
@@ -245,6 +255,29 @@ object BrowserClientAssets {
                 function safeId(value) {
                   return String(value ?? "").replace(/[^a-zA-Z0-9_-]/g, "_");
                 }
+                function attachmentUrl(id, preview = false) {
+                  const previewQuery = preview ? "&preview=1" : "";
+                  return "/api/download/" + encodeURIComponent(id) + "?token=" + encodeURIComponent(token) + "&" + clientQuery() + previewQuery;
+                }
+                function isImageAttachment(message) {
+                  const mime = String(message.attachmentMimeType || "").toLowerCase();
+                  const name = String(message.attachmentFileName || "").toLowerCase();
+                  return mime.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/.test(name);
+                }
+                function attachmentMarkup(message) {
+                  if (!message.attachmentTransferId) return "";
+                  const id = message.attachmentTransferId;
+                  const statusId = "chatAttachmentStatus-" + safeId(id);
+                  const name = message.attachmentFileName || "Lampiran chat";
+                  const size = Number(message.attachmentSizeBytes || -1);
+                  const meta = formatBytes(size);
+                  const url = attachmentUrl(id, true);
+                  const downloadButton = `<button type="button" class="chatAttachmentDownload" data-id="${'$'}{esc(id)}" data-name="${'$'}{esc(name)}" data-status="${'$'}{esc(statusId)}">Download</button><p id="${'$'}{esc(statusId)}" class="muted"></p>`;
+                  if (isImageAttachment(message)) {
+                    return `<div class="attachment-card"><img class="chat-image" src="${'$'}{esc(url)}" alt="Preview ${'$'}{esc(name)}" loading="lazy"><p class="muted">${'$'}{esc(name)} - ${'$'}{meta}</p><div class="attachment-actions">${'$'}{downloadButton}</div></div>`;
+                  }
+                  return `<div class="attachment-card"><strong>${'$'}{esc(name)}</strong><p>${'$'}{meta} - Download dulu untuk membuka file ini.</p><div class="attachment-actions">${'$'}{downloadButton}</div></div>`;
+                }
                 async function refreshRoom() {
                   if (!token) { showLocked(); return; }
                   try {
@@ -333,6 +366,23 @@ object BrowserClientAssets {
                     status.className = "error";
                   }
                 }
+                async function downloadChatAttachment(id, name, statusId) {
+                  const status = document.getElementById(statusId);
+                  if (!id || !status) return;
+                  status.textContent = "Menyiapkan download...";
+                  status.className = "muted";
+                  try {
+                    const response = await fetch(attachmentUrl(id));
+                    if (!response.ok) throw new Error("download_failed");
+                    const blob = await response.blob();
+                    saveBlob(blob, name || "lampiran-nadi");
+                    status.textContent = "Download selesai. Buka file dari folder download browser.";
+                    status.className = "success";
+                  } catch (error) {
+                    status.textContent = "Download gagal. Pastikan room masih aktif.";
+                    status.className = "error";
+                  }
+                }
                 function saveBlob(blob, fileName) {
                   const url = URL.createObjectURL(blob);
                   const link = document.createElement("a");
@@ -390,11 +440,12 @@ object BrowserClientAssets {
                     latestMessageAt = Math.max(latestMessageAt, message.createdAt);
                     const div = document.createElement("div");
                     div.className = "message";
-                    const attachment = message.attachmentTransferId
-                      ? `<p><a href="/api/download/${'$'}{encodeURIComponent(message.attachmentTransferId)}?token=${'$'}{encodeURIComponent(token)}&${'$'}{clientQuery()}">Lampiran: ${'$'}{esc(message.attachmentFileName)}</a></p>`
-                      : "";
+                    const attachment = attachmentMarkup(message);
                     div.innerHTML = `<strong>${'$'}{esc(message.senderName)}</strong><p>${'$'}{esc(message.text)}</p>${'$'}{attachment}`;
                     holder.appendChild(div);
+                    div.querySelectorAll(".chatAttachmentDownload").forEach(button => {
+                      button.addEventListener("click", () => downloadChatAttachment(button.dataset.id, button.dataset.name, button.dataset.status));
+                    });
                   }
                   if (!seenMessages.size) holder.innerHTML = `<p class="muted">Belum ada pesan.</p>`;
                 }

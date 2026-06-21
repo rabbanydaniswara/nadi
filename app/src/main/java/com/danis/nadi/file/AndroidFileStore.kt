@@ -79,8 +79,13 @@ class AndroidFileStore(
         direction: TransferDirection,
         senderName: String?
     ): TransferItem {
-        if (direction == TransferDirection.UPLOAD && folderName == RECEIVED_FOLDER) {
-            return savePublicReceivedFile(fileName, mimeType, inputStream, roomId, direction, senderName)
+        val publicFolder = when {
+            direction == TransferDirection.UPLOAD && folderName == RECEIVED_FOLDER -> folderName
+            direction == TransferDirection.CHAT_ATTACHMENT && folderName == CHAT_DOWNLOADS_FOLDER -> folderName
+            else -> null
+        }
+        if (publicFolder != null) {
+            return savePublicRoomFile(fileName, mimeType, inputStream, roomId, publicFolder, direction, senderName)
         }
         return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
     }
@@ -95,24 +100,25 @@ class AndroidFileStore(
         }
     }
 
-    private fun savePublicReceivedFile(
+    private fun savePublicRoomFile(
         fileName: String,
         mimeType: String?,
         inputStream: InputStream,
         roomId: String?,
+        folderName: String,
         direction: TransferDirection,
         senderName: String?
     ): TransferItem {
         fileRoomTreeUriProvider()?.takeIf { it.isNotBlank() }?.let { treeUri ->
-            saveTreeReceivedFile(fileName, mimeType, inputStream, roomId, direction, senderName, Uri.parse(treeUri))?.let {
+            saveTreeRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName, Uri.parse(treeUri))?.let {
                 return it
             }
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
+            return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
         }
         val safeName = fileName.safeFileName()
-        val relativePath = publicRelativePath(roomId, RECEIVED_FOLDER)
+        val relativePath = publicRelativePath(roomId, folderName)
         val targetName = FileNameResolver.uniqueName(safeName) { mediaFileExists(relativePath, it) }
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, targetName)
@@ -122,7 +128,7 @@ class AndroidFileStore(
         }
         val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val uri = context.contentResolver.insert(collection, values)
-            ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
+            ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
 
         var bytesWritten = 0L
         context.contentResolver.openOutputStream(uri)?.use { output ->
@@ -135,7 +141,7 @@ class AndroidFileStore(
                     bytesWritten += read
                 }
             }
-        } ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
+        } ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
 
         context.contentResolver.update(
             uri,
@@ -158,11 +164,12 @@ class AndroidFileStore(
         )
     }
 
-    private fun saveTreeReceivedFile(
+    private fun saveTreeRoomFile(
         fileName: String,
         mimeType: String?,
         inputStream: InputStream,
         roomId: String?,
+        folderName: String,
         direction: TransferDirection,
         senderName: String?,
         treeUri: Uri
@@ -173,7 +180,7 @@ class AndroidFileStore(
         )
         val nadiDirectory = findOrCreateDirectory(treeUri, rootDocument, PUBLIC_ROOT_FOLDER) ?: return null
         val roomDirectory = findOrCreateDirectory(treeUri, nadiDirectory, roomId.safePathSegment()) ?: return null
-        val receivedDirectory = findOrCreateDirectory(treeUri, roomDirectory, RECEIVED_FOLDER) ?: return null
+        val receivedDirectory = findOrCreateDirectory(treeUri, roomDirectory, folderName.safePathSegment()) ?: return null
         val safeName = fileName.safeFileName()
         val targetName = FileNameResolver.uniqueName(safeName) { documentExists(treeUri, receivedDirectory, it) }
         val documentUri = DocumentsContract.createDocument(
@@ -346,6 +353,7 @@ class AndroidFileStore(
 
 private const val PUBLIC_ROOT_FOLDER = "Nadi"
 private const val RECEIVED_FOLDER = "received"
+private const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
 
 private data class FileMetadata(
     val displayName: String,

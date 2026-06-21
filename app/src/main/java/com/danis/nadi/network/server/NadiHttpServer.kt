@@ -112,17 +112,26 @@ class NadiHttpServer(
             Response.Status.NOT_FOUND,
             """{"error":"file_unavailable"}"""
         )
+        val preview = session.parameters["preview"]?.firstOrNull() == "1" &&
+            transfer.direction == TransferDirection.CHAT_ATTACHMENT &&
+            (payload.mimeType.isPreviewableImage() || payload.fileName.isPreviewableImageName())
+        val responseMimeType = if (preview) {
+            payload.mimeType.takeIf { it.isPreviewableImage() } ?: payload.fileName.inferredMimeType()
+        } else {
+            payload.mimeType
+        }
         val response = if (payload.sizeBytes >= 0) {
             newFixedLengthResponse(
                 Response.Status.OK,
-                payload.mimeType,
+                responseMimeType,
                 payload.inputStream,
                 payload.sizeBytes
             )
         } else {
-            newChunkedResponse(Response.Status.OK, payload.mimeType, payload.inputStream)
+            newChunkedResponse(Response.Status.OK, responseMimeType, payload.inputStream)
         }
-        response.addHeader("Content-Disposition", "attachment; filename=\"${payload.fileName.headerSafe()}\"")
+        val disposition = if (preview) "inline" else "attachment"
+        response.addHeader("Content-Disposition", "$disposition; filename=\"${payload.fileName.headerSafe()}\"")
         return response.withNoStoreHeaders()
     }
 
@@ -138,8 +147,7 @@ class NadiHttpServer(
         val originalName = session.parameters["file"]?.firstOrNull()
             ?: session.parameters["filename"]?.firstOrNull()
             ?: "upload.bin"
-        val mimeType = session.headers["content-type"]?.substringAfter("type=", missingDelimiterValue = "")
-            ?.takeIf { it.isNotBlank() }
+        val mimeType = originalName.resolvedUploadMimeType(session.headers["content-type"]?.substringAfter("type=", missingDelimiterValue = ""))
         val roomId = roomManager.currentSession()?.sessionId
         val transfer = FileInputStream(File(tempPath)).use { input ->
             fileStore.saveRoomFile(
@@ -193,8 +201,7 @@ class NadiHttpServer(
         if (!originalName.isAllowedChatAttachmentName() || tempFile.length() > MAX_CHAT_ATTACHMENT_BYTES) {
             return json(Response.Status.BAD_REQUEST, """{"error":"attachment_not_allowed"}""")
         }
-        val mimeType = session.headers["content-type"]?.substringAfter("type=", missingDelimiterValue = "")
-            ?.takeIf { it.isNotBlank() }
+        val mimeType = originalName.resolvedUploadMimeType(session.headers["content-type"]?.substringAfter("type=", missingDelimiterValue = ""))
         val roomId = roomManager.currentSession()?.sessionId
         val transfer = FileInputStream(tempFile).use { input ->
             fileStore.saveRoomFile(
@@ -202,7 +209,7 @@ class NadiHttpServer(
                 mimeType = mimeType,
                 inputStream = input,
                 roomId = roomId,
-                folderName = "chat-attachments",
+                folderName = "chat-downloads",
                 direction = TransferDirection.CHAT_ATTACHMENT,
                 senderName = client.displayName
             )
@@ -335,6 +342,44 @@ class NadiHttpServer(
     private fun String.decodeUrl(): String = URLDecoder.decode(this, "UTF-8")
 
     private fun String.headerSafe(): String = replace("\"", "'").replace("\r", "").replace("\n", "")
+
+    private fun String.isPreviewableImage(): Boolean = lowercase() in setOf(
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp"
+    )
+
+    private fun String.isPreviewableImageName(): Boolean {
+        return substringAfterLast('.', missingDelimiterValue = "").lowercase() in setOf("jpg", "jpeg", "png", "gif", "webp")
+    }
+
+    private fun String.resolvedUploadMimeType(declaredMimeType: String?): String {
+        return declaredMimeType
+            ?.substringBefore(";")
+            ?.trim()
+            ?.takeIf { it.isNotBlank() && it != "application/octet-stream" && !it.startsWith("multipart/") }
+            ?: inferredMimeType()
+    }
+
+    private fun String.inferredMimeType(): String {
+        return when (substringAfterLast('.', missingDelimiterValue = "").lowercase()) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "pdf" -> "application/pdf"
+            "txt" -> "text/plain"
+            "doc" -> "application/msword"
+            "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "ppt" -> "application/vnd.ms-powerpoint"
+            "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "xls" -> "application/vnd.ms-excel"
+            "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "zip" -> "application/zip"
+            else -> "application/octet-stream"
+        }
+    }
 
     private fun String.isAllowedChatAttachmentName(): Boolean {
         val extension = substringAfterLast('.', missingDelimiterValue = "").lowercase()
