@@ -54,10 +54,23 @@ object BrowserClientAssets {
                 progress { width: 100%; height: 10px; accent-color: var(--green); }
                 .file-row { border-top: 1px solid var(--line); padding: 12px 0; }
                 .file-row:first-child { border-top: 0; }
+                .chat-window {
+                  min-height: 260px; max-height: min(58vh, 520px); overflow-y: auto;
+                  overscroll-behavior: contain; scroll-behavior: smooth;
+                  border: 1px solid var(--line); border-radius: 8px;
+                  background: var(--mist); padding: 10px;
+                }
                 .message {
-                  width: fit-content; max-width: 100%; margin-top: 10px; padding: 10px 12px;
+                  width: fit-content; max-width: min(82%, 560px); margin-top: 10px; padding: 10px 12px;
                   border: 1px solid var(--line); border-radius: 8px 8px 8px 2px; background: var(--mist);
                 }
+                .message.mine {
+                  margin-left: auto; border-color: var(--green); border-radius: 8px 8px 2px 8px;
+                  background: var(--green); color: white;
+                }
+                .message.mine strong, .message.mine p { color: white; }
+                .message.mine .attachment-card { color: var(--ink); }
+                .message.mine .attachment-card p { color: var(--soft); }
                 .message strong { display: block; color: var(--green); font-size: 13px; }
                 .message p { margin: 6px 0 0; color: var(--ink); }
                 .attachment-card {
@@ -83,6 +96,8 @@ object BrowserClientAssets {
                   main { padding: 12px; }
                   h1 { font-size: 29px; }
                   .hero, .card { padding: 14px; }
+                  .chat-window { min-height: 320px; max-height: 56vh; }
+                  .message { max-width: 90%; }
                 }
               </style>
             </head>
@@ -133,7 +148,7 @@ object BrowserClientAssets {
                 <section id="clientChatSection" class="client-section hidden">
                   <article class="card">
                     <h2>Chat lokal</h2>
-                    <div id="messages"><p class="muted">Belum ada pesan.</p></div>
+                    <div id="messages" class="chat-window"><p class="muted">Belum ada pesan.</p></div>
                     <input id="chatInput" type="text" style="margin-top:10px" placeholder="Tulis pesan">
                     <button id="sendButton" style="margin-top:10px">Kirim</button>
                     <input id="chatAttachmentInput" type="file" style="margin-top:10px" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip">
@@ -175,6 +190,7 @@ object BrowserClientAssets {
                 nameInput.value = localStorage.getItem(clientNameKey) || "";
                 let latestMessageAt = 0;
                 let seenMessages = new Set();
+                let forceChatScrollToBottom = false;
                 document.getElementById("currentUrl").textContent = window.location.href;
 
                 function switchClientTab(tab) {
@@ -184,6 +200,21 @@ object BrowserClientAssets {
                   document.getElementById("clientFilesSection").classList.toggle("hidden", tab !== "files");
                   document.getElementById("clientChatSection").classList.toggle("hidden", tab !== "chat");
                   document.getElementById("clientInfoSection").classList.toggle("hidden", tab !== "info");
+                  if (tab === "chat") requestAnimationFrame(scrollMessagesToBottom);
+                }
+
+                function messagesHolder() {
+                  return document.getElementById("messages");
+                }
+
+                function isMessagesNearBottom() {
+                  const holder = messagesHolder();
+                  return holder.scrollHeight - holder.scrollTop - holder.clientHeight <= 48;
+                }
+
+                function scrollMessagesToBottom() {
+                  const holder = messagesHolder();
+                  holder.scrollTop = holder.scrollHeight;
                 }
 
                 function clientId() {
@@ -432,22 +463,27 @@ object BrowserClientAssets {
                   const response = await fetch("/api/chat?token=" + encodeURIComponent(token) + "&" + clientQuery() + "&after=" + latestMessageAt);
                   if (!response.ok) return;
                   const payload = await response.json();
-                  const holder = document.getElementById("messages");
+                  const holder = messagesHolder();
+                  const shouldScrollToBottom = forceChatScrollToBottom || isMessagesNearBottom();
+                  forceChatScrollToBottom = false;
                   if (!seenMessages.size) holder.innerHTML = "";
+                  let appended = 0;
                   for (const message of payload.messages || []) {
                     if (seenMessages.has(message.messageId)) continue;
                     seenMessages.add(message.messageId);
                     latestMessageAt = Math.max(latestMessageAt, message.createdAt);
                     const div = document.createElement("div");
-                    div.className = "message";
+                    div.className = "message" + (message.senderId === clientId() ? " mine" : "");
                     const attachment = attachmentMarkup(message);
                     div.innerHTML = `<strong>${'$'}{esc(message.senderName)}</strong><p>${'$'}{esc(message.text)}</p>${'$'}{attachment}`;
                     holder.appendChild(div);
+                    appended += 1;
                     div.querySelectorAll(".chatAttachmentDownload").forEach(button => {
                       button.addEventListener("click", () => downloadChatAttachment(button.dataset.id, button.dataset.name, button.dataset.status));
                     });
                   }
                   if (!seenMessages.size) holder.innerHTML = `<p class="muted">Belum ada pesan.</p>`;
+                  if (shouldScrollToBottom && appended > 0) requestAnimationFrame(scrollMessagesToBottom);
                 }
                 async function sendChat() {
                   const input = document.getElementById("chatInput");
@@ -467,6 +503,7 @@ object BrowserClientAssets {
                   });
                   if (response.ok) {
                     input.value = "";
+                    forceChatScrollToBottom = true;
                     refreshChat();
                   }
                 }
@@ -498,6 +535,7 @@ object BrowserClientAssets {
                     if (ok) {
                       input.value = "";
                       document.getElementById("chatInput").value = "";
+                      forceChatScrollToBottom = true;
                       refreshChat();
                     }
                   };

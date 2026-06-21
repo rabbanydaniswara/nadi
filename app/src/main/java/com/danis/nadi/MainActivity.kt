@@ -29,7 +29,6 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -38,6 +37,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.NestedScrollView
 import com.danis.nadi.file.FileSizeFormatter
 import com.danis.nadi.history.TransferHistoryItem
 import com.danis.nadi.model.ChatMessage
@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
     private var activeRoomDestinationId = R.id.active_room_tab_room
 
     private lateinit var homePanel: LinearLayout
-    private lateinit var mainScrollView: ScrollView
+    private lateinit var mainScrollView: NestedScrollView
     private lateinit var joinPanel: LinearLayout
     private lateinit var joinWebPanel: LinearLayout
     private lateinit var historyPanel: LinearLayout
@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fileRoomLocationText: TextView
     private lateinit var sharedFilesText: TextView
     private lateinit var receivedFilesText: TextView
+    private lateinit var chatMessagesScrollView: NestedScrollView
     private lateinit var chatMessagesContainer: LinearLayout
     private lateinit var participantSummaryText: TextView
     private lateinit var clientListText: TextView
@@ -124,6 +125,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var joinWebView: WebView
     private var webFileChooserCallback: ValueCallback<Array<Uri>>? = null
     private var chatKeyboardCompactMode = false
+    private var forceChatScrollToBottom = false
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -251,6 +253,7 @@ class MainActivity : AppCompatActivity() {
         fileRoomLocationText = findViewById(R.id.fileRoomLocationText)
         sharedFilesText = findViewById(R.id.sharedFilesText)
         receivedFilesText = findViewById(R.id.receivedFilesText)
+        chatMessagesScrollView = findViewById(R.id.chatMessagesScrollView)
         chatMessagesContainer = findViewById(R.id.chatMessagesContainer)
         participantSummaryText = findViewById(R.id.participantSummaryText)
         clientListText = findViewById(R.id.clientListText)
@@ -697,6 +700,7 @@ class MainActivity : AppCompatActivity() {
         )
         hostChatInput.text?.clear()
         controller.persistRecentTransfers()
+        forceChatScrollToBottom = true
         refreshHostDashboard()
         Toast.makeText(this, "Lampiran chat terkirim.", Toast.LENGTH_SHORT).show()
     }
@@ -789,6 +793,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         hostChatInput.text?.clear()
+        forceChatScrollToBottom = true
         refreshHostDashboard()
     }
 
@@ -821,7 +826,7 @@ class MainActivity : AppCompatActivity() {
         val snapshot = controller.roomManager.snapshot()
         val shared = controller.roomManager.sharedFiles()
         val received = controller.roomManager.receivedFiles()
-        val messages = snapshot.messages.takeLast(8)
+        val messages = snapshot.messages
         if (controller.lifecycleState == RoomLifecycleState.ACTIVE) {
             controller.persistRecentTransfers()
             activeStatusText.text = buildStatusLine(controller.activeNetworkMode, snapshot.clients.size)
@@ -891,6 +896,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderChatMessages(messages: List<ChatMessage>) {
+        val shouldScrollToBottom = forceChatScrollToBottom || isChatMessagesWindowNearBottom()
+        forceChatScrollToBottom = false
         chatMessagesContainer.removeAllViews()
         if (messages.isEmpty()) {
             chatMessagesContainer.addView(
@@ -900,6 +907,7 @@ class MainActivity : AppCompatActivity() {
                     textSize = 14f
                 }
             )
+            chatMessagesScrollView.post { chatMessagesScrollView.scrollTo(0, 0) }
             return
         }
 
@@ -909,6 +917,16 @@ class MainActivity : AppCompatActivity() {
             val isHost = message.senderId == hostId || message.senderName == hostName
             chatMessagesContainer.addView(messageBubble(message, isHost))
         }
+        if (shouldScrollToBottom) {
+            chatMessagesScrollView.post { chatMessagesScrollView.fullScroll(View.FOCUS_DOWN) }
+        }
+    }
+
+    private fun isChatMessagesWindowNearBottom(): Boolean {
+        if (chatMessagesScrollView.childCount == 0) return true
+        val content = chatMessagesScrollView.getChildAt(0)
+        val distanceToBottom = content.bottom - (chatMessagesScrollView.scrollY + chatMessagesScrollView.height)
+        return distanceToBottom <= 48.dp()
     }
 
     private fun messageBubble(message: ChatMessage, isHost: Boolean): View {
