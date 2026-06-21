@@ -220,3 +220,26 @@ Owner proyek ingin Nadi berkembang dari MVP file/chat sederhana menjadi ruang lo
 - Keamanan dibuat cukup dan praktis untuk jaringan lokal: token/PIN, validasi identitas lokal, batas ukuran/jenis file, sanitasi nama file, dan kontrol host.
 
 Catatan penting: validasi identitas yang benar-benar resmi tidak mungkin dilakukan tanpa database kampus/server eksternal. Untuk Nadi local-first, validasi yang realistis adalah kombinasi format NIM, daftar peserta/roster lokal opsional, persetujuan host, dan identitas yang dikunci selama sesi room.
+
+## Perkembangan Terkini (Antigravity Updates)
+
+### 1. Fitur & Perbaikan yang Sudah Selesai (Completed)
+- **Overhaul UI Chat ala WhatsApp:** 
+  - Layout obrolan dengan warna latar belakang creme `#EFE6DD`.
+  - Balon chat (`messageBubble`) hijau terang (`#DCF8C6`) untuk host/pengirim dan putih untuk guest dengan ujung tail melengkung.
+  - Composer input chat dimodelkan melengkung (*pill* style) dengan tombol kirim bertipe lingkaran (FAB-style).
+  - Penghapusan nama pengirim "Anda" (Host) pada pesan keluar agar obrolan bersih.
+- **Visualisasi Lampiran Gambar:** Gambar tidak lagi terpotong kasar (*no center-crop*) karena menggunakan `ScaleType.FIT_CENTER` yang dibalut `MaterialCardView` bersudut bulat dengan border outline tipis `1dp`.
+- **Kartu Lampiran Dokumen:** File non-gambar ditampilkan dalam layout kartu horizontal khusus yang memuat ikon berkas kertas (`ic_document.xml`), nama berkas tebal, format berkas, serta ukuran berkas terformat (contoh: `TXT • 51 B`).
+- **Fix Keyboard Overlap:** Layout area input chat telah dipindahkan dan dikonfigurasi agar selalu "lengket" di bagian bawah layar secara dinamis, sehingga saat keyboard muncul input box terdorong ke atas dengan mulus tanpa menutupi elemen lain.
+- **Fix Launch Crash:** Memperbaiki crash `ClassCastException` di `MainActivity.kt` karena perbedaan casting tombol attach dan send setelah migrasi ke `ImageButton` dan `FloatingActionButton`.
+
+### 2. Rencana Kerja Optimisasi Berikutnya (Planned & Researched)
+Untuk mengatasi chat yang terasa berat saat memuat gambar berulang, rencana optimisasi berikut telah disepakati:
+- **HTTP Caching di Local Server (`NadiHttpServer.kt`):**
+  - Mengaktifkan `Cache-Control: public, max-age=31536000` khusus untuk request pratinjau berkas gambar (`preview=true`).
+  - Mendukung `ETag` (menggunakan data `transferId` unik) dan mengembalikan respons **`304 Not Modified`** (tanpa memancarkan ulang byte gambar) jika browser client sudah menyimpan cache lokal di perangkatnya.
+- **Incremental Chat Rendering (`MainActivity.kt`):**
+  - Menyimpan cache state `renderedMessageIds` (Set) dan `lastRenderedRoomId` di HP host.
+  - Memodifikasi `renderChatMessages` agar hanya menyaring dan menambahkan view untuk pesan baru (`messageId !in renderedMessageIds`), alih-alih menghapus (`removeAllViews`) dan mendekode ulang seluruh bitmap gambar dari disk ke main thread.
+
