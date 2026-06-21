@@ -373,10 +373,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.addSharedFileButton).setOnClickListener {
             openFilePicker()
         }
-        findViewById<MaterialButton>(R.id.attachHostChatFileButton).setOnClickListener {
+        findViewById<View>(R.id.attachHostChatFileButton).setOnClickListener {
             openHostChatAttachmentPicker()
         }
-        findViewById<MaterialButton>(R.id.sendHostMessageButton).setOnClickListener {
+        findViewById<View>(R.id.sendHostMessageButton).setOnClickListener {
             sendHostMessage()
         }
         hostChatInput.setOnFocusChangeListener { _, hasFocus ->
@@ -939,8 +939,9 @@ class MainActivity : AppCompatActivity() {
 
         val bubble = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(12.dp(), 9.dp(), 12.dp(), 8.dp())
+            setPadding(0, 0, 0, 0)
             background = chatBubbleBackground(isHost)
+            elevation = 2.dp().toFloat()
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -949,52 +950,168 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        bubble.addView(TextView(this).apply {
-            text = if (isHost) getString(R.string.chat_sender_you) else message.senderName
-            setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.white else R.color.nadi_green))
-            textSize = 12f
-            typeface = Typeface.DEFAULT_BOLD
-            maxWidth = chatBubbleMaxWidth()
-        })
-        bubble.addView(TextView(this).apply {
-            text = message.text
-            setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.white else R.color.nadi_graphite))
-            textSize = 15f
-            maxWidth = chatBubbleMaxWidth()
-        })
-        if (attachment?.isPreviewableImage() == true) {
-            val imageUri = attachment.previewUri()
-            if (imageUri != null) {
-                bubble.addView(ImageView(this).apply {
-                    setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_line))
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    contentDescription = attachment.fileName
-                    layoutParams = LinearLayout.LayoutParams(
-                        chatBubbleMaxWidth(),
-                        180.dp()
-                    ).apply {
-                        topMargin = 8.dp()
-                    }
-                    runCatching { setImageURI(imageUri) }
-                })
-            }
-        }
-        if (!message.attachmentFileName.isNullOrBlank()) {
+        // 1. Nama pengirim (hanya untuk guest)
+        if (!isHost) {
             bubble.addView(TextView(this).apply {
-                text = getString(R.string.chat_attachment_line, message.attachmentFileName)
-                setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.white else R.color.nadi_deep_green))
-                textSize = 13f
+                text = message.senderName
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
                 maxWidth = chatBubbleMaxWidth()
-                setPadding(0, 6.dp(), 0, 0)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(12.dp(), 8.dp(), 12.dp(), 2.dp())
+                }
             })
         }
+
+        // 2. Lampiran Gambar (jika ada)
+        val isImage = attachment?.isPreviewableImage() == true
+        if (isImage) {
+            val imageUri = attachment!!.previewUri()
+            if (imageUri != null) {
+                val card = com.google.android.material.card.MaterialCardView(this).apply {
+                    radius = 12.dp().toFloat()
+                    elevation = 0f
+                    strokeWidth = 1.dp()
+                    strokeColor = android.graphics.Color.parseColor(if (isHost) "#C0E8AA" else "#E5E5E5")
+                    setCardBackgroundColor(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT))
+                    clipToOutline = true
+                    
+                    layoutParams = LinearLayout.LayoutParams(
+                        chatBubbleMaxWidth(),
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        setMargins(3.dp(), 3.dp(), 3.dp(), 3.dp())
+                    }
+                }
+
+                val imageView = ImageView(this).apply {
+                    adjustViewBounds = true
+                    maxHeight = 240.dp()
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    contentDescription = attachment.fileName
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    runCatching { setImageURI(imageUri) }
+                }
+                card.addView(imageView)
+                bubble.addView(card)
+            }
+        }
+
+        // 3. Teks Pesan
+        if (!message.text.isNullOrBlank()) {
+            bubble.addView(TextView(this).apply {
+                text = message.text
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_graphite))
+                textSize = 15f
+                maxWidth = chatBubbleMaxWidth()
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    val top = if (isImage) 4.dp() else if (isHost) 8.dp() else 2.dp()
+                    setMargins(12.dp(), top, 12.dp(), 2.dp())
+                }
+            })
+        }
+
+        // 4. Kartu Lampiran Berkas Non-Gambar
+        val hasFile = !message.attachmentFileName.isNullOrBlank()
+        if (hasFile && !isImage) {
+            val card = com.google.android.material.card.MaterialCardView(this).apply {
+                radius = 8.dp().toFloat()
+                elevation = 0f
+                strokeWidth = 0
+                setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor(if (isHost) "#CFE9BA" else "#F0F2F5")
+                ))
+                
+                layoutParams = LinearLayout.LayoutParams(
+                    chatBubbleMaxWidth(),
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(6.dp(), 6.dp(), 6.dp(), 4.dp())
+                }
+            }
+
+            val cardContent = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(8.dp(), 8.dp(), 8.dp(), 8.dp())
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val fileIcon = ImageView(this).apply {
+                setImageResource(R.drawable.ic_document)
+                imageTintList = android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor(if (isHost) "#075E54" else "#65676B")
+                )
+                layoutParams = LinearLayout.LayoutParams(32.dp(), 32.dp()).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    rightMargin = 8.dp()
+                }
+            }
+
+            val textLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            val fileNameText = TextView(this).apply {
+                text = message.attachmentFileName
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(android.graphics.Color.BLACK)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+
+            val fileMetaText = TextView(this).apply {
+                val sizeStr = attachment?.let { FileSizeFormatter.format(it.sizeBytes) }.orEmpty()
+                val extStr = message.attachmentFileName.orEmpty()
+                    .substringAfterLast('.', missingDelimiterValue = "")
+                    .uppercase()
+                text = listOf(extStr, sizeStr).filter { it.isNotBlank() }.joinToString(" • ")
+                textSize = 11f
+                setTextColor(android.graphics.Color.parseColor("#65676B"))
+            }
+
+            textLayout.addView(fileNameText)
+            textLayout.addView(fileMetaText)
+
+            cardContent.addView(fileIcon)
+            cardContent.addView(textLayout)
+            card.addView(cardContent)
+            bubble.addView(card)
+        }
+
+        // 5. Waktu / Timestamp
         bubble.addView(TextView(this).apply {
             text = chatTimeFormat.format(Date(message.createdAt))
-            setTextColor(ContextCompat.getColor(this@MainActivity, if (isHost) R.color.nadi_line else R.color.nadi_soft_ink))
-            textSize = 11f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 10f
             gravity = Gravity.END
             maxWidth = chatBubbleMaxWidth()
-            setPadding(0, 5.dp(), 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.END
+                val top = if (hasFile && !isImage) 2.dp() else 4.dp()
+                setMargins(12.dp(), top, 12.dp(), 6.dp())
+            }
         })
 
         row.addView(bubble)
@@ -1021,12 +1138,14 @@ class MainActivity : AppCompatActivity() {
     private fun chatBubbleBackground(isHost: Boolean): GradientDrawable {
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = 12.dp().toFloat()
+            val radius = 16.dp().toFloat()
+            val smallRadius = 4.dp().toFloat()
             if (isHost) {
-                setColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+                cornerRadii = floatArrayOf(radius, radius, smallRadius, smallRadius, radius, radius, radius, radius)
+                setColor(android.graphics.Color.parseColor("#DCF8C6"))
             } else {
-                setColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_mist))
-                setStroke(1.dp(), ContextCompat.getColor(this@MainActivity, R.color.nadi_line))
+                cornerRadii = floatArrayOf(smallRadius, smallRadius, radius, radius, radius, radius, radius, radius)
+                setColor(android.graphics.Color.WHITE)
             }
         }
     }

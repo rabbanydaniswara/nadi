@@ -1044,23 +1044,47 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:padding="20dp"
+                android:background="#EFE6DD"
                 android:visibility="gone">
 
-                <TextView
+                <!-- Custom Chat Header -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/host_chat_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
+                    android:background="@color/nadi_green"
+                    android:padding="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:elevation="4dp">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/host_chat_copy"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_circle_avatar"
+                        android:src="@drawable/ic_room"
+                        android:padding="8dp"/>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/host_chat_title"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            android:textSize="18sp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Terlindungi secara lokal"
+                            android:textColor="#D1F2EB"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <!-- ScrollView for chat messages that takes remaining height (weight=1) -->
                 <androidx.core.widget.NestedScrollView
@@ -1068,70 +1092,76 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:layout_marginTop="12dp"
-                    android:background="@color/nadi_mist"
                     android:clipToPadding="false"
                     android:fillViewport="true"
-                    android:overScrollMode="ifContentScrolls"
-                    android:padding="10dp">
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:overScrollMode="ifContentScrolls">
 
                     <LinearLayout
                         android:id="@+id/chatMessagesContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:orientation="vertical"
+                        android:paddingHorizontal="12dp" />
                 </androidx.core.widget.NestedScrollView>
 
                 <!-- Chat composer area (stays sticky above keyboard) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical">
-
-                    <EditText
-                        android:id="@+id/hostChatInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:backgroundTint="@color/nadi_green"
-                        android:hint="@string/host_chat_hint"
-                        android:inputType="textCapSentences"
-                        android:singleLine="true"
-                        android:textColor="@color/nadi_graphite"
-                        android:textSize="15sp" />
+                    android:orientation="horizontal"
+                    android:gravity="bottom"
+                    android:padding="8dp"
+                    android:clipToPadding="false"
+                    android:background="@android:color/transparent">
 
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_chat_input"
+                        android:orientation="horizontal"
+                        android:gravity="bottom"
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="4dp">
 
-                        <com.google.android.material.button.MaterialButton
+                        <EditText
+                            android:id="@+id/hostChatInput"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="@null"
+                            android:hint="@string/host_chat_hint"
+                            android:inputType="textCapSentences|textMultiLine"
+                            android:maxLines="6"
+                            android:minHeight="40dp"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="8dp"
+                            android:textColor="@color/nadi_graphite"
+                            android:textSize="16sp" />
+
+                        <ImageButton
                             android:id="@+id/attachHostChatFileButton"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/attach_chat_file"
-                            android:textAllCaps="false"
-                            android:textColor="@color/nadi_green"
-                            app:cornerRadius="10dp"
-                            app:strokeColor="@color/nadi_green" />
-
-                        <Space
-                            android:layout_width="10dp"
-                            android:layout_height="1dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/sendHostMessageButton"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:text="@string/send_message"
-                            android:textAllCaps="false"
-                            app:backgroundTint="@color/nadi_green"
-                            app:cornerRadius="10dp" />
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_gravity="bottom"
+                            android:layout_marginBottom="2dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_attachment_chat" />
                     </LinearLayout>
+
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/sendHostMessageButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginBottom="2dp"
+                        app:backgroundTint="@color/nadi_green"
+                        app:tint="@color/white"
+                        app:elevation="2dp"
+                        app:fabSize="mini"
+                        android:src="@drawable/ic_send_chat" />
                 </LinearLayout>
             </LinearLayout>
 
