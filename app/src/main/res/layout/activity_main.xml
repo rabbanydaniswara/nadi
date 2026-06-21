@@ -1,1030 +1,1051 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/nadi_mist"
-    android:clipToPadding="false"
-    android:fillViewport="true"
-    android:isScrollContainer="true"
     tools:context=".MainActivity">
 
-    <LinearLayout
+    <!-- 1. ScrollView for Non-Active Panels (Home, History, Settings, Setup, Join, JoinWeb) -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/mainScrollView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true">
 
         <LinearLayout
-            android:id="@+id/homePanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:id="@+id/activeRoomHeaderSection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_deep_panel"
-                android:orientation="vertical"
-                android:padding="24dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_chip"
-                    android:text="@string/nadi_tagline"
-                    android:textColor="@color/nadi_deep_green"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="@string/app_name"
-                    android:textColor="@color/white"
-                    android:textSize="44sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:lineSpacingExtra="4dp"
-                    android:text="@string/home_intro"
-                    android:textColor="@color/nadi_line"
-                    android:textSize="16sp" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/createRoomButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="18dp"
-                android:text="@string/start_room"
-                android:textAllCaps="false"
-                android:textStyle="bold"
-                app:backgroundTint="@color/nadi_green"
-                app:cornerRadius="10dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/joinRoomButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="10dp"
-                android:text="@string/join_room"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_green"
-                app:cornerRadius="10dp"
-                app:strokeColor="@color/nadi_line" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/homeHistoryButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="6dp"
-                android:text="@string/view_history"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_soft_ink" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/settingsButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="@string/settings"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_soft_ink" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/recent_transfers"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/recentEmptyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/recent_empty"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/joinPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/join_room_title"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="4dp"
-                android:text="@string/join_room_copy"
-                android:textColor="@color/nadi_soft_ink"
-                android:textSize="15sp" />
+            android:padding="20dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <EditText
-                    android:id="@+id/roomUrlInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:backgroundTint="@color/nadi_green"
-                    android:hint="@string/join_room_url_hint"
-                    android:inputType="textUri"
-                    android:singleLine="true"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="15sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/openRoomButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/open_room_in_app"
-                    android:textAllCaps="false"
-                    app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/pasteRoomUrlButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/paste_url"
-                    android:textAllCaps="false"
-                    android:textColor="@color/nadi_green"
-                    app:cornerRadius="10dp"
-                    app:strokeColor="@color/nadi_green" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/joinBackButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/back_home"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_soft_ink" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/joinWebPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/joined_room_title"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="28sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/joinedRoomUrlText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_outline_card"
-                android:padding="12dp"
-                android:textColor="@color/nadi_green"
-                android:textIsSelectable="true"
-                android:textSize="13sp"
-                tools:text="http://192.168.1.5:8080/?token=..." />
-
-            <WebView
-                android:id="@+id/joinWebView"
-                android:layout_width="match_parent"
-                android:layout_height="620dp"
-                android:layout_marginTop="12dp"
-                android:background="@color/white" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/closeJoinedRoomButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="@string/close_joined_room"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_green"
-                app:cornerRadius="10dp"
-                app:strokeColor="@color/nadi_green" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/historyPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/history_title"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="4dp"
-                android:text="@string/history_copy"
-                android:textColor="@color/nadi_soft_ink"
-                android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/historyListText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_outline_card"
-                android:lineSpacingExtra="3dp"
-                android:padding="18dp"
-                android:text="@string/history_empty"
-                android:textColor="@color/nadi_soft_ink"
-                android:textSize="14sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/clearHistoryButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="14dp"
-                android:text="@string/clear_history"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_error"
-                app:cornerRadius="10dp"
-                app:strokeColor="@color/nadi_error" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/historyBackButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/back_home"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_soft_ink" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/settingsPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_title"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="4dp"
-                android:text="@string/settings_copy"
-                android:textColor="@color/nadi_soft_ink"
-                android:textSize="15sp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/default_host_name"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/defaultHostNameInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:backgroundTint="@color/nadi_green"
-                    android:inputType="textCapWords"
-                    android:singleLine="true"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="16sp"
-                    tools:text="Host Nadi" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="@string/default_network_mode"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <RadioGroup
-                    android:id="@+id/defaultNetworkModeGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <RadioButton
-                        android:id="@+id/defaultSameWifiModeRadio"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/same_wifi_mode"
-                        android:textColor="@color/nadi_graphite" />
-
-                    <RadioButton
-                        android:id="@+id/defaultHotspotModeRadio"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/hotspot_mode"
-                        android:textColor="@color/nadi_graphite" />
-                </RadioGroup>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/local_data_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/local_data_copy"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="@string/file_room_storage_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/fileRoomStorageText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:background="@color/nadi_mist"
-                    android:lineSpacingExtra="3dp"
-                    android:padding="12dp"
-                    android:text="@string/file_room_storage_default"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textIsSelectable="true"
-                    android:textSize="13sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chooseFileRoomFolderButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/choose_file_room_folder"
-                    android:textAllCaps="false"
-                    android:textColor="@color/nadi_green"
-                    app:cornerRadius="10dp"
-                    app:strokeColor="@color/nadi_green" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/resetFileRoomFolderButton"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/reset_file_room_folder"
-                    android:textAllCaps="false"
-                    android:textColor="@color/nadi_soft_ink" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/saveSettingsButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="18dp"
-                android:text="@string/save_settings"
-                android:textAllCaps="false"
-                android:textStyle="bold"
-                app:backgroundTint="@color/nadi_green"
-                app:cornerRadius="10dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/settingsBackButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/back_home"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_soft_ink" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/setupPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/host_setup_title"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="4dp"
-                android:text="@string/host_setup_copy"
-                android:textColor="@color/nadi_soft_ink"
-                android:textSize="15sp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/room_name_label"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/roomNameInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:backgroundTint="@color/nadi_green"
-                    android:inputType="textCapWords"
-                    android:singleLine="true"
-                    android:text="@string/room_name_default"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="@string/host_name_label"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/hostNameInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:backgroundTint="@color/nadi_green"
-                    android:inputType="textCapWords"
-                    android:singleLine="true"
-                    android:text="@string/host_name_default"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="16sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/network_mode_label"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <RadioGroup
-                    android:id="@+id/networkModeGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <RadioButton
-                        android:id="@+id/sameWifiModeRadio"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:checked="true"
-                        android:text="@string/same_wifi_mode"
-                        android:textColor="@color/nadi_graphite" />
-
-                    <RadioButton
-                        android:id="@+id/hotspotModeRadio"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/hotspot_mode"
-                        android:textColor="@color/nadi_graphite" />
-                </RadioGroup>
-
-                <TextView
-                    android:id="@+id/networkModeHelpText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/same_wifi_note"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/startLocalRoomButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="18dp"
-                android:text="@string/start_local_room"
-                android:textAllCaps="false"
-                android:textStyle="bold"
-                app:backgroundTint="@color/nadi_green"
-                app:cornerRadius="10dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/setupBackButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/back_home"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_soft_ink" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/activeRoomPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_deep_panel"
-                android:orientation="vertical"
-                android:padding="22dp">
-
-                <TextView
-                    android:id="@+id/activeStatusText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_chip"
-                    android:text="@string/room_active"
-                    android:textColor="@color/nadi_deep_green"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/activeRoomNameText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="@string/room_name_default"
-                    android:textColor="@color/white"
-                    android:textSize="30sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/activeRoomCopyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/same_wifi_note"
-                    android:textColor="@color/nadi_line"
-                    android:textSize="15sp" />
-            </LinearLayout>
-
-            <com.google.android.material.bottomnavigation.BottomNavigationView
-                android:id="@+id/activeRoomNavigation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                app:itemIconTint="@color/nadi_green"
-                app:itemTextColor="@color/nadi_green"
-                app:labelVisibilityMode="labeled"
-                app:menu="@menu/menu_active_room" />
-
-            <LinearLayout
-                android:id="@+id/activeRoomJoinSection"
+                android:id="@+id/homePanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/qrImage"
-                android:layout_width="220dp"
-                android:layout_height="220dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="18dp"
-                android:background="@color/white"
-                android:contentDescription="@string/copy_url"
-                android:padding="10dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_deep_panel"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-            <TextView
-                android:id="@+id/wifiQrTitleText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:gravity="center"
-                android:text="@string/wifi_qr_title"
-                android:textColor="@color/nadi_graphite"
-                android:textStyle="bold"
-                android:visibility="gone" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_chip"
+                        android:text="@string/nadi_tagline"
+                        android:textColor="@color/nadi_deep_green"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
-            <ImageView
-                android:id="@+id/wifiQrImage"
-                android:layout_width="190dp"
-                android:layout_height="190dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:background="@color/white"
-                android:contentDescription="@string/wifi_qr_title"
-                android:padding="10dp"
-                android:visibility="gone" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:text="@string/app_name"
+                        android:textColor="@color/white"
+                        android:textSize="44sp"
+                        android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/joinUrlText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                android:padding="14dp"
-                android:textColor="@color/nadi_green"
-                android:textIsSelectable="true"
-                android:textSize="13sp"
-                tools:text="http://192.168.1.2:8080/?token=abc" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="@string/home_intro"
+                        android:textColor="@color/nadi_line"
+                        android:textSize="16sp" />
+                </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/copyUrlButton"
-                    android:layout_width="0dp"
-                    android:layout_height="52dp"
-                    android:layout_weight="1"
-                    android:text="@string/copy_url"
+                    android:id="@+id/createRoomButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/start_room"
                     android:textAllCaps="false"
+                    android:textStyle="bold"
                     app:backgroundTint="@color/nadi_green"
                     app:cornerRadius="10dp" />
 
-                <Space
-                    android:layout_width="10dp"
-                    android:layout_height="1dp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/joinRoomButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/join_room"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_green"
+                    app:cornerRadius="10dp"
+                    app:strokeColor="@color/nadi_line" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/regenerateLinkButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                    android:id="@+id/homeHistoryButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:layout_weight="1"
-                    android:text="@string/regenerate_link"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/view_history"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_soft_ink" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/settingsButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="@string/settings"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_soft_ink" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recent_transfers"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/recentEmptyText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="@string/recent_empty"
+                        android:textColor="@color/nadi_soft_ink"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/joinPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/join_room_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="4dp"
+                    android:text="@string/join_room_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <EditText
+                        android:id="@+id/roomUrlInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:backgroundTint="@color/nadi_green"
+                        android:hint="@string/join_room_url_hint"
+                        android:inputType="textUri"
+                        android:singleLine="true"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="15sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/openRoomButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/open_room_in_app"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/nadi_green"
+                        app:cornerRadius="10dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/pasteRoomUrlButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/paste_url"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_green"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="@color/nadi_green" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/joinBackButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/back_home"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_soft_ink" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/joinWebPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/joined_room_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/joinedRoomUrlText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:padding="12dp"
+                    android:textColor="@color/nadi_green"
+                    android:textIsSelectable="true"
+                    android:textSize="13sp"
+                    tools:text="http://192.168.1.5:8080/?token=..." />
+
+                <WebView
+                    android:id="@+id/joinWebView"
+                    android:layout_width="match_parent"
+                    android:layout_height="620dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@color/white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/closeJoinedRoomButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/close_joined_room"
                     android:textAllCaps="false"
                     android:textColor="@color/nadi_green"
                     app:cornerRadius="10dp"
                     app:strokeColor="@color/nadi_green" />
             </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/stopRoomButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="@string/stop_room"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_error"
-                app:cornerRadius="10dp"
-                app:strokeColor="@color/nadi_error" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/copyJoinInstructionsButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="@string/copy_join_instructions"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_green"
-                app:cornerRadius="10dp"
-                app:strokeColor="@color/nadi_green" />
-
-            </LinearLayout>
-
             <LinearLayout
-                android:id="@+id/activeRoomFileOverviewSection"
+                android:id="@+id/historyPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/file_room_title"
+                    android:text="@string/history_title"
                     android:textColor="@color/nadi_graphite"
-                    android:textSize="18sp"
+                    android:textSize="32sp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/file_room_copy"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/fileRoomSummaryText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/file_room_summary_empty"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/fileRoomLocationText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@color/nadi_mist"
-                    android:lineSpacingExtra="3dp"
-                    android:padding="12dp"
-                    android:text="@string/file_room_location_pending"
+                    android:lineSpacingExtra="4dp"
+                    android:text="@string/history_copy"
                     android:textColor="@color/nadi_soft_ink"
-                    android:textIsSelectable="true"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/openFileRoomButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="@string/open_file_room"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_green"
-                app:cornerRadius="10dp"
-                app:strokeColor="@color/nadi_green" />
-
-            <LinearLayout
-                android:id="@+id/activeRoomPrivacySection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
+                    android:textSize="15sp" />
 
                 <TextView
+                    android:id="@+id/historyListText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/room_privacy_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/privacyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_outline_card"
                     android:lineSpacingExtra="3dp"
-                    android:text="@string/room_privacy_copy"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/activeRoomParticipantsSection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/participants_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/participants_copy"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/participantSummaryText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/participants_summary_empty"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/participantIdentityPolicyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@color/nadi_mist"
-                    android:lineSpacingExtra="3dp"
-                    android:padding="12dp"
-                    android:text="@string/participants_identity_policy"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/clientListText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/connected_devices_empty"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/activeRoomSharedFilesSection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/host_shared_files_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/host_shared_files_copy"
+                    android:padding="18dp"
+                    android:text="@string/history_empty"
                     android:textColor="@color/nadi_soft_ink"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/addSharedFileButton"
+                    android:id="@+id/clearHistoryButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/add_shared_file"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/clear_history"
                     android:textAllCaps="false"
-                    app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp" />
+                    android:textColor="@color/nadi_error"
+                    app:cornerRadius="10dp"
+                    app:strokeColor="@color/nadi_error" />
 
-                <TextView
-                    android:id="@+id/sharedFilesText"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/historyBackButton"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/shared_files_empty"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/back_home"
+                    android:textAllCaps="false"
                     android:textColor="@color/nadi_soft_ink" />
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/activeRoomReceivedFilesSection"
+                android:id="@+id/settingsPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/host_received_files_title"
+                    android:text="@string/settings_title"
                     android:textColor="@color/nadi_graphite"
+                    android:textSize="32sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/host_received_files_copy"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="4dp"
+                    android:text="@string/settings_copy"
                     android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
+                    android:textSize="15sp" />
 
-                <TextView
-                    android:id="@+id/receivedFilesText"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/received_files_empty"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/default_host_name"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/defaultHostNameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/nadi_green"
+                        android:inputType="textCapWords"
+                        android:singleLine="true"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="16sp"
+                        tools:text="Host Nadi" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/default_network_mode"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/defaultNetworkModeGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/defaultSameWifiModeRadio"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/same_wifi_mode"
+                            android:textColor="@color/nadi_graphite" />
+
+                        <RadioButton
+                            android:id="@+id/defaultHotspotModeRadio"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/hotspot_mode"
+                            android:textColor="@color/nadi_graphite" />
+                    </RadioGroup>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/local_data_title"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="@string/local_data_copy"
+                        android:textColor="@color/nadi_soft_ink"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/file_room_storage_title"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/fileRoomStorageText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@color/nadi_mist"
+                        android:lineSpacingExtra="3dp"
+                        android:padding="12dp"
+                        android:text="@string/file_room_storage_default"
+                        android:textColor="@color/nadi_soft_ink"
+                        android:textIsSelectable="true"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/chooseFileRoomFolderButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/choose_file_room_folder"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_green"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="@color/nadi_green" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/resetFileRoomFolderButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/reset_file_room_folder"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_soft_ink" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/saveSettingsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/save_settings"
+                    android:textAllCaps="false"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/nadi_green"
+                    app:cornerRadius="10dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/settingsBackButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/back_home"
+                    android:textAllCaps="false"
                     android:textColor="@color/nadi_soft_ink" />
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/activeRoomChatSection"
+                android:id="@+id/setupPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/host_setup_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="4dp"
+                    android:text="@string/host_setup_copy"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/room_name_label"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/roomNameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/nadi_green"
+                        android:inputType="textCapWords"
+                        android:singleLine="true"
+                        android:text="@string/room_name_default"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/host_name_label"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/hostNameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/nadi_green"
+                        android:inputType="textCapWords"
+                        android:singleLine="true"
+                        android:text="@string/host_name_default"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="16sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/network_mode_label"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/networkModeGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/sameWifiModeRadio"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:checked="true"
+                            android:text="@string/same_wifi_mode"
+                            android:textColor="@color/nadi_graphite" />
+
+                        <RadioButton
+                            android:id="@+id/hotspotModeRadio"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/hotspot_mode"
+                            android:textColor="@color/nadi_graphite" />
+                    </RadioGroup>
+
+                    <TextView
+                        android:id="@+id/networkModeHelpText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="@string/same_wifi_note"
+                        android:textColor="@color/nadi_soft_ink"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/startLocalRoomButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/start_local_room"
+                    android:textAllCaps="false"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/nadi_green"
+                    app:cornerRadius="10dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/setupBackButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/back_home"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_soft_ink" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- 2. Active Room Panel (full screen when active, stacks tab FrameLayout and BottomNav) -->
+    <LinearLayout
+        android:id="@+id/activeRoomPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- Tab contents are placed inside a FrameLayout (resizes automatically above keyboard) -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- Tab 1: Ruang (Header + Join Section + Privacy + Diagnostics) -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/activeRoomJoinScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Header Card inside Ruang tab so it is scrollable and doesn't eat Chat space -->
+                    <LinearLayout
+                        android:id="@+id/activeRoomHeaderSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_deep_panel"
+                        android:orientation="vertical"
+                        android:padding="22dp">
+
+                        <TextView
+                            android:id="@+id/activeStatusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_chip"
+                            android:text="@string/room_active"
+                            android:textColor="@color/nadi_deep_green"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/activeRoomNameText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="18dp"
+                            android:text="@string/room_name_default"
+                            android:textColor="@color/white"
+                            android:textSize="30sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/activeRoomCopyText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/same_wifi_note"
+                            android:textColor="@color/nadi_line"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <LinearLayout
+                            android:id="@+id/activeRoomJoinSection"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <ImageView
+                                android:id="@+id/qrImage"
+                                android:layout_width="220dp"
+                                android:layout_height="220dp"
+                                android:layout_gravity="center_horizontal"
+                                android:layout_marginTop="18dp"
+                                android:background="@color/white"
+                                android:contentDescription="@string/copy_url"
+                                android:padding="10dp" />
+
+                            <TextView
+                                android:id="@+id/wifiQrTitleText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp"
+                                android:gravity="center"
+                                android:text="@string/wifi_qr_title"
+                                android:textColor="@color/nadi_graphite"
+                                android:textStyle="bold"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/wifiQrImage"
+                                android:layout_width="190dp"
+                                android:layout_height="190dp"
+                                android:layout_gravity="center_horizontal"
+                                android:layout_marginTop="8dp"
+                                android:background="@color/white"
+                                android:contentDescription="@string/wifi_qr_title"
+                                android:padding="10dp"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/joinUrlText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:background="@drawable/bg_outline_card"
+                                android:padding="14dp"
+                                android:textColor="@color/nadi_green"
+                                android:textIsSelectable="true"
+                                android:textSize="13sp"
+                                tools:text="http://192.168.1.2:8080/?token=abc" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/copyUrlButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/copy_url"
+                                    android:textAllCaps="false"
+                                    app:backgroundTint="@color/nadi_green"
+                                    app:cornerRadius="10dp" />
+
+                                <Space
+                                    android:layout_width="10dp"
+                                    android:layout_height="1dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/regenerateLinkButton"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/regenerate_link"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/nadi_green"
+                                    app:cornerRadius="10dp"
+                                    app:strokeColor="@color/nadi_green" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/stopRoomButton"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:layout_marginTop="10dp"
+                                android:text="@string/stop_room"
+                                android:textAllCaps="false"
+                                android:textColor="@color/nadi_error"
+                                app:cornerRadius="10dp"
+                                app:strokeColor="@color/nadi_error" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/copyJoinInstructionsButton"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:layout_marginTop="10dp"
+                                android:text="@string/copy_join_instructions"
+                                android:textAllCaps="false"
+                                android:textColor="@color/nadi_green"
+                                app:cornerRadius="10dp"
+                                app:strokeColor="@color/nadi_green" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/activeRoomPrivacySection"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_outline_card"
+                            android:orientation="vertical"
+                            android:padding="18dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/room_privacy_title"
+                                android:textColor="@color/nadi_graphite"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/privacyText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="@string/room_privacy_copy"
+                                android:textColor="@color/nadi_soft_ink"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/activeRoomDiagnosticsSection"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_outline_card"
+                            android:orientation="vertical"
+                            android:padding="18dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/diagnostics_title"
+                                android:textColor="@color/nadi_graphite"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/diagnosticsText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="@string/diagnostics_empty"
+                                android:textColor="@color/nadi_soft_ink"
+                                android:textIsSelectable="true"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/copyDiagnosticsButton"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="10dp"
+                                android:text="@string/copy_diagnostics"
+                                android:textAllCaps="false"
+                                android:textColor="@color/nadi_green"
+                                app:cornerRadius="10dp"
+                                app:strokeColor="@color/nadi_green" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Tab 2: File (File Room summary, storage text, open folder, shared, received) -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/activeRoomFileScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:id="@+id/activeRoomFileOverviewSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/file_room_title"
+                            android:textColor="@color/nadi_graphite"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingExtra="3dp"
+                            android:text="@string/file_room_copy"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/fileRoomSummaryText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/file_room_summary_empty"
+                            android:textColor="@color/nadi_graphite"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/fileRoomLocationText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="@color/nadi_mist"
+                            android:lineSpacingExtra="3dp"
+                            android:padding="12dp"
+                            android:text="@string/file_room_location_pending"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textIsSelectable="true"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/openFileRoomButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/open_file_room"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_green"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="@color/nadi_green" />
+
+                    <LinearLayout
+                        android:id="@+id/activeRoomSharedFilesSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/host_shared_files_title"
+                            android:textColor="@color/nadi_graphite"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/host_shared_files_copy"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="14sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/addSharedFileButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/add_shared_file"
+                            android:textAllCaps="false"
+                            app:backgroundTint="@color/nadi_green"
+                            app:cornerRadius="10dp" />
+
+                        <TextView
+                            android:id="@+id/sharedFilesText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/shared_files_empty"
+                            android:textColor="@color/nadi_soft_ink" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/activeRoomReceivedFilesSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/host_received_files_title"
+                            android:textColor="@color/nadi_graphite"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/host_received_files_copy"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/receivedFilesText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/received_files_empty"
+                            android:textColor="@color/nadi_soft_ink" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Tab 3: Chat (Title, Copy, Message List dynamic scroll, Input area sticky) -->
+            <LinearLayout
+                android:id="@+id/activeRoomChatSection"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1041,10 +1062,12 @@
                     android:textColor="@color/nadi_soft_ink"
                     android:textSize="14sp" />
 
+                <!-- ScrollView for chat messages that takes remaining height (weight=1) -->
                 <androidx.core.widget.NestedScrollView
                     android:id="@+id/chatMessagesScrollView"
                     android:layout_width="match_parent"
-                    android:layout_height="280dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
                     android:layout_marginTop="12dp"
                     android:background="@color/nadi_mist"
                     android:clipToPadding="false"
@@ -1059,6 +1082,7 @@
                         android:orientation="vertical" />
                 </androidx.core.widget.NestedScrollView>
 
+                <!-- Chat composer area (stays sticky above keyboard) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -1111,72 +1135,131 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/activeRoomDiagnosticsSection"
+            <!-- Tab 4: Peserta -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/activeRoomParticipantsScroll"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/diagnostics_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:id="@+id/diagnosticsText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/diagnostics_empty"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textIsSelectable="true"
-                    android:textSize="13sp" />
+                    <LinearLayout
+                        android:id="@+id/activeRoomParticipantsSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="18dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/copyDiagnosticsButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/copy_diagnostics"
-                    android:textAllCaps="false"
-                    android:textColor="@color/nadi_green"
-                    app:cornerRadius="10dp"
-                    app:strokeColor="@color/nadi_green" />
-            </LinearLayout>
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/participants_title"
+                            android:textColor="@color/nadi_graphite"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
 
-            <LinearLayout
-                android:id="@+id/activeRoomHistorySection"
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingExtra="3dp"
+                            android:text="@string/participants_copy"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/participantSummaryText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/participants_summary_empty"
+                            android:textColor="@color/nadi_graphite"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/participantIdentityPolicyText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="@color/nadi_mist"
+                            android:lineSpacingExtra="3dp"
+                            android:padding="12dp"
+                            android:text="@string/participants_identity_policy"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/clientListText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:lineSpacingExtra="3dp"
+                            android:text="@string/connected_devices_empty"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Tab 5: Riwayat -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/activeRoomHistoryScroll"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_outline_card"
-                android:orientation="vertical"
-                android:padding="18dp">
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/active_room_history_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:id="@+id/activeRoomHistoryText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="@string/history_empty"
-                    android:textColor="@color/nadi_soft_ink"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/activeRoomHistorySection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/active_room_history_title"
+                            android:textColor="@color/nadi_graphite"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/activeRoomHistoryText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingExtra="3dp"
+                            android:text="@string/history_empty"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </FrameLayout>
+
+        <!-- Sticky Bottom Navigation Bar -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/activeRoomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_outline_card"
+            app:itemIconTint="@color/nadi_green"
+            app:itemTextColor="@color/nadi_green"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/menu_active_room" />
     </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+</RelativeLayout>

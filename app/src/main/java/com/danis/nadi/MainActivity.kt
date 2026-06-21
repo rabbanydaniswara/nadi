@@ -75,6 +75,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var homePanel: LinearLayout
     private lateinit var mainScrollView: NestedScrollView
+    private lateinit var activeRoomJoinScroll: NestedScrollView
+    private lateinit var activeRoomFileScroll: NestedScrollView
+    private lateinit var activeRoomParticipantsScroll: NestedScrollView
+    private lateinit var activeRoomHistoryScroll: NestedScrollView
     private lateinit var joinPanel: LinearLayout
     private lateinit var joinWebPanel: LinearLayout
     private lateinit var historyPanel: LinearLayout
@@ -217,7 +221,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindViews() {
-        mainScrollView = findViewById(R.id.main)
+        mainScrollView = findViewById(R.id.mainScrollView)
+        activeRoomJoinScroll = findViewById(R.id.activeRoomJoinScroll)
+        activeRoomFileScroll = findViewById(R.id.activeRoomFileScroll)
+        activeRoomParticipantsScroll = findViewById(R.id.activeRoomParticipantsScroll)
+        activeRoomHistoryScroll = findViewById(R.id.activeRoomHistoryScroll)
         homePanel = findViewById(R.id.homePanel)
         joinPanel = findViewById(R.id.joinPanel)
         joinWebPanel = findViewById(R.id.joinWebPanel)
@@ -270,19 +278,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(mainScrollView) { view, insets ->
+        val rootLayout = findViewById<View>(R.id.main)
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val bottomPadding = maxOf(systemBars.bottom, ime.bottom)
+            view.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding)
+
             val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
             val compactChat = imeVisible && hostChatInput.hasFocus() && activeRoomDestinationId == R.id.active_room_tab_chat
-            view.setPadding(
-                systemBars.left,
-                systemBars.top,
-                systemBars.right,
-                systemBars.bottom
-            )
+
             setChatKeyboardCompactMode(compactChat)
             if (compactChat) {
-                requestChatComposerScroll()
+                chatMessagesScrollView.post {
+                    chatMessagesScrollView.fullScroll(View.FOCUS_DOWN)
+                }
             }
             insets
         }
@@ -371,13 +381,17 @@ class MainActivity : AppCompatActivity() {
         }
         hostChatInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                requestChatComposerScroll()
+                chatMessagesScrollView.post {
+                    chatMessagesScrollView.fullScroll(View.FOCUS_DOWN)
+                }
             } else {
                 setChatKeyboardCompactMode(false)
             }
         }
         hostChatInput.setOnClickListener {
-            requestChatComposerScroll()
+            chatMessagesScrollView.post {
+                chatMessagesScrollView.fullScroll(View.FOCUS_DOWN)
+            }
         }
         activeRoomNavigation.setOnItemSelectedListener { item ->
             activeRoomDestinationId = item.itemId
@@ -797,29 +811,10 @@ class MainActivity : AppCompatActivity() {
         refreshHostDashboard()
     }
 
-    private fun requestChatComposerScroll() {
-        mainScrollView.removeCallbacks(chatComposerScrollRunnable)
-        mainScrollView.postDelayed(chatComposerScrollRunnable, 180L)
-        mainScrollView.postDelayed(chatComposerScrollRunnable, 360L)
-    }
-
     private fun setChatKeyboardCompactMode(enabled: Boolean) {
         if (chatKeyboardCompactMode == enabled) return
         chatKeyboardCompactMode = enabled
-        activeRoomHeaderSection.visibleIf(!enabled)
         activeRoomNavigation.visibleIf(!enabled)
-        if (enabled) {
-            mainScrollView.post { mainScrollView.smoothScrollTo(0, activeRoomChatSection.top.coerceAtLeast(0)) }
-        }
-    }
-
-    private val chatComposerScrollRunnable = Runnable {
-        if (activeRoomDestinationId != R.id.active_room_tab_chat || !hostChatInput.hasFocus()) return@Runnable
-        val inputRect = Rect()
-        hostChatInput.getDrawingRect(inputRect)
-        mainScrollView.offsetDescendantRectToMyCoords(hostChatInput, inputRect)
-        val targetY = (inputRect.top - 220.dp()).coerceAtLeast(0)
-        mainScrollView.smoothScrollTo(0, targetY)
     }
 
     private fun refreshHostDashboard() {
@@ -1255,6 +1250,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showHome() {
+        mainScrollView.visible()
         homePanel.visible()
         joinPanel.gone()
         joinWebPanel.gone()
@@ -1266,6 +1262,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showJoin() {
+        mainScrollView.visible()
         homePanel.gone()
         joinPanel.visible()
         joinWebPanel.gone()
@@ -1276,6 +1273,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showJoinedRoom() {
+        mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
         joinWebPanel.visible()
@@ -1286,6 +1284,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showHistory() {
+        mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
         joinWebPanel.gone()
@@ -1297,6 +1296,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
+        mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
         joinWebPanel.gone()
@@ -1308,6 +1308,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSetup() {
+        mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
         joinWebPanel.gone()
@@ -1319,13 +1320,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showActiveRoom() {
-        homePanel.gone()
-        joinPanel.gone()
-        joinWebPanel.gone()
-        historyPanel.gone()
-        settingsPanel.gone()
-        setupPanel.gone()
+        mainScrollView.gone()
         activeRoomPanel.visible()
+        activeRoomNavigation.visible()
         activeRoomNavigation.selectedItemId = activeRoomDestinationId
         showActiveRoomSection(activeRoomDestinationId)
     }
@@ -1340,16 +1337,27 @@ class MainActivity : AppCompatActivity() {
         val showParticipants = destinationId == R.id.active_room_tab_participants
         val showHistory = destinationId == R.id.active_room_tab_history
 
-        activeRoomJoinSection.visibleIf(showRoom)
-        activeRoomPrivacySection.visibleIf(showRoom)
-        activeRoomDiagnosticsSection.visibleIf(showRoom)
-        activeRoomFileOverviewSection.visibleIf(showFiles)
-        openFileRoomButton.visibleIf(showFiles)
-        activeRoomSharedFilesSection.visibleIf(showFiles)
-        activeRoomReceivedFilesSection.visibleIf(showFiles)
+        activeRoomJoinScroll.visibleIf(showRoom)
+        activeRoomFileScroll.visibleIf(showFiles)
         activeRoomChatSection.visibleIf(showChat)
-        activeRoomParticipantsSection.visibleIf(showParticipants)
-        activeRoomHistorySection.visibleIf(showHistory)
+        activeRoomParticipantsScroll.visibleIf(showParticipants)
+        activeRoomHistoryScroll.visibleIf(showHistory)
+
+        activeRoomJoinSection.visible()
+        activeRoomPrivacySection.visible()
+        activeRoomDiagnosticsSection.visible()
+        activeRoomFileOverviewSection.visible()
+        openFileRoomButton.visible()
+        activeRoomSharedFilesSection.visible()
+        activeRoomReceivedFilesSection.visible()
+        activeRoomParticipantsSection.visible()
+        activeRoomHistorySection.visible()
+
+        if (showChat) {
+            chatMessagesScrollView.post {
+                chatMessagesScrollView.fullScroll(View.FOCUS_DOWN)
+            }
+        }
     }
 
     private fun View.visible() {
