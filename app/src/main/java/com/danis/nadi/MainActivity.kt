@@ -8,6 +8,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -28,6 +29,7 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -72,12 +74,14 @@ class MainActivity : AppCompatActivity() {
     private var activeRoomDestinationId = R.id.active_room_tab_room
 
     private lateinit var homePanel: LinearLayout
+    private lateinit var mainScrollView: ScrollView
     private lateinit var joinPanel: LinearLayout
     private lateinit var joinWebPanel: LinearLayout
     private lateinit var historyPanel: LinearLayout
     private lateinit var settingsPanel: LinearLayout
     private lateinit var setupPanel: LinearLayout
     private lateinit var activeRoomPanel: LinearLayout
+    private lateinit var activeRoomHeaderSection: LinearLayout
     private lateinit var activeRoomNavigation: BottomNavigationView
     private lateinit var activeRoomJoinSection: LinearLayout
     private lateinit var activeRoomPrivacySection: LinearLayout
@@ -119,6 +123,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var wifiQrImage: ImageView
     private lateinit var joinWebView: WebView
     private var webFileChooserCallback: ValueCallback<Array<Uri>>? = null
+    private var chatKeyboardCompactMode = false
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -190,14 +195,9 @@ class MainActivity : AppCompatActivity() {
         settingsStore = NadiSettingsStore(applicationContext)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, maxOf(systemBars.bottom, ime.bottom))
-            insets
-        }
 
         bindViews()
+        setupWindowInsets()
         setupJoinWebView()
         bindActions()
         val activeRoom = controller.currentActiveRoom()
@@ -215,6 +215,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindViews() {
+        mainScrollView = findViewById(R.id.main)
         homePanel = findViewById(R.id.homePanel)
         joinPanel = findViewById(R.id.joinPanel)
         joinWebPanel = findViewById(R.id.joinWebPanel)
@@ -222,6 +223,7 @@ class MainActivity : AppCompatActivity() {
         settingsPanel = findViewById(R.id.settingsPanel)
         setupPanel = findViewById(R.id.setupPanel)
         activeRoomPanel = findViewById(R.id.activeRoomPanel)
+        activeRoomHeaderSection = findViewById(R.id.activeRoomHeaderSection)
         activeRoomNavigation = findViewById(R.id.activeRoomNavigation)
         activeRoomJoinSection = findViewById(R.id.activeRoomJoinSection)
         activeRoomPrivacySection = findViewById(R.id.activeRoomPrivacySection)
@@ -262,6 +264,25 @@ class MainActivity : AppCompatActivity() {
         qrImage = findViewById(R.id.qrImage)
         wifiQrImage = findViewById(R.id.wifiQrImage)
         joinWebView = findViewById(R.id.joinWebView)
+    }
+
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(mainScrollView) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            val compactChat = imeVisible && hostChatInput.hasFocus() && activeRoomDestinationId == R.id.active_room_tab_chat
+            view.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                systemBars.bottom
+            )
+            setChatKeyboardCompactMode(compactChat)
+            if (compactChat) {
+                requestChatComposerScroll()
+            }
+            insets
+        }
     }
 
     private fun bindActions() {
@@ -344,6 +365,16 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.sendHostMessageButton).setOnClickListener {
             sendHostMessage()
+        }
+        hostChatInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                requestChatComposerScroll()
+            } else {
+                setChatKeyboardCompactMode(false)
+            }
+        }
+        hostChatInput.setOnClickListener {
+            requestChatComposerScroll()
         }
         activeRoomNavigation.setOnItemSelectedListener { item ->
             activeRoomDestinationId = item.itemId
@@ -759,6 +790,31 @@ class MainActivity : AppCompatActivity() {
         }
         hostChatInput.text?.clear()
         refreshHostDashboard()
+    }
+
+    private fun requestChatComposerScroll() {
+        mainScrollView.removeCallbacks(chatComposerScrollRunnable)
+        mainScrollView.postDelayed(chatComposerScrollRunnable, 180L)
+        mainScrollView.postDelayed(chatComposerScrollRunnable, 360L)
+    }
+
+    private fun setChatKeyboardCompactMode(enabled: Boolean) {
+        if (chatKeyboardCompactMode == enabled) return
+        chatKeyboardCompactMode = enabled
+        activeRoomHeaderSection.visibleIf(!enabled)
+        activeRoomNavigation.visibleIf(!enabled)
+        if (enabled) {
+            mainScrollView.post { mainScrollView.smoothScrollTo(0, activeRoomChatSection.top.coerceAtLeast(0)) }
+        }
+    }
+
+    private val chatComposerScrollRunnable = Runnable {
+        if (activeRoomDestinationId != R.id.active_room_tab_chat || !hostChatInput.hasFocus()) return@Runnable
+        val inputRect = Rect()
+        hostChatInput.getDrawingRect(inputRect)
+        mainScrollView.offsetDescendantRectToMyCoords(hostChatInput, inputRect)
+        val targetY = (inputRect.top - 220.dp()).coerceAtLeast(0)
+        mainScrollView.smoothScrollTo(0, targetY)
     }
 
     private fun refreshHostDashboard() {
@@ -1222,6 +1278,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showActiveRoomSection(destinationId: Int) {
+        if (destinationId != R.id.active_room_tab_chat) {
+            setChatKeyboardCompactMode(false)
+        }
         val showRoom = destinationId == R.id.active_room_tab_room
         val showFiles = destinationId == R.id.active_room_tab_files
         val showChat = destinationId == R.id.active_room_tab_chat

@@ -6,7 +6,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/nadi_mist"
+    android:clipToPadding="false"
     android:fillViewport="true"
+    android:isScrollContainer="true"
     tools:context=".MainActivity">
 
     <LinearLayout
@@ -22,6 +24,7 @@
             android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/activeRoomHeaderSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_deep_panel"
