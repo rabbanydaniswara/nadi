@@ -1,6 +1,7 @@
 package com.danis.nadi
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -14,9 +15,15 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -65,6 +72,8 @@ class MainActivity : AppCompatActivity() {
     private var activeRoomDestinationId = R.id.active_room_tab_room
 
     private lateinit var homePanel: LinearLayout
+    private lateinit var joinPanel: LinearLayout
+    private lateinit var joinWebPanel: LinearLayout
     private lateinit var historyPanel: LinearLayout
     private lateinit var settingsPanel: LinearLayout
     private lateinit var setupPanel: LinearLayout
@@ -83,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var defaultNetworkModeGroup: RadioGroup
     private lateinit var roomNameInput: EditText
     private lateinit var hostNameInput: EditText
+    private lateinit var roomUrlInput: EditText
     private lateinit var defaultHostNameInput: EditText
     private lateinit var fileRoomStorageText: TextView
     private lateinit var hostChatInput: EditText
@@ -104,8 +114,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recentEmptyText: TextView
     private lateinit var networkModeHelpText: TextView
     private lateinit var wifiQrTitleText: TextView
+    private lateinit var joinedRoomUrlText: TextView
     private lateinit var qrImage: ImageView
     private lateinit var wifiQrImage: ImageView
+    private lateinit var joinWebView: WebView
+    private var webFileChooserCallback: ValueCallback<Array<Uri>>? = null
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -123,6 +136,19 @@ class MainActivity : AppCompatActivity() {
         settingsStore.save(settingsStore.settings().copy(fileRoomTreeUri = uri.toString()))
         applySettingsToSettingsScreen()
         Toast.makeText(this, "Folder File Room disimpan.", Toast.LENGTH_SHORT).show()
+    }
+
+    private val hostChatAttachmentPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        val uri = result.data?.data ?: return@registerForActivityResult
+        persistReadPermissionIfPossible(uri, result.data)
+        sendHostChatAttachment(uri)
+    }
+
+    private val webFileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+        webFileChooserCallback?.onReceiveValue(uris)
+        webFileChooserCallback = null
     }
 
     private val hotspotPermissionLauncher = registerForActivityResult(
@@ -166,11 +192,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            view.setPadding(systemBars.left, systemBars.top, systemBars.right, maxOf(systemBars.bottom, ime.bottom))
             insets
         }
 
         bindViews()
+        setupJoinWebView()
         bindActions()
         val activeRoom = controller.currentActiveRoom()
         if (activeRoom != null) {
@@ -188,6 +216,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun bindViews() {
         homePanel = findViewById(R.id.homePanel)
+        joinPanel = findViewById(R.id.joinPanel)
+        joinWebPanel = findViewById(R.id.joinWebPanel)
         historyPanel = findViewById(R.id.historyPanel)
         settingsPanel = findViewById(R.id.settingsPanel)
         setupPanel = findViewById(R.id.setupPanel)
@@ -206,6 +236,7 @@ class MainActivity : AppCompatActivity() {
         defaultNetworkModeGroup = findViewById(R.id.defaultNetworkModeGroup)
         roomNameInput = findViewById(R.id.roomNameInput)
         hostNameInput = findViewById(R.id.hostNameInput)
+        roomUrlInput = findViewById(R.id.roomUrlInput)
         defaultHostNameInput = findViewById(R.id.defaultHostNameInput)
         fileRoomStorageText = findViewById(R.id.fileRoomStorageText)
         hostChatInput = findViewById(R.id.hostChatInput)
@@ -227,8 +258,10 @@ class MainActivity : AppCompatActivity() {
         recentEmptyText = findViewById(R.id.recentEmptyText)
         networkModeHelpText = findViewById(R.id.networkModeHelpText)
         wifiQrTitleText = findViewById(R.id.wifiQrTitleText)
+        joinedRoomUrlText = findViewById(R.id.joinedRoomUrlText)
         qrImage = findViewById(R.id.qrImage)
         wifiQrImage = findViewById(R.id.wifiQrImage)
+        joinWebView = findViewById(R.id.joinWebView)
     }
 
     private fun bindActions() {
@@ -236,7 +269,22 @@ class MainActivity : AppCompatActivity() {
             showSetup()
         }
         findViewById<MaterialButton>(R.id.joinRoomButton).setOnClickListener {
+            showJoin()
+        }
+        findViewById<MaterialButton>(R.id.homeHistoryButton).setOnClickListener {
             showHistory()
+        }
+        findViewById<MaterialButton>(R.id.joinBackButton).setOnClickListener {
+            showHome()
+        }
+        findViewById<MaterialButton>(R.id.openRoomButton).setOnClickListener {
+            openJoinedRoom()
+        }
+        findViewById<MaterialButton>(R.id.pasteRoomUrlButton).setOnClickListener {
+            pasteRoomUrl()
+        }
+        findViewById<MaterialButton>(R.id.closeJoinedRoomButton).setOnClickListener {
+            closeJoinedRoom()
         }
         findViewById<MaterialButton>(R.id.settingsButton).setOnClickListener {
             showSettings()
@@ -291,6 +339,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.addSharedFileButton).setOnClickListener {
             openFilePicker()
         }
+        findViewById<MaterialButton>(R.id.attachHostChatFileButton).setOnClickListener {
+            openHostChatAttachmentPicker()
+        }
         findViewById<MaterialButton>(R.id.sendHostMessageButton).setOnClickListener {
             sendHostMessage()
         }
@@ -304,6 +355,34 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.hotspot_permission_reason)
             } else {
                 getString(R.string.same_wifi_note)
+            }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun setupJoinWebView() {
+        joinWebView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            cacheMode = WebSettings.LOAD_NO_CACHE
+            allowFileAccess = false
+            allowContentAccess = true
+        }
+        joinWebView.webViewClient = WebViewClient()
+        joinWebView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: WebChromeClient.FileChooserParams?
+            ): Boolean {
+                webFileChooserCallback?.onReceiveValue(null)
+                webFileChooserCallback = filePathCallback
+                return runCatching {
+                    webFileChooserLauncher.launch(fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                    })
+                }.isSuccess
             }
         }
     }
@@ -519,6 +598,78 @@ class MainActivity : AppCompatActivity() {
         filePicker.launch(intent)
     }
 
+    private fun openHostChatAttachmentPicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf(
+                    "image/jpeg",
+                    "image/png",
+                    "image/gif",
+                    "image/webp",
+                    "application/pdf",
+                    "text/plain",
+                    "application/zip",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        hostChatAttachmentPicker.launch(intent)
+    }
+
+    private fun sendHostChatAttachment(uri: Uri) {
+        val session = controller.roomManager.currentSession()
+        if (session == null) {
+            Toast.makeText(this, "Room belum aktif.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val metadata = querySelectedFile(uri)
+        if (!metadata.fileName.isAllowedChatAttachmentName()) {
+            Toast.makeText(this, "Lampiran chat hanya untuk gambar, dokumen, teks, atau zip kecil.", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (metadata.sizeBytes > MAX_CHAT_ATTACHMENT_BYTES) {
+            Toast.makeText(this, "Lampiran chat maksimal 10 MB.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val hostName = session.hostName.ifBlank { getString(R.string.host_name_default) }
+        val transfer = contentResolver.openInputStream(uri)?.use { input ->
+            controller.fileStore.saveRoomFile(
+                fileName = metadata.fileName,
+                mimeType = metadata.mimeType,
+                inputStream = input,
+                roomId = session.sessionId,
+                folderName = CHAT_DOWNLOADS_FOLDER,
+                direction = TransferDirection.CHAT_ATTACHMENT,
+                senderName = hostName
+            )
+        }
+        if (transfer == null) {
+            Toast.makeText(this, "Lampiran belum bisa dibaca.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        controller.roomManager.addTransfer(transfer)
+        controller.roomManager.addMessage(
+            senderId = currentHostId(),
+            senderName = hostName,
+            text = hostChatInput.text?.toString().orEmpty(),
+            attachment = transfer
+        )
+        hostChatInput.text?.clear()
+        controller.persistRecentTransfers()
+        refreshHostDashboard()
+        Toast.makeText(this, "Lampiran chat terkirim.", Toast.LENGTH_SHORT).show()
+    }
+
     private fun persistReadPermissionIfPossible(uri: Uri, data: Intent?) {
         val flags = data?.flags ?: return
         val takeFlags = flags and Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -536,6 +687,52 @@ class MainActivity : AppCompatActivity() {
             runCatching {
                 contentResolver.takePersistableUriPermission(uri, takeFlags)
             }
+        }
+    }
+
+    private fun querySelectedFile(uri: Uri): SelectedFile {
+        var displayName = "lampiran-nadi"
+        var sizeBytes = -1L
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+            if (cursor.moveToFirst()) {
+                if (nameIndex >= 0) {
+                    displayName = cursor.getString(nameIndex)?.ifBlank { displayName } ?: displayName
+                }
+                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                    sizeBytes = cursor.getLong(sizeIndex)
+                }
+            }
+        }
+        return SelectedFile(
+            fileName = displayName,
+            mimeType = contentResolver.getType(uri) ?: displayName.inferredMimeType(),
+            sizeBytes = sizeBytes
+        )
+    }
+
+    private fun String.isAllowedChatAttachmentName(): Boolean {
+        val extension = substringAfterLast('.', missingDelimiterValue = "").lowercase()
+        return extension in ALLOWED_CHAT_ATTACHMENT_EXTENSIONS
+    }
+
+    private fun String.inferredMimeType(): String {
+        return when (substringAfterLast('.', missingDelimiterValue = "").lowercase()) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "pdf" -> "application/pdf"
+            "txt" -> "text/plain"
+            "doc" -> "application/msword"
+            "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "ppt" -> "application/vnd.ms-powerpoint"
+            "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "xls" -> "application/vnd.ms-excel"
+            "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "zip" -> "application/zip"
+            else -> "application/octet-stream"
         }
     }
 
@@ -832,6 +1029,44 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "URL ruang disalin.", Toast.LENGTH_SHORT).show()
     }
 
+    private fun pasteRoomUrl() {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val text = clipboard.primaryClip
+            ?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)
+            ?.coerceToText(this)
+            ?.toString()
+            .orEmpty()
+            .trim()
+        if (text.isBlank()) {
+            Toast.makeText(this, "Clipboard belum berisi URL room.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        roomUrlInput.setText(text)
+        roomUrlInput.setSelection(text.length)
+    }
+
+    private fun openJoinedRoom() {
+        val url = roomUrlInput.text?.toString().orEmpty().trim()
+        val uri = runCatching { Uri.parse(url) }.getOrNull()
+        val valid = uri != null &&
+            (uri.scheme == "http" || uri.scheme == "https") &&
+            uri.host?.isNotBlank() == true
+        if (!valid) {
+            Toast.makeText(this, "Masukkan URL room Nadi yang valid.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        joinedRoomUrlText.text = url
+        showJoinedRoom()
+        joinWebView.loadUrl(url)
+    }
+
+    private fun closeJoinedRoom() {
+        joinWebView.stopLoading()
+        joinWebView.loadUrl("about:blank")
+        showHome()
+    }
+
     private fun copyJoinInstructions() {
         val instructions = buildJoinInstructions()
         if (instructions.isBlank()) return
@@ -912,6 +1147,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showHome() {
         homePanel.visible()
+        joinPanel.gone()
+        joinWebPanel.gone()
         historyPanel.gone()
         settingsPanel.gone()
         setupPanel.gone()
@@ -919,8 +1156,30 @@ class MainActivity : AppCompatActivity() {
         refreshHostDashboard()
     }
 
+    private fun showJoin() {
+        homePanel.gone()
+        joinPanel.visible()
+        joinWebPanel.gone()
+        historyPanel.gone()
+        settingsPanel.gone()
+        setupPanel.gone()
+        activeRoomPanel.gone()
+    }
+
+    private fun showJoinedRoom() {
+        homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.visible()
+        historyPanel.gone()
+        settingsPanel.gone()
+        setupPanel.gone()
+        activeRoomPanel.gone()
+    }
+
     private fun showHistory() {
         homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.gone()
         historyPanel.visible()
         settingsPanel.gone()
         setupPanel.gone()
@@ -930,6 +1189,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSettings() {
         homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.gone()
         historyPanel.gone()
         settingsPanel.visible()
         setupPanel.gone()
@@ -939,6 +1200,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSetup() {
         homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.gone()
         historyPanel.gone()
         settingsPanel.gone()
         setupPanel.visible()
@@ -948,6 +1211,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showActiveRoom() {
         homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.gone()
         historyPanel.gone()
         settingsPanel.gone()
         setupPanel.gone()
@@ -992,4 +1257,28 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+private data class SelectedFile(
+    val fileName: String,
+    val mimeType: String,
+    val sizeBytes: Long
+)
+
 private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L
+private const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
+private const val MAX_CHAT_ATTACHMENT_BYTES = 10L * 1024L * 1024L
+private val ALLOWED_CHAT_ATTACHMENT_EXTENSIONS = setOf(
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "pdf",
+    "txt",
+    "doc",
+    "docx",
+    "ppt",
+    "pptx",
+    "xls",
+    "xlsx",
+    "zip"
+)

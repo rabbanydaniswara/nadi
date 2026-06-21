@@ -3,7 +3,8 @@
     <string name="nadi_tagline">Tetap mengalir, meski sinyal melemah.</string>
     <string name="home_intro">Buat ruang lokal untuk berbagi file dan chat di ruangan yang sama tanpa mengandalkan internet.</string>
     <string name="start_room">Buat Ruang</string>
-    <string name="join_room">Lihat Riwayat</string>
+    <string name="join_room">Gabung Room</string>
+    <string name="view_history">Lihat Riwayat</string>
     <string name="settings">Pengaturan</string>
     <string name="recent_transfers">Aktivitas lokal terakhir</string>
     <string name="recent_empty">Belum ada file yang mengalir. Mulai ruang pertama untuk berbagi secara lokal.</string>
@@ -19,6 +20,13 @@
     <string name="hotspot_mode">Hotspot lokal</string>
     <string name="hotspot_permission_reason">Nadi perlu izin Wi-Fi/lokasi untuk mencoba membuat hotspot lokal. Jika tidak berhasil, mode satu Wi-Fi tetap tersedia.</string>
     <string name="back_home">Kembali</string>
+    <string name="join_room_title">Gabung Room</string>
+    <string name="join_room_copy">Masukkan URL room Nadi dari host, lalu buka langsung dari aplikasi ini.</string>
+    <string name="join_room_url_hint">Tempel URL room Nadi</string>
+    <string name="open_room_in_app">Buka Room</string>
+    <string name="paste_url">Tempel URL</string>
+    <string name="joined_room_title">Room Client</string>
+    <string name="close_joined_room">Tutup Room Client</string>
     <string name="room_active">Ruang Aktif</string>
     <string name="tab_room">Ruang</string>
     <string name="tab_files">File</string>
@@ -43,6 +51,7 @@
     <string name="chat_empty">Belum ada pesan di room ini.</string>
     <string name="add_shared_file">Tambah File</string>
     <string name="send_message">Kirim</string>
+    <string name="attach_chat_file">Lampirkan</string>
     <string name="host_chat_hint">Tulis pesan untuk room</string>
     <string name="same_wifi_note">Mode satu Wi-Fi aktif. Sambungkan perangkat lain ke Wi-Fi yang sama, lalu buka QR atau URL.</string>
     <string name="hotspot_note">Hotspot lokal aktif. Sambungkan perangkat lain ke Wi-Fi Nadi, lalu buka QR atau URL.</string>

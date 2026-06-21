@@ -80,11 +80,20 @@
                 app:strokeColor="@color/nadi_line" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/homeHistoryButton"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="6dp"
+                android:text="@string/view_history"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_soft_ink" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/settingsButton"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:layout_marginTop="8dp"
                 android:text="@string/settings"
                 android:textAllCaps="false"
                 android:textColor="@color/nadi_soft_ink" />
@@ -115,6 +124,130 @@
                     android:textColor="@color/nadi_soft_ink"
                     android:textSize="14sp" />
             </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/joinPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/join_room_title"
+                android:textColor="@color/nadi_graphite"
+                android:textSize="32sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4dp"
+                android:text="@string/join_room_copy"
+                android:textColor="@color/nadi_soft_ink"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:background="@drawable/bg_outline_card"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <EditText
+                    android:id="@+id/roomUrlInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:backgroundTint="@color/nadi_green"
+                    android:hint="@string/join_room_url_hint"
+                    android:inputType="textUri"
+                    android:singleLine="true"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="15sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/openRoomButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/open_room_in_app"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/nadi_green"
+                    app:cornerRadius="10dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/pasteRoomUrlButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/paste_url"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_green"
+                    app:cornerRadius="10dp"
+                    app:strokeColor="@color/nadi_green" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/joinBackButton"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/back_home"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_soft_ink" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/joinWebPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/joined_room_title"
+                android:textColor="@color/nadi_graphite"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/joinedRoomUrlText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_outline_card"
+                android:padding="12dp"
+                android:textColor="@color/nadi_green"
+                android:textIsSelectable="true"
+                android:textSize="13sp"
+                tools:text="http://192.168.1.5:8080/?token=..." />
+
+            <WebView
+                android:id="@+id/joinWebView"
+                android:layout_width="match_parent"
+                android:layout_height="620dp"
+                android:layout_marginTop="12dp"
+                android:background="@color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/closeJoinedRoomButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/close_joined_room"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_green"
+                app:cornerRadius="10dp"
+                app:strokeColor="@color/nadi_green" />
         </LinearLayout>
 
         <LinearLayout
@@ -916,14 +1049,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
 
                     <EditText
                         android:id="@+id/hostChatInput"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:layout_weight="1"
                         android:backgroundTint="@color/nadi_green"
                         android:hint="@string/host_chat_hint"
                         android:inputType="textCapSentences"
@@ -931,18 +1062,38 @@
                         android:textColor="@color/nadi_graphite"
                         android:textSize="15sp" />
 
-                    <Space
-                        android:layout_width="10dp"
-                        android:layout_height="1dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/sendHostMessageButton"
-                        android:layout_width="96dp"
-                        android:layout_height="48dp"
-                        android:text="@string/send_message"
-                        android:textAllCaps="false"
-                        app:backgroundTint="@color/nadi_green"
-                        app:cornerRadius="10dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/attachHostChatFileButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="@string/attach_chat_file"
+                            android:textAllCaps="false"
+                            android:textColor="@color/nadi_green"
+                            app:cornerRadius="10dp"
+                            app:strokeColor="@color/nadi_green" />
+
+                        <Space
+                            android:layout_width="10dp"
+                            android:layout_height="1dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sendHostMessageButton"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="@string/send_message"
+                            android:textAllCaps="false"
+                            app:backgroundTint="@color/nadi_green"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
