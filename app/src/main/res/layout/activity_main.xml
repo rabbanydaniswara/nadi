@@ -1049,7 +1049,6 @@
                     android:background="@color/nadi_mist"
                     android:clipToPadding="false"
                     android:fillViewport="true"
-                    android:nestedScrollingEnabled="true"
                     android:overScrollMode="ifContentScrolls"
                     android:padding="10dp">
 
