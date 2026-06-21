@@ -4,6 +4,65 @@ Catatan hasil smoke test manual. Update file ini setiap kali build kandidat diuj
 
 ---
 
+## UIX Separation Final Verification
+
+```text
+Date: 2026-06-21
+Implementation commit: 9d2d8f4
+Documentation commit: this commit
+Tester: Codex
+Host device: 69019f47
+Network mode: Same-Wi-Fi
+APK: app/build/outputs/apk/debug/app-debug.apk
+```
+
+Automated:
+
+- [x] `./gradlew.bat :app:testDebugUnitTest`
+- [x] `./gradlew.bat :app:assembleDebug`
+- [x] `git diff --check`
+
+Device and local room smoke:
+
+- [x] APK install and launch succeeded on the test device.
+- [x] Local room started from Android UI in Same-Wi-Fi mode.
+- [x] Browser client HTML over forwarded local URL returned the separated client UI.
+- [x] Browser client shell contained `File Room`, `Chat`, `Info`, `chat-image`, and the non-image download instruction.
+- [x] `/api/identity` accepted `NIM` and `Nama` for the test client.
+- [x] `/api/chat-attachment` accepted a PNG attachment.
+- [x] `/api/chat-attachment` accepted a TXT attachment.
+- [x] Chat attachment image metadata resolved to `image/png`.
+- [x] Chat attachment document metadata resolved to `text/plain`.
+- [x] Image preview endpoint returned `Content-Disposition: inline`.
+- [x] Document download endpoint returned `Content-Disposition: attachment`.
+- [x] Chat attachment files appeared in `Download/Nadi/<Room>/chat-downloads/`.
+
+Evidence:
+
+```text
+SessionId: rspU6aPp8h2U
+PageHasChatImage: True
+PageHasDownloadInstruction: True
+ImageMime: image/png
+TextMime: text/plain
+ImageDirection: chat_attachment
+TextDirection: chat_attachment
+PreviewDisposition: inline; filename="stage8-preview-085714.png"
+PreviewContentType: image/png
+DownloadDisposition: attachment; filename="stage8-document-085714.txt"
+Storage: /sdcard/Download/Nadi/rspU6aPp8h2U/chat-downloads/
+Files: stage8-document-085714.txt, stage8-preview-085714.png
+```
+
+Scope note:
+
+```text
+QA mengikuti batasan owner proyek: cukup lingkungan test Codex/device yang tersedia.
+Tidak dilakukan Safari/iOS, matrix vendor Android luas, signing produksi, feedback tester, atau final release testing.
+```
+
+---
+
 ## Identity, Chat Attachment, and File Room Verification
 
 ```text

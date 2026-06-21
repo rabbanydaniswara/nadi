@@ -140,7 +140,7 @@ Aturan ini harus dijaga saat implementasi UI:
    File yang dikirim lewat File Room muncul di File menu. Lampiran chat muncul di bubble chat.
 
 2. **Lampiran chat bukan File Room utama.**
-   Lampiran chat disimpan di `chat-attachments` dan ditampilkan di Chat. Jika nanti perlu, tambahkan aksi eksplisit "Simpan ke File Room".
+   Lampiran chat disimpan di `chat-downloads` dan ditampilkan di Chat. Jika nanti perlu, tambahkan aksi eksplisit "Simpan ke File Room".
 
 3. **Dashboard Ruang hanya boleh preview ringkas.**
    Menu Ruang boleh menampilkan count: jumlah peserta, file masuk, pesan baru. Detailnya harus diarahkan ke menu masing-masing.
@@ -459,6 +459,10 @@ Acceptance:
 - Semua fitur lama tetap dapat diakses.
 - Build dan unit test lulus.
 
+Status:
+
+- Selesai. Active room host memakai menu `Ruang`, `File`, `Chat`, `Peserta`, dan `Riwayat`.
+
 ### Phase UIX-2: File Room Redesign
 
 Objective:
@@ -481,6 +485,10 @@ Acceptance:
 - User dapat menjelaskan bahwa file tugas/materi masuk File Room.
 - Lampiran chat tidak tampil di daftar File Room utama.
 - File Room utama mudah ditemukan lewat file manager.
+
+Status:
+
+- Selesai. File Room host/browser dipisahkan, file utama masuk `Download/Nadi/<Room>/received/`, dan folder penyimpanan dapat diatur lewat Settings.
 
 ### Phase UIX-3: Chat Redesign
 
@@ -507,6 +515,10 @@ Acceptance:
 - File Room tetap tidak tercampur.
 - Setelah attachment chat didownload, user bisa membukanya dari chat.
 
+Status:
+
+- Selesai untuk MVP test scope. Chat memakai bubble, identitas pengirim, lampiran gambar dengan preview, kartu file untuk dokumen/file lain, dan storage `Download/Nadi/<Room>/chat-downloads/`.
+
 ### Phase UIX-4: Peserta and Identity Screen
 
 Objective:
@@ -524,6 +536,10 @@ Acceptance:
 
 - Host bisa melihat siapa yang terkoneksi dan identitasnya.
 - Tidak ada flow ringan untuk mengganti identitas diam-diam.
+
+Status:
+
+- Selesai. Menu Peserta menampilkan NIM, Nama, status peserta, dan copy identitas terkunci.
 
 ### Phase UIX-5: Browser Client Separation
 
@@ -543,6 +559,10 @@ Acceptance:
 - Client bisa berpindah jelas antara File Room dan Chat.
 - Tidak perlu tutorial untuk memahami fungsi tiap area.
 
+Status:
+
+- Selesai. Browser client memakai menu `File Room`, `Chat`, dan `Info` dengan identity gate.
+
 ### Phase UIX-6: QA and Documentation
 
 Objective:
@@ -560,6 +580,32 @@ Scope:
 Acceptance:
 
 - Create room, join, identity, upload File Room, chat, chat attachment, and open folder tetap berjalan.
+
+Status:
+
+- Selesai untuk lingkungan test Codex/device yang tersedia. Evidence terbaru dicatat di [NADI_SMOKE_TEST_LOG.md](NADI_SMOKE_TEST_LOG.md).
+
+### Completion Snapshot - 2026-06-21
+
+Tahap UI/UX separation yang direncanakan sudah selesai untuk scope MVP/test environment saat ini:
+
+- Stage 1: active room navigation shell.
+- Stage 2: File Room redesign.
+- Stage 3: chat bubble redesign.
+- Stage 4: peserta dan identity screen.
+- Stage 5: public storage File Room ke `Download/Nadi/<Room>/received/`.
+- Stage 6: setting folder penyimpanan File Room.
+- Stage 7: browser client separation.
+- Stage 8: chat media behavior, preview gambar, kartu file, dan `chat-downloads`.
+- Stage 9: final QA/documentation update.
+
+Yang tetap di luar scope tahap ini:
+
+- Safari/iOS.
+- Matrix vendor Android luas.
+- Signing produksi.
+- Feedback tester dan final release testing.
+- WebSocket, E2EE penuh, roster resmi kampus, dan fitur cloud.
 
 ---
 
