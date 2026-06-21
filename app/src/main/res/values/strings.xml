@@ -55,6 +55,8 @@
     <string name="host_chat_hint">Tulis pesan untuk room</string>
     <string name="same_wifi_note">Mode satu Wi-Fi aktif. Sambungkan perangkat lain ke Wi-Fi yang sama, lalu buka QR atau URL.</string>
     <string name="hotspot_note">Hotspot lokal aktif. Sambungkan perangkat lain ke Wi-Fi Nadi, lalu buka QR atau URL.</string>
+    <string name="hotspot_ssid_unavailable_note">Hotspot lokal aktif, tetapi Android tidak memberikan nama Wi-Fi/password ke Nadi. Buka daftar Wi-Fi di perangkat peserta, pilih hotspot yang baru dibuat oleh perangkat host, lalu buka URL/QR room.</string>
+    <string name="hotspot_ssid_unavailable_toast">Hotspot aktif, tetapi nama Wi-Fi tidak bisa dibaca oleh Android. QR Wi-Fi dilewati.</string>
     <string name="hotspot_fallback_note">Hotspot lokal belum tersedia di perangkat ini. Nadi memakai mode satu Wi-Fi sebagai fallback.</string>
     <string name="host_shared_files_title">Dibagikan</string>
     <string name="host_shared_files_copy">File yang host sediakan untuk diambil peserta.</string>

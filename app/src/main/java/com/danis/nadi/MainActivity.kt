@@ -221,6 +221,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (controller.currentActiveRoom() != null) {
+            startDashboardPolling()
+        }
+    }
+
+    override fun onStop() {
+        stopDashboardPolling()
+        super.onStop()
+    }
+
     override fun onDestroy() {
         stopDashboardPolling()
         super.onDestroy()
@@ -535,6 +547,9 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Menyiapkan hotspot lokal...", Toast.LENGTH_SHORT).show()
                 }
                 is HotspotState.Active -> {
+                    if (state.ssid.isNullOrBlank()) {
+                        Toast.makeText(this, getString(R.string.hotspot_ssid_unavailable_toast), Toast.LENGTH_LONG).show()
+                    }
                     dashboardHandler.postDelayed(
                         {
                             activateRoom(
@@ -587,8 +602,12 @@ class MainActivity : AppCompatActivity() {
         activeRoomNameText.text = session.roomName
         activeRoomCopyText.text = when (activeRoom.mode) {
             NetworkMode.HOTSPOT -> buildString {
-                append(getString(R.string.hotspot_note))
-                if (!activeRoom.hotspotSsid.isNullOrBlank()) append("\nWi-Fi: ").append(activeRoom.hotspotSsid)
+                if (activeRoom.hotspotSsid.isNullOrBlank()) {
+                    append(getString(R.string.hotspot_ssid_unavailable_note))
+                } else {
+                    append(getString(R.string.hotspot_note))
+                    append("\nWi-Fi: ").append(activeRoom.hotspotSsid)
+                }
                 if (!activeRoom.hotspotPassword.isNullOrBlank()) append("\nPassword: ").append(activeRoom.hotspotPassword)
             }
             NetworkMode.SAME_WIFI_FALLBACK -> getString(R.string.hotspot_fallback_note)
@@ -877,23 +896,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun ConnectedClient.displayLine(): String {
-        val identity = if (nim.isNotBlank() || name.isNotBlank()) {
-            "${nim.ifBlank { "-" }} - ${name.ifBlank { displayName }}"
-        } else {
-            displayName
-        }
-        return "$identity\n${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
+        return "${identityLine()}\n${deviceLine()}"
     }
 
     private fun ConnectedClient.participantLine(): String {
-        val identityLine = if (nim.isNotBlank() || name.isNotBlank()) {
+        val statusLine = getString(R.string.participant_status_active)
+        return "${identityLine()}\n$statusLine\n${deviceLine()}"
+    }
+
+    private fun ConnectedClient.identityLine(): String {
+        return if (nim.isNotBlank() || name.isNotBlank()) {
             "${nim.ifBlank { "-" }} - ${name.ifBlank { displayName }}"
         } else {
             displayName
         }
-        val statusLine = getString(R.string.participant_status_active)
-        val deviceLine = "${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
-        return "$identityLine\n$statusLine\n$deviceLine"
+    }
+
+    private fun ConnectedClient.deviceLine(): String {
+        return "${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
     }
 
     private fun renderChatMessages(messages: List<ChatMessage>) {

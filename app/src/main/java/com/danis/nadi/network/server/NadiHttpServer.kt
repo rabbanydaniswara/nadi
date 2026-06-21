@@ -149,7 +149,7 @@ class NadiHttpServer(
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
         val files = mutableMapOf<String, String>()
         session.parseBody(files)
-        val client = identifiedClient(session) ?: return identityRequired()
+        val client = identifiedClient(session, session.clientIdParameter()) ?: return identityRequired()
         val tempPath = files["file"] ?: files.values.firstOrNull()
         if (tempPath.isNullOrBlank()) {
             return json(Response.Status.BAD_REQUEST, """{"error":"file_required"}""")
@@ -199,7 +199,7 @@ class NadiHttpServer(
         if (!roomManager.validateToken(session.parameters["token"]?.firstOrNull())) return invalidToken()
         val files = mutableMapOf<String, String>()
         session.parseBody(files)
-        val client = identifiedClient(session) ?: return identityRequired()
+        val client = identifiedClient(session, session.clientIdParameter()) ?: return identityRequired()
         val tempPath = files["file"] ?: files.values.firstOrNull()
         if (tempPath.isNullOrBlank()) {
             return json(Response.Status.BAD_REQUEST, """{"error":"file_required"}""")
@@ -304,12 +304,16 @@ class NadiHttpServer(
 
     private fun identityRequired(): Response = json(Response.Status.FORBIDDEN, """{"error":"identity_required"}""")
 
-    private fun identifiedClient(session: IHTTPSession): ConnectedClient? {
+    private fun identifiedClient(session: IHTTPSession, clientId: String? = session.clientIdParameter()): ConnectedClient? {
         return roomManager.touchKnownClient(
-            clientId = session.parameters["clientId"]?.firstOrNull(),
+            clientId = clientId,
             userAgent = session.headers["user-agent"].orEmpty(),
             ipAddress = session.remoteIpAddress.orEmpty()
         )
+    }
+
+    private fun IHTTPSession.clientIdParameter(): String? {
+        return parameters["clientId"]?.firstOrNull()?.takeIf { it.isNotBlank() }
     }
 
     private fun text(status: Response.IStatus, body: String): Response {

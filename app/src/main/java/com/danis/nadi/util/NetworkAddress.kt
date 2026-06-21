@@ -25,6 +25,14 @@ object NetworkAddress {
                     ?.firstIpv4Address()
             }
             .firstOrNull()
+            ?: interfaces.asSequence()
+                .filterNot { networkInterface ->
+                    preferredNames.any { preferredName ->
+                        networkInterface.name.equals(preferredName, ignoreCase = true)
+                    }
+                }
+                .mapNotNull { it.firstIpv4Address() }
+                .firstOrNull()
     }
 
     private fun NetworkInterface.firstIpv4Address(): String? {
