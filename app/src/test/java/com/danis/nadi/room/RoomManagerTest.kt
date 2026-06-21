@@ -18,6 +18,8 @@ class RoomManagerTest {
         assertEquals("Danis", session.hostName)
         assertEquals(RoomStatus.PREPARING, session.status)
         assertEquals(1000L, session.startedAt)
+        assertEquals(6, session.pin?.length)
+        assertTrue(session.pin.orEmpty().all { it.isDigit() })
         assertNull(session.localUrl)
     }
 
@@ -30,6 +32,18 @@ class RoomManagerTest {
 
         assertTrue(manager.validateToken(session.token))
         assertFalse(manager.validateToken("wrong-token"))
+    }
+
+    @Test
+    fun validateAccessAcceptsTokenOrRoomPin() {
+        val manager = RoomManager(clock = { 1000L })
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host", pin = "123456")
+
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        assertTrue(manager.validateAccess(token = session.token, pin = null))
+        assertTrue(manager.validateAccess(token = null, pin = "123456"))
+        assertFalse(manager.validateAccess(token = "wrong-token", pin = "000000"))
     }
 
     @Test
@@ -150,6 +164,64 @@ class RoomManagerTest {
 
         assertEquals(1, manager.snapshot().clients.size)
         assertEquals("22010001", manager.snapshot().clients.single().nim)
+    }
+
+    @Test
+    fun knownClientTouchRestoresStaleLockedIdentity() {
+        var now = 1000L
+        val manager = RoomManager(
+            clock = { now },
+            activeClientTimeoutMillis = 5_000L
+        )
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+        manager.touchIdentifiedClient(
+            clientId = "client-1",
+            nim = "22010001",
+            name = "Rabbany Daniswara",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+
+        now = 7_000L
+
+        assertEquals(0, manager.snapshot().clients.size)
+        assertEquals("22010001 - Rabbany Daniswara", manager.clientById("client-1")?.displayName)
+
+        val restored = manager.touchKnownClient(
+            clientId = "client-1",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+
+        assertEquals("22010001", restored?.nim)
+        assertEquals(1, manager.snapshot().clients.size)
+        assertEquals("22010001 - Rabbany Daniswara", manager.snapshot().clients.single().displayName)
+    }
+
+    @Test
+    fun regenerateAccessClearsLockedIdentities() {
+        val manager = RoomManager(clock = { 1000L })
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+        manager.touchIdentifiedClient(
+            clientId = "client-1",
+            nim = "22010001",
+            name = "Rabbany Daniswara",
+            userAgent = "Chrome",
+            ipAddress = "192.168.1.8"
+        )
+
+        manager.regenerateAccess { token -> "http://127.0.0.1:8080/?token=$token" }
+
+        assertNull(manager.clientById("client-1"))
+        assertNull(
+            manager.touchKnownClient(
+                clientId = "client-1",
+                userAgent = "Chrome",
+                ipAddress = "192.168.1.8"
+            )
+        )
     }
 
     @Test

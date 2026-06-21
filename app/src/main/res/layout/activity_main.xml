@@ -211,53 +211,6 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/joinWebPanel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/joined_room_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="28sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/joinedRoomUrlText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_outline_card"
-                    android:padding="12dp"
-                    android:textColor="@color/nadi_green"
-                    android:textIsSelectable="true"
-                    android:textSize="13sp"
-                    tools:text="http://192.168.1.5:8080/?token=..." />
-
-                <WebView
-                    android:id="@+id/joinWebView"
-                    android:layout_width="match_parent"
-                    android:layout_height="620dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@color/white" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/closeJoinedRoomButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/close_joined_room"
-                    android:textAllCaps="false"
-                    android:textColor="@color/nadi_green"
-                    app:cornerRadius="10dp"
-                    app:strokeColor="@color/nadi_green" />
-            </LinearLayout>
-
-            <LinearLayout
                 android:id="@+id/historyPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -560,6 +513,36 @@
                         android:text="@string/host_name_default"
                         android:textColor="@color/nadi_graphite"
                         android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/room_pin_label"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/roomPinInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/nadi_green"
+                        android:hint="@string/room_pin_hint"
+                        android:inputType="numberPassword"
+                        android:maxLength="8"
+                        android:singleLine="true"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="3dp"
+                        android:text="@string/room_pin_copy"
+                        android:textColor="@color/nadi_soft_ink"
+                        android:textSize="13sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -636,6 +619,55 @@
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <LinearLayout
+        android:id="@+id/joinWebPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/joined_room_title"
+            android:textColor="@color/nadi_graphite"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/joinedRoomUrlText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_outline_card"
+            android:padding="12dp"
+            android:textColor="@color/nadi_green"
+            android:textIsSelectable="true"
+            android:textSize="13sp"
+            tools:text="http://192.168.1.5:8080/?token=..." />
+
+        <WebView
+            android:id="@+id/joinWebView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1"
+            android:background="@color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/closeJoinedRoomButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:text="@string/close_joined_room"
+            android:textAllCaps="false"
+            android:textColor="@color/nadi_green"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/nadi_green" />
+    </LinearLayout>
 
     <!-- 2. Active Room Panel (full screen when active, stacks tab FrameLayout and BottomNav) -->
     <LinearLayout
@@ -757,6 +789,18 @@
                                 android:textIsSelectable="true"
                                 android:textSize="13sp"
                                 tools:text="http://192.168.1.2:8080/?token=abc" />
+
+                            <TextView
+                                android:id="@+id/activeRoomPinText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:background="@drawable/bg_outline_card"
+                                android:padding="14dp"
+                                android:textColor="@color/nadi_graphite"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                tools:text="PIN room: 123456" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -994,13 +1038,12 @@
                             app:backgroundTint="@color/nadi_green"
                             app:cornerRadius="10dp" />
 
-                        <TextView
-                            android:id="@+id/sharedFilesText"
+                        <LinearLayout
+                            android:id="@+id/sharedFilesList"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="@string/shared_files_empty"
-                            android:textColor="@color/nadi_soft_ink" />
+                            android:orientation="vertical" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -1027,13 +1070,12 @@
                             android:textColor="@color/nadi_soft_ink"
                             android:textSize="14sp" />
 
-                        <TextView
-                            android:id="@+id/receivedFilesText"
+                        <LinearLayout
+                            android:id="@+id/receivedFilesList"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="@string/received_files_empty"
-                            android:textColor="@color/nadi_soft_ink" />
+                            android:orientation="vertical" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>
@@ -1044,7 +1086,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:background="#EFE6DD"
+                android:background="@color/nadi_chat_canvas"
                 android:visibility="gone">
 
                 <!-- Custom Chat Header -->
@@ -1080,7 +1122,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Terlindungi secara lokal"
+                            android:text="@string/host_chat_subtitle"
                             android:textColor="#D1F2EB"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -1139,6 +1181,7 @@
                             android:paddingHorizontal="12dp"
                             android:paddingVertical="8dp"
                             android:textColor="@color/nadi_graphite"
+                            android:textColorHint="@color/nadi_soft_ink"
                             android:textSize="16sp" />
 
                         <ImageButton
@@ -1148,6 +1191,9 @@
                             android:layout_gravity="bottom"
                             android:layout_marginBottom="2dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/host_chat_attach_description"
+                            android:padding="8dp"
+                            app:tint="@color/nadi_green"
                             android:src="@drawable/ic_attachment_chat" />
                     </LinearLayout>
 
@@ -1159,6 +1205,7 @@
                         android:layout_marginBottom="2dp"
                         app:backgroundTint="@color/nadi_green"
                         app:tint="@color/white"
+                        android:contentDescription="@string/host_chat_send_description"
                         app:elevation="2dp"
                         app:fabSize="mini"
                         android:src="@drawable/ic_send_chat" />
@@ -1225,15 +1272,12 @@
                             android:textColor="@color/nadi_soft_ink"
                             android:textSize="13sp" />
 
-                        <TextView
-                            android:id="@+id/clientListText"
+                        <LinearLayout
+                            android:id="@+id/clientListContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:lineSpacingExtra="3dp"
-                            android:text="@string/connected_devices_empty"
-                            android:textColor="@color/nadi_soft_ink"
-                            android:textSize="14sp" />
+                            android:orientation="vertical" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>
@@ -1267,15 +1311,12 @@
                             android:textColor="@color/nadi_graphite"
                             android:textStyle="bold" />
 
-                        <TextView
-                            android:id="@+id/activeRoomHistoryText"
+                        <LinearLayout
+                            android:id="@+id/activeRoomHistoryList"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:lineSpacingExtra="3dp"
-                            android:text="@string/history_empty"
-                            android:textColor="@color/nadi_soft_ink"
-                            android:textSize="14sp" />
+                            android:orientation="vertical" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>

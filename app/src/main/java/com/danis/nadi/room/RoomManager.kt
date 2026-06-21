@@ -7,10 +7,12 @@ import com.danis.nadi.model.RoomStatus
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
 import com.danis.nadi.security.IdentityValidator
+import com.danis.nadi.security.PinValidator
 import com.danis.nadi.security.TokenGenerator
 
 class RoomManager(
     private val tokenGenerator: TokenGenerator = TokenGenerator(),
+    private val pinValidator: PinValidator = PinValidator(),
     private val clock: () -> Long = { System.currentTimeMillis() },
     private val activeClientTimeoutMillis: Long = ACTIVE_CLIENT_TIMEOUT_MILLIS,
     private val maxMessages: Int = MAX_MESSAGES
@@ -18,8 +20,10 @@ class RoomManager(
     private val lock = Any()
     private var session: RoomSession? = null
     private val clients = mutableListOf<ConnectedClient>()
+    private val identifiedClients = mutableMapOf<String, ConnectedClient>()
     private val transfers = mutableListOf<TransferItem>()
     private val messages = mutableListOf<ChatMessage>()
+    private val messageListeners = mutableSetOf<(ChatMessage) -> Unit>()
 
     fun startPreparing(
         roomName: String,
@@ -32,7 +36,7 @@ class RoomManager(
             sessionId = tokenGenerator.newSessionId(),
             roomName = cleanRoomName,
             hostName = cleanHostName,
-            pin = pin?.trim()?.takeIf { it.isNotBlank() },
+            pin = pin?.trim()?.takeIf { PIN_PATTERN.matches(it) } ?: tokenGenerator.newPin(),
             token = tokenGenerator.newToken(),
             startedAt = clock(),
             status = RoomStatus.PREPARING,
@@ -41,6 +45,7 @@ class RoomManager(
         )
         session = newSession
         clients.clear()
+        identifiedClients.clear()
         transfers.clear()
         messages.clear()
         newSession
@@ -66,6 +71,7 @@ class RoomManager(
         val stopped = session?.copy(status = RoomStatus.STOPPED)
         session = stopped
         clients.clear()
+        identifiedClients.clear()
         stopped
     }
 
@@ -78,6 +84,14 @@ class RoomManager(
         current != null && current.status == RoomStatus.ACTIVE && current.token == token
     }
 
+    fun validateAccess(token: String?, pin: String?): Boolean = synchronized(lock) {
+        val current = session
+        if (current == null || current.status != RoomStatus.ACTIVE) return@synchronized false
+        val tokenValid = current.token == token
+        val pinValid = !current.pin.isNullOrBlank() && pinValidator.isConfiguredPinValid(current.pin, pin)
+        tokenValid || pinValid
+    }
+
     fun regenerateAccess(localUrlForToken: (String) -> String): RoomSession? = synchronized(lock) {
         val current = session ?: return@synchronized null
         if (current.status != RoomStatus.ACTIVE) return@synchronized null
@@ -88,6 +102,7 @@ class RoomManager(
         )
         session = refreshed
         clients.clear()
+        identifiedClients.clear()
         refreshed
     }
 
@@ -140,9 +155,10 @@ class RoomManager(
         val now = clock()
         pruneStaleClients(now)
         val cleanClientId = clientId.cleanClientId().ifBlank { tokenGenerator.newSessionId(12) }
-        val existingIndex = clients.indexOfFirst { it.clientId == cleanClientId }
-        val client = if (existingIndex >= 0) {
-            val existing = clients[existingIndex]
+        val lockedIdentity = identifiedClients[cleanClientId]
+            ?: clients.firstOrNull { it.clientId == cleanClientId && it.nim.isNotBlank() }
+        val client = if (lockedIdentity != null) {
+            val existing = lockedIdentity
             existing.copy(
                 lastSeenAt = now,
                 userAgent = userAgent,
@@ -160,18 +176,15 @@ class RoomManager(
                 name = identity.name
             )
         }
-        if (existingIndex >= 0) {
-            clients[existingIndex] = client
-        } else {
-            clients.add(client)
-        }
+        identifiedClients[cleanClientId] = client
+        upsertActiveClient(client)
         client
     }
 
     fun clientById(clientId: String?): ConnectedClient? = synchronized(lock) {
         val cleanClientId = clientId.orEmpty().cleanClientId()
         if (cleanClientId.isBlank()) return@synchronized null
-        clients.firstOrNull { it.clientId == cleanClientId }
+        clients.firstOrNull { it.clientId == cleanClientId } ?: identifiedClients[cleanClientId]
     }
 
     fun touchKnownClient(
@@ -183,14 +196,18 @@ class RoomManager(
         if (cleanClientId.isBlank()) return@synchronized null
         val now = clock()
         pruneStaleClients(now)
-        val existingIndex = clients.indexOfFirst { it.clientId == cleanClientId }
-        if (existingIndex < 0) return@synchronized null
-        val client = clients[existingIndex].copy(
+        val knownClient = clients.firstOrNull { it.clientId == cleanClientId }
+            ?: identifiedClients[cleanClientId]
+            ?: return@synchronized null
+        val client = knownClient.copy(
             lastSeenAt = now,
             userAgent = userAgent,
             ipAddress = ipAddress
         )
-        clients[existingIndex] = client
+        if (client.nim.isNotBlank()) {
+            identifiedClients[cleanClientId] = client
+        }
+        upsertActiveClient(client)
         client
     }
 
@@ -216,29 +233,45 @@ class RoomManager(
         transfers.firstOrNull { it.transferId == transferId }
     }
 
+    fun addMessageListener(listener: (ChatMessage) -> Unit): AutoCloseable = synchronized(lock) {
+        messageListeners.add(listener)
+        AutoCloseable {
+            synchronized(lock) {
+                messageListeners.remove(listener)
+            }
+        }
+    }
+
     fun addMessage(
         senderId: String,
         senderName: String,
         text: String,
         attachment: TransferItem? = null
-    ): ChatMessage? = synchronized(lock) {
-        val cleanText = text.trim().take(1000)
-        if (cleanText.isBlank() && attachment == null) return@synchronized null
-        val message = ChatMessage(
-            messageId = tokenGenerator.newSessionId(16),
-            senderId = senderId.trim().ifBlank { "unknown" },
-            senderName = senderName.trim().ifBlank { "Nadi" },
-            text = cleanText.ifBlank { attachment?.fileName ?: "" },
-            createdAt = clock(),
-            status = "sent",
-            attachmentTransferId = attachment?.transferId,
-            attachmentFileName = attachment?.fileName,
-            attachmentMimeType = attachment?.mimeType,
-            attachmentSizeBytes = attachment?.sizeBytes ?: -1L
-        )
-        messages.add(message)
-        trimMessages()
-        message
+    ): ChatMessage? {
+        val result = synchronized(lock) {
+            val cleanText = text.trim().take(1000)
+            if (cleanText.isBlank() && attachment == null) return@synchronized null
+            val nextMessage = ChatMessage(
+                messageId = tokenGenerator.newSessionId(16),
+                senderId = senderId.trim().ifBlank { "unknown" },
+                senderName = senderName.trim().ifBlank { "Nadi" },
+                text = cleanText.ifBlank { attachment?.fileName ?: "" },
+                createdAt = clock(),
+                status = "sent",
+                attachmentTransferId = attachment?.transferId,
+                attachmentFileName = attachment?.fileName,
+                attachmentMimeType = attachment?.mimeType,
+                attachmentSizeBytes = attachment?.sizeBytes ?: -1L
+            )
+            messages.add(nextMessage)
+            trimMessages()
+            nextMessage to messageListeners.toList()
+        } ?: return null
+        val (message, listeners) = result
+        listeners.forEach { listener ->
+            runCatching { listener(message) }
+        }
+        return message
     }
 
     fun messagesAfter(after: Long): List<ChatMessage> = synchronized(lock) {
@@ -265,6 +298,15 @@ class RoomManager(
         }
     }
 
+    private fun upsertActiveClient(client: ConnectedClient) {
+        val existingIndex = clients.indexOfFirst { it.clientId == client.clientId }
+        if (existingIndex >= 0) {
+            clients[existingIndex] = client
+        } else {
+            clients.add(client)
+        }
+    }
+
     private fun trimMessages() {
         val overflow = messages.size - maxMessages.coerceAtLeast(0)
         if (overflow > 0) {
@@ -277,8 +319,9 @@ class RoomManager(
     }
 
     private companion object {
-        const val ACTIVE_CLIENT_TIMEOUT_MILLIS = 15_000L
+        const val ACTIVE_CLIENT_TIMEOUT_MILLIS = 60_000L
         const val MAX_MESSAGES = 200
+        val PIN_PATTERN = Regex("^\\d{4,8}$")
     }
 }
 

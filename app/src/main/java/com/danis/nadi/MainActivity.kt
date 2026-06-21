@@ -12,7 +12,6 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -44,7 +43,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.NestedScrollView
 import com.danis.nadi.file.FileSizeFormatter
 import com.danis.nadi.history.TransferHistoryItem
-import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.model.ConnectedClient
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferDirection
@@ -60,6 +58,7 @@ import com.danis.nadi.room.RoomRuntime
 import com.danis.nadi.room.RoomStartResult
 import com.danis.nadi.settings.NadiSettings
 import com.danis.nadi.settings.NadiSettingsStore
+import com.danis.nadi.ui.HostChatRenderer
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -72,7 +71,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var controller: RoomController
     private lateinit var settingsStore: NadiSettingsStore
     private val dashboardHandler = Handler(Looper.getMainLooper())
-    private val chatTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val historyTimeFormat = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
     private var dashboardPolling = false
     private var pendingHotspotStart = false
     private var activeRoomDestinationId = R.id.active_room_tab_room
@@ -104,6 +103,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var defaultNetworkModeGroup: RadioGroup
     private lateinit var roomNameInput: EditText
     private lateinit var hostNameInput: EditText
+    private lateinit var roomPinInput: EditText
     private lateinit var roomUrlInput: EditText
     private lateinit var defaultHostNameInput: EditText
     private lateinit var fileRoomStorageText: TextView
@@ -113,17 +113,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var activeRoomNameText: TextView
     private lateinit var activeRoomCopyText: TextView
     private lateinit var joinUrlText: TextView
+    private lateinit var activeRoomPinText: TextView
     private lateinit var fileRoomSummaryText: TextView
     private lateinit var fileRoomLocationText: TextView
-    private lateinit var sharedFilesText: TextView
-    private lateinit var receivedFilesText: TextView
+    private lateinit var sharedFilesList: LinearLayout
+    private lateinit var receivedFilesList: LinearLayout
     private lateinit var chatMessagesScrollView: NestedScrollView
     private lateinit var chatMessagesContainer: LinearLayout
     private lateinit var participantSummaryText: TextView
-    private lateinit var clientListText: TextView
+    private lateinit var clientListContainer: LinearLayout
     private lateinit var diagnosticsText: TextView
     private lateinit var historyListText: TextView
-    private lateinit var activeRoomHistoryText: TextView
+    private lateinit var activeRoomHistoryList: LinearLayout
     private lateinit var recentEmptyText: TextView
     private lateinit var networkModeHelpText: TextView
     private lateinit var wifiQrTitleText: TextView
@@ -133,9 +134,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var joinWebView: WebView
     private var webFileChooserCallback: ValueCallback<Array<Uri>>? = null
     private var chatKeyboardCompactMode = false
-    private var forceChatScrollToBottom = false
-    private var lastRenderedChatRoomId: String? = null
-    private val renderedChatMessageIds = linkedSetOf<String>()
+    private lateinit var hostChatRenderer: HostChatRenderer
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -209,6 +208,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         bindViews()
+        setupHostChatRenderer()
         setupWindowInsets()
         setupJoinWebView()
         bindActions()
@@ -266,6 +266,7 @@ class MainActivity : AppCompatActivity() {
         defaultNetworkModeGroup = findViewById(R.id.defaultNetworkModeGroup)
         roomNameInput = findViewById(R.id.roomNameInput)
         hostNameInput = findViewById(R.id.hostNameInput)
+        roomPinInput = findViewById(R.id.roomPinInput)
         roomUrlInput = findViewById(R.id.roomUrlInput)
         defaultHostNameInput = findViewById(R.id.defaultHostNameInput)
         fileRoomStorageText = findViewById(R.id.fileRoomStorageText)
@@ -275,17 +276,18 @@ class MainActivity : AppCompatActivity() {
         activeRoomNameText = findViewById(R.id.activeRoomNameText)
         activeRoomCopyText = findViewById(R.id.activeRoomCopyText)
         joinUrlText = findViewById(R.id.joinUrlText)
+        activeRoomPinText = findViewById(R.id.activeRoomPinText)
         fileRoomSummaryText = findViewById(R.id.fileRoomSummaryText)
         fileRoomLocationText = findViewById(R.id.fileRoomLocationText)
-        sharedFilesText = findViewById(R.id.sharedFilesText)
-        receivedFilesText = findViewById(R.id.receivedFilesText)
+        sharedFilesList = findViewById(R.id.sharedFilesList)
+        receivedFilesList = findViewById(R.id.receivedFilesList)
         chatMessagesScrollView = findViewById(R.id.chatMessagesScrollView)
         chatMessagesContainer = findViewById(R.id.chatMessagesContainer)
         participantSummaryText = findViewById(R.id.participantSummaryText)
-        clientListText = findViewById(R.id.clientListText)
+        clientListContainer = findViewById(R.id.clientListContainer)
         diagnosticsText = findViewById(R.id.diagnosticsText)
         historyListText = findViewById(R.id.historyListText)
-        activeRoomHistoryText = findViewById(R.id.activeRoomHistoryText)
+        activeRoomHistoryList = findViewById(R.id.activeRoomHistoryList)
         recentEmptyText = findViewById(R.id.recentEmptyText)
         networkModeHelpText = findViewById(R.id.networkModeHelpText)
         wifiQrTitleText = findViewById(R.id.wifiQrTitleText)
@@ -293,6 +295,20 @@ class MainActivity : AppCompatActivity() {
         qrImage = findViewById(R.id.qrImage)
         wifiQrImage = findViewById(R.id.wifiQrImage)
         joinWebView = findViewById(R.id.joinWebView)
+    }
+
+    private fun setupHostChatRenderer() {
+        hostChatRenderer = HostChatRenderer(
+            context = this,
+            scrollView = chatMessagesScrollView,
+            container = chatMessagesContainer,
+            hostIdProvider = ::currentHostId,
+            hostNameProvider = { controller.roomManager.currentSession()?.hostName.orEmpty() },
+            roomIdProvider = { controller.roomManager.currentSession()?.sessionId },
+            attachmentProvider = { transferId -> controller.roomManager.transferById(transferId) },
+            onPreviewImage = ::showImageAttachmentPreview,
+            onOpenAttachment = ::openChatAttachment
+        )
     }
 
     private fun setupWindowInsets() {
@@ -518,10 +534,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun startLocalRoomWithMode(mode: NetworkMode) {
         stopDashboardPolling()
+        val roomPin = roomPinInput.text?.toString().orEmpty().trim()
+        if (roomPin.isNotBlank() && !roomPin.isValidRoomPin()) {
+            Toast.makeText(this, getString(R.string.room_pin_invalid), Toast.LENGTH_LONG).show()
+            return
+        }
         val startResult = controller.prepareRoom(
             roomName = roomNameInput.text?.toString().orEmpty(),
             hostName = hostNameInput.text?.toString().orEmpty(),
-            mode = mode
+            mode = mode,
+            pin = roomPin
         )
         when (startResult) {
             is RoomStartResult.Failed -> {
@@ -614,6 +636,7 @@ class MainActivity : AppCompatActivity() {
             NetworkMode.SAME_WIFI -> getString(R.string.same_wifi_note)
         }
         joinUrlText.text = joinUrl
+        activeRoomPinText.text = getString(R.string.room_pin_active, session.pin.orEmpty())
         if (joinUrl.isNotBlank()) {
             val qrSize = (220 * resources.displayMetrics.density).toInt()
             qrImage.setImageBitmap(QrCodeGenerator.generate(joinUrl, qrSize))
@@ -739,7 +762,7 @@ class MainActivity : AppCompatActivity() {
         )
         hostChatInput.text?.clear()
         controller.persistRecentTransfers()
-        forceChatScrollToBottom = true
+        hostChatRenderer.forceScrollToBottom = true
         refreshHostDashboard()
         Toast.makeText(this, "Lampiran chat terkirim.", Toast.LENGTH_SHORT).show()
     }
@@ -759,7 +782,12 @@ class MainActivity : AppCompatActivity() {
         val takeFlags = flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         if (takeFlags != 0) {
             runCatching {
-                contentResolver.takePersistableUriPermission(uri, takeFlags)
+                if (takeFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0) {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                if (takeFlags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0) {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
             }
         }
     }
@@ -832,7 +860,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         hostChatInput.text?.clear()
-        forceChatScrollToBottom = true
+        hostChatRenderer.forceScrollToBottom = true
         refreshHostDashboard()
     }
 
@@ -861,31 +889,13 @@ class MainActivity : AppCompatActivity() {
             ?.let { getString(R.string.file_room_location, it) }
             ?: getString(R.string.file_room_location_pending)
         participantSummaryText.text = getString(R.string.participants_summary, snapshot.clients.size)
-        clientListText.text = if (snapshot.clients.isEmpty()) {
-            getString(R.string.participants_empty)
-        } else {
-            snapshot.clients.joinToString(separator = "\n\n") { it.participantLine() }
-        }
-        sharedFilesText.text = if (shared.isEmpty()) {
-            getString(R.string.shared_files_empty)
-        } else {
-            shared.joinToString(separator = "\n\n") { it.displayLine() }
-        }
-        receivedFilesText.text = if (received.isEmpty()) {
-            getString(R.string.received_files_empty)
-        } else {
-            received.joinToString(separator = "\n\n") { it.displayLine() }
-        }
-        renderChatMessages(messages)
+        renderParticipantList(snapshot.clients)
+        renderTransferList(sharedFilesList, shared, getString(R.string.shared_files_empty))
+        renderTransferList(receivedFilesList, received, getString(R.string.received_files_empty))
+        hostChatRenderer.render(messages)
         val recent = controller.roomManager.recentTransfers()
         val history = controller.recentHistory()
-        activeRoomHistoryText.text = if (recent.isNotEmpty()) {
-            recent.joinToString(separator = "\n\n") { it.displayLine() }
-        } else if (history.isNotEmpty()) {
-            history.take(8).joinToString(separator = "\n\n") { it.displayLine() }
-        } else {
-            getString(R.string.history_empty)
-        }
+        renderActiveHistoryList(recent, history)
         recentEmptyText.text = if (recent.isNotEmpty()) {
             recent.joinToString(separator = "\n") { it.displayLine() }
         } else if (history.isNotEmpty()) {
@@ -893,15 +903,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.recent_empty)
         }
-    }
-
-    private fun ConnectedClient.displayLine(): String {
-        return "${identityLine()}\n${deviceLine()}"
-    }
-
-    private fun ConnectedClient.participantLine(): String {
-        val statusLine = getString(R.string.participant_status_active)
-        return "${identityLine()}\n$statusLine\n${deviceLine()}"
     }
 
     private fun ConnectedClient.identityLine(): String {
@@ -916,257 +917,318 @@ class MainActivity : AppCompatActivity() {
         return "${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
     }
 
-    private fun renderChatMessages(messages: List<ChatMessage>) {
-        val shouldScrollToBottom = forceChatScrollToBottom || isChatMessagesWindowNearBottom()
-        forceChatScrollToBottom = false
-        val roomId = controller.roomManager.currentSession()?.sessionId
-        val currentMessageIds = messages.mapTo(mutableSetOf()) { it.messageId }
-        val shouldRebuild = roomId != lastRenderedChatRoomId || !currentMessageIds.containsAll(renderedChatMessageIds)
-        if (shouldRebuild) {
-            chatMessagesContainer.removeAllViews()
-            renderedChatMessageIds.clear()
-            lastRenderedChatRoomId = roomId
-        }
-        if (messages.isEmpty()) {
-            if (chatMessagesContainer.childCount == 0) {
-                chatMessagesContainer.addView(
-                    TextView(this).apply {
-                        text = getString(R.string.chat_empty)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
-                        textSize = 14f
-                    }
-                )
-            }
-            chatMessagesScrollView.post { chatMessagesScrollView.scrollTo(0, 0) }
+    private fun renderParticipantList(clients: List<ConnectedClient>) {
+        clientListContainer.removeAllViews()
+        if (clients.isEmpty()) {
+            clientListContainer.addView(simpleStateCard(getString(R.string.participants_empty)))
             return
         }
-
-        val newMessages = messages.filterNot { it.messageId in renderedChatMessageIds }
-        if (newMessages.isEmpty()) return
-        if (renderedChatMessageIds.isEmpty() && chatMessagesContainer.childCount > 0) {
-            chatMessagesContainer.removeAllViews()
-        }
-        val hostId = currentHostId()
-        val hostName = controller.roomManager.currentSession()?.hostName.orEmpty()
-        newMessages.forEach { message ->
-            val isHost = message.senderId == hostId || message.senderName == hostName
-            val attachment = message.attachmentTransferId?.let { controller.roomManager.transferById(it) }
-            chatMessagesContainer.addView(messageBubble(message, attachment, isHost))
-            renderedChatMessageIds.add(message.messageId)
-        }
-        if (shouldScrollToBottom) {
-            chatMessagesScrollView.post { chatMessagesScrollView.fullScroll(View.FOCUS_DOWN) }
+        clients.forEachIndexed { index, client ->
+            clientListContainer.addView(participantCard(client, index > 0))
         }
     }
 
-    private fun isChatMessagesWindowNearBottom(): Boolean {
-        if (chatMessagesScrollView.childCount == 0) return true
-        val content = chatMessagesScrollView.getChildAt(0)
-        val distanceToBottom = content.bottom - (chatMessagesScrollView.scrollY + chatMessagesScrollView.height)
-        return distanceToBottom <= 48.dp()
-    }
-
-    private fun messageBubble(message: ChatMessage, attachment: TransferItem?, isHost: Boolean): View {
+    private fun participantCard(client: ConnectedClient, hasTopMargin: Boolean): View {
+        val card = baseInfoCard(hasTopMargin)
         val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(12.dp(), 10.dp(), 12.dp(), 10.dp())
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_participants)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_green)
+            )
+            layoutParams = LinearLayout.LayoutParams(34.dp(), 34.dp()).apply {
+                marginEnd = 10.dp()
+            }
+        }
+        val textColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = if (isHost) Gravity.END else Gravity.START
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        textColumn.addView(TextView(this).apply {
+            text = client.identityLine()
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_graphite))
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        textColumn.addView(TextView(this).apply {
+            text = client.deviceLine()
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 12f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = 8.dp()
+                topMargin = 2.dp()
             }
-        }
-
-        val bubble = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, 0)
-            background = chatBubbleBackground(isHost)
-            elevation = 2.dp().toFloat()
+        })
+        textColumn.addView(TextView(this).apply {
+            text = getString(R.string.participant_status_active)
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_success))
+            textSize = 12f
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                gravity = if (isHost) Gravity.END else Gravity.START
+                topMargin = 2.dp()
+            }
+        })
+        row.addView(icon)
+        row.addView(textColumn)
+        card.addView(row)
+        return card
+    }
+
+    private fun renderActiveHistoryList(recent: List<TransferItem>, history: List<TransferHistoryItem>) {
+        activeRoomHistoryList.removeAllViews()
+        when {
+            recent.isNotEmpty() -> recent.forEachIndexed { index, item ->
+                activeRoomHistoryList.addView(historyCard(
+                    fileName = item.fileName,
+                    meta = listOf(
+                        item.direction.label(),
+                        FileSizeFormatter.format(item.sizeBytes),
+                        item.status.label(item.progress)
+                    ).joinToString(" - "),
+                    time = historyTimeFormat.format(Date(item.createdAt)),
+                    senderName = item.senderName,
+                    hasTopMargin = index > 0
+                ))
+            }
+            history.isNotEmpty() -> history.take(8).forEachIndexed { index, item ->
+                activeRoomHistoryList.addView(historyCard(
+                    fileName = item.fileName,
+                    meta = listOf(
+                        item.direction.label(),
+                        FileSizeFormatter.format(item.sizeBytes),
+                        item.status.label(item.progress)
+                    ).joinToString(" - "),
+                    time = historyTimeFormat.format(Date(item.createdAt)),
+                    senderName = item.senderName,
+                    hasTopMargin = index > 0
+                ))
+            }
+            else -> activeRoomHistoryList.addView(simpleStateCard(getString(R.string.history_empty)))
+        }
+    }
+
+    private fun historyCard(
+        fileName: String,
+        meta: String,
+        time: String,
+        senderName: String?,
+        hasTopMargin: Boolean
+    ): View {
+        val card = baseInfoCard(hasTopMargin)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(12.dp(), 10.dp(), 12.dp(), 10.dp())
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_history)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_green)
+            )
+            layoutParams = LinearLayout.LayoutParams(34.dp(), 34.dp()).apply {
+                marginEnd = 10.dp()
             }
         }
+        val textColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        textColumn.addView(TextView(this).apply {
+            text = fileName
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_graphite))
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        textColumn.addView(TextView(this).apply {
+            text = meta
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 12f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 2.dp()
+            }
+        })
+        textColumn.addView(TextView(this).apply {
+            text = listOfNotNull(senderName?.takeIf { it.isNotBlank() }, time).joinToString(" - ")
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+            textSize = 12f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 2.dp()
+            }
+        })
+        row.addView(icon)
+        row.addView(textColumn)
+        card.addView(row)
+        return card
+    }
 
-        // 1. Nama pengirim (hanya untuk guest)
-        if (!isHost) {
-            bubble.addView(TextView(this).apply {
-                text = message.senderName
+    private fun simpleStateCard(text: String): View {
+        val card = baseInfoCard(false)
+        card.addView(TextView(this).apply {
+            this.text = text
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setPadding(14.dp(), 18.dp(), 14.dp(), 18.dp())
+        })
+        return card
+    }
+
+    private fun baseInfoCard(hasTopMargin: Boolean): com.google.android.material.card.MaterialCardView {
+        return com.google.android.material.card.MaterialCardView(this).apply {
+            radius = 8.dp().toFloat()
+            elevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = ContextCompat.getColor(this@MainActivity, R.color.nadi_line)
+            setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_mist)
+            ))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                if (hasTopMargin) topMargin = 8.dp()
+            }
+        }
+    }
+
+    private fun renderTransferList(container: LinearLayout, items: List<TransferItem>, emptyText: String) {
+        container.removeAllViews()
+        if (items.isEmpty()) {
+            container.addView(transferEmptyState(emptyText))
+            return
+        }
+        items.forEachIndexed { index, item ->
+            container.addView(transferRow(item, index > 0))
+        }
+    }
+
+    private fun transferEmptyState(text: String): View {
+        val card = com.google.android.material.card.MaterialCardView(this).apply {
+            radius = 8.dp().toFloat()
+            elevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = ContextCompat.getColor(this@MainActivity, R.color.nadi_line)
+            setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_mist)
+            ))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        card.addView(TextView(this).apply {
+            this.text = text
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setPadding(14.dp(), 18.dp(), 14.dp(), 18.dp())
+        })
+        return card
+    }
+
+    private fun transferRow(item: TransferItem, hasTopMargin: Boolean): View {
+        val card = com.google.android.material.card.MaterialCardView(this).apply {
+            radius = 8.dp().toFloat()
+            elevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = ContextCompat.getColor(this@MainActivity, R.color.nadi_line)
+            setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_mist)
+            ))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                if (hasTopMargin) topMargin = 8.dp()
+            }
+        }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(12.dp(), 10.dp(), 12.dp(), 10.dp())
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_document)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_green)
+            )
+            layoutParams = LinearLayout.LayoutParams(34.dp(), 34.dp()).apply {
+                marginEnd = 10.dp()
+            }
+        }
+        val textColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val title = TextView(this).apply {
+            text = item.fileName
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_graphite))
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val meta = TextView(this).apply {
+            text = listOf(
+                item.direction.label(),
+                FileSizeFormatter.format(item.sizeBytes),
+                item.status.label(item.progress)
+            ).joinToString(" - ")
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 12f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 2.dp()
+            }
+        }
+        val sender = item.senderName?.takeIf { it.isNotBlank() }?.let { senderName ->
+            TextView(this).apply {
+                text = senderName
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
                 textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-                maxWidth = chatBubbleMaxWidth()
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(12.dp(), 8.dp(), 12.dp(), 2.dp())
-                }
-            })
-        }
-
-        // 2. Lampiran Gambar (jika ada)
-        val isImage = attachment?.isPreviewableImage() == true
-        if (isImage) {
-            val imageUri = attachment!!.previewUri()
-            if (imageUri != null) {
-                val card = com.google.android.material.card.MaterialCardView(this).apply {
-                    radius = 12.dp().toFloat()
-                    elevation = 0f
-                    strokeWidth = 1.dp()
-                    strokeColor = android.graphics.Color.parseColor(if (isHost) "#C0E8AA" else "#E5E5E5")
-                    setCardBackgroundColor(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT))
-                    clipToOutline = true
-                    isClickable = true
-                    isFocusable = true
-                    foreground = selectableItemBackground()
-                    setOnClickListener { showImageAttachmentPreview(attachment) }
-
-                    layoutParams = LinearLayout.LayoutParams(
-                        chatBubbleMaxWidth(),
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setMargins(3.dp(), 3.dp(), 3.dp(), 3.dp())
-                    }
-                }
-
-                val imageView = ImageView(this).apply {
-                    adjustViewBounds = true
-                    maxHeight = 240.dp()
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    contentDescription = attachment.fileName
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    runCatching { setImageURI(imageUri) }
-                }
-                card.addView(imageView)
-                bubble.addView(card)
-            }
-        }
-
-        // 3. Teks Pesan
-        if (!message.text.isNullOrBlank()) {
-            bubble.addView(TextView(this).apply {
-                text = message.text
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_graphite))
-                textSize = 15f
-                maxWidth = chatBubbleMaxWidth()
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    val top = if (isImage) 4.dp() else if (isHost) 8.dp() else 2.dp()
-                    setMargins(12.dp(), top, 12.dp(), 2.dp())
-                }
-            })
-        }
-
-        // 4. Kartu Lampiran Berkas Non-Gambar
-        val hasFile = !message.attachmentFileName.isNullOrBlank()
-        if (hasFile && !isImage) {
-            val card = com.google.android.material.card.MaterialCardView(this).apply {
-                radius = 8.dp().toFloat()
-                elevation = 0f
-                strokeWidth = 0
-                setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor(if (isHost) "#CFE9BA" else "#F0F2F5")
-                ))
-
-                layoutParams = LinearLayout.LayoutParams(
-                    chatBubbleMaxWidth(),
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(6.dp(), 6.dp(), 6.dp(), 4.dp())
-                }
-            }
-
-            val cardContent = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(8.dp(), 8.dp(), 8.dp(), 8.dp())
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-            }
-
-            val fileIcon = ImageView(this).apply {
-                setImageResource(R.drawable.ic_document)
-                imageTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor(if (isHost) "#075E54" else "#65676B")
-                )
-                layoutParams = LinearLayout.LayoutParams(32.dp(), 32.dp()).apply {
-                    gravity = Gravity.CENTER_VERTICAL
-                    rightMargin = 8.dp()
+                ).apply {
+                    topMargin = 2.dp()
                 }
             }
-
-            val textLayout = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-            }
-
-            val fileNameText = TextView(this).apply {
-                text = message.attachmentFileName
-                textSize = 14f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(android.graphics.Color.BLACK)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            }
-
-            val fileMetaText = TextView(this).apply {
-                val sizeStr = attachment?.let { FileSizeFormatter.format(it.sizeBytes) }.orEmpty()
-                val extStr = message.attachmentFileName.orEmpty()
-                    .substringAfterLast('.', missingDelimiterValue = "")
-                    .uppercase()
-                text = listOf(extStr, sizeStr).filter { it.isNotBlank() }.joinToString(" - ")
-                textSize = 11f
-                setTextColor(android.graphics.Color.parseColor("#65676B"))
-            }
-
-            textLayout.addView(fileNameText)
-            textLayout.addView(fileMetaText)
-
-            cardContent.addView(fileIcon)
-            cardContent.addView(textLayout)
-            card.addView(cardContent)
-            if (attachment != null) {
-                card.isClickable = true
-                card.isFocusable = true
-                card.foreground = selectableItemBackground()
-                card.setOnClickListener { openChatAttachment(attachment) }
-            }
-            bubble.addView(card)
         }
-
-        // 5. Waktu / Timestamp
-        bubble.addView(TextView(this).apply {
-            text = chatTimeFormat.format(Date(message.createdAt))
-            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
-            textSize = 10f
-            gravity = Gravity.END
-            maxWidth = chatBubbleMaxWidth()
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.END
-                val top = if (hasFile && !isImage) 2.dp() else 4.dp()
-                setMargins(12.dp(), top, 12.dp(), 6.dp())
-            }
-        })
-
-        row.addView(bubble)
-        return row
+        textColumn.addView(title)
+        textColumn.addView(meta)
+        sender?.let(textColumn::addView)
+        row.addView(icon)
+        row.addView(textColumn)
+        card.addView(row)
+        return card
     }
 
     private fun showImageAttachmentPreview(attachment: TransferItem) {
@@ -1252,10 +1314,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun TransferItem.isPreviewableImage(): Boolean {
-        return mimeType.orEmpty().lowercase().startsWith("image/") || fileName.isImageFileName()
-    }
-
     private fun TransferItem.previewUri(): Uri? {
         val value = localUri?.takeIf { it.isNotBlank() } ?: return null
         return if (value.startsWith("content://") || value.startsWith("file://")) {
@@ -1274,35 +1332,6 @@ class MainActivity : AppCompatActivity() {
                 FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", file)
             }
         }
-    }
-
-    private fun String.isImageFileName(): Boolean {
-        return substringAfterLast('.', missingDelimiterValue = "").lowercase() in IMAGE_ATTACHMENT_EXTENSIONS
-    }
-
-    private fun selectableItemBackground(): android.graphics.drawable.Drawable? {
-        val outValue = android.util.TypedValue()
-        theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
-        return ContextCompat.getDrawable(this, outValue.resourceId)
-    }
-
-    private fun chatBubbleBackground(isHost: Boolean): GradientDrawable {
-        return GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            val radius = 16.dp().toFloat()
-            val smallRadius = 4.dp().toFloat()
-            if (isHost) {
-                cornerRadii = floatArrayOf(radius, radius, smallRadius, smallRadius, radius, radius, radius, radius)
-                setColor(android.graphics.Color.parseColor("#DCF8C6"))
-            } else {
-                cornerRadii = floatArrayOf(smallRadius, smallRadius, radius, radius, radius, radius, radius, radius)
-                setColor(android.graphics.Color.WHITE)
-            }
-        }
-    }
-
-    private fun chatBubbleMaxWidth(): Int {
-        return (resources.displayMetrics.widthPixels * 0.72f).toInt()
     }
 
     private fun currentHostId(): String {
@@ -1380,6 +1409,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun requiredHotspotPermissions(): Array<String> {
         return buildList {
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
             add(Manifest.permission.ACCESS_FINE_LOCATION)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.NEARBY_WIFI_DEVICES)
@@ -1472,6 +1502,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             append("URL: ").append(url).append("\n")
+            session.pin?.takeIf { it.isNotBlank() }?.let {
+                append("PIN room: ").append(it).append("\n")
+            }
             append("Masukkan NIM dan Nama saat halaman Nadi terbuka.")
         }
     }
@@ -1543,7 +1576,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showJoinedRoom() {
-        mainScrollView.visible()
+        mainScrollView.gone()
         homePanel.gone()
         joinPanel.gone()
         joinWebPanel.visible()
@@ -1591,6 +1624,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showActiveRoom() {
         mainScrollView.gone()
+        joinWebPanel.gone()
         activeRoomPanel.visible()
         activeRoomNavigation.visible()
         activeRoomNavigation.selectedItemId = activeRoomDestinationId
@@ -1645,6 +1679,8 @@ class MainActivity : AppCompatActivity() {
     private fun Int.dp(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
+
+    private fun String.isValidRoomPin(): Boolean = matches(Regex("^\\d{4,8}$"))
 }
 
 private data class SelectedFile(
@@ -1656,7 +1692,6 @@ private data class SelectedFile(
 private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L
 private const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
 private const val MAX_CHAT_ATTACHMENT_BYTES = 10L * 1024L * 1024L
-private val IMAGE_ATTACHMENT_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp")
 private val ALLOWED_CHAT_ATTACHMENT_EXTENSIONS = setOf(
     "jpg",
     "jpeg",

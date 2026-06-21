@@ -12,6 +12,11 @@
     <string name="host_setup_copy">Pilih cara perangkat lain bergabung. Hotspot cocok saat tidak ada Wi-Fi stabil, satu Wi-Fi cocok saat semua perangkat sudah berada di jaringan yang sama.</string>
     <string name="room_name_label">Nama ruang</string>
     <string name="host_name_label">Nama host</string>
+    <string name="room_pin_label">PIN room</string>
+    <string name="room_pin_hint">Kosongkan untuk PIN otomatis</string>
+    <string name="room_pin_copy">PIN 4-8 digit dipakai jika peserta membuka alamat room tanpa token QR.</string>
+    <string name="room_pin_invalid">PIN harus 4-8 digit angka.</string>
+    <string name="room_pin_active">PIN room: %1$s</string>
     <string name="room_name_default">Nadi Room</string>
     <string name="host_name_default">Host Nadi</string>
     <string name="start_local_room">Mulai Ruang Lokal</string>
@@ -48,7 +53,8 @@
     <string name="file_room_location_pending">Lokasi folder akan muncul saat room aktif.</string>
     <string name="shared_files_empty">Belum ada file yang dibagikan. Tekan Tambah File untuk menaruh materi di File Room.</string>
     <string name="received_files_empty">Belum ada file diterima dari peserta.</string>
-    <string name="chat_empty">Belum ada pesan di room ini.</string>
+    <string name="chat_empty">Belum ada pesan</string>
+    <string name="chat_empty_hint">Percakapan dan lampiran chat akan muncul di sini.</string>
     <string name="add_shared_file">Tambah File</string>
     <string name="send_message">Kirim</string>
     <string name="attach_chat_file">Lampirkan</string>
@@ -64,6 +70,9 @@
     <string name="host_received_files_copy">File yang peserta kirim ke host melalui File Room.</string>
     <string name="host_chat_title">Chat lokal</string>
     <string name="host_chat_copy">Percakapan room tampil terpisah dari File Room. Lampiran chat tetap berada di bubble chat.</string>
+    <string name="host_chat_subtitle">Identitas terkunci - lampiran tetap di chat</string>
+    <string name="host_chat_attach_description">Lampirkan file chat</string>
+    <string name="host_chat_send_description">Kirim pesan</string>
     <string name="chat_sender_you">Anda</string>
     <string name="chat_attachment_line">Lampiran: %1$s</string>
     <string name="connected_devices_title">Perangkat terhubung</string>
@@ -76,7 +85,7 @@
     <string name="participants_empty">Belum ada peserta. Bagikan QR atau instruksi join agar peserta masuk dengan NIM dan Nama.</string>
     <string name="participant_status_active">Status: aktif di room ini</string>
     <string name="room_privacy_title">Privasi room</string>
-    <string name="room_privacy_copy">Nadi bekerja lokal. Siapa pun yang memiliki QR/URL dan berada di jaringan yang sama dapat mencoba bergabung. Perbarui link untuk menutup akses link lama.</string>
+    <string name="room_privacy_copy">Nadi bekerja lokal. Siapa pun yang memiliki QR/URL atau PIN dan berada di jaringan yang sama dapat mencoba bergabung. Perbarui link untuk menutup akses link lama.</string>
     <string name="diagnostics_title">Diagnostics lokal</string>
     <string name="copy_diagnostics">Salin Diagnostics</string>
     <string name="diagnostics_empty">Diagnostics akan muncul saat room aktif.</string>

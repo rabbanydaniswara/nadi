@@ -14,4 +14,8 @@
     <color name="nadi_error">#B91C1C</color>
     <color name="nadi_success">#047857</color>
     <color name="nadi_chip_background">#E8F5F1</color>
+    <color name="nadi_chat_canvas">#EFF6F3</color>
+    <color name="nadi_chat_outgoing">#0E7A63</color>
+    <color name="nadi_chat_incoming">#FFFFFFFF</color>
+    <color name="nadi_chat_meta_on_outgoing">#D1FAE5</color>
 </resources>

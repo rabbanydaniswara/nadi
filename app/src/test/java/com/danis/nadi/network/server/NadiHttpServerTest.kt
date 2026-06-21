@@ -12,11 +12,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.ServerSocket
 import java.net.URL
 import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.WebSocket
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class NadiHttpServerTest {
     private var server: NadiHttpServer? = null
@@ -40,6 +48,77 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun browserClientAssetsLoadFromExternalFiles() {
+        val htmlAsset = browserClientAssetFile(BrowserClientAssets.HTML_FILE_NAME)
+        val cssAsset = browserClientAssetFile(BrowserClientAssets.CSS_FILE_NAME)
+        val jsAsset = browserClientAssetFile(BrowserClientAssets.JS_FILE_NAME)
+        val html = BrowserClientAssets.html()
+        val css = BrowserClientAssets.asset(BrowserClientAssets.CSS_FILE_NAME)?.content.orEmpty()
+        val js = BrowserClientAssets.asset(BrowserClientAssets.JS_FILE_NAME)?.content.orEmpty()
+
+        assertTrue("Browser client HTML asset file should exist at ${htmlAsset.path}", htmlAsset.isFile)
+        assertTrue("Browser client CSS asset file should exist at ${cssAsset.path}", cssAsset.isFile)
+        assertTrue("Browser client JS asset file should exist at ${jsAsset.path}", jsAsset.isFile)
+        assertEquals(htmlAsset.readText(), html)
+        assertEquals(cssAsset.readText(), css)
+        assertEquals(jsAsset.readText(), js)
+        assertTrue(html.startsWith("<!doctype html>"))
+        assertTrue(html.contains("chatRealtimeStatus"))
+        assertTrue(html.contains("browser-client.css"))
+        assertTrue(html.contains("browser-client.js"))
+        assertTrue("Inline style block should be split into CSS asset", !html.contains("<style>"))
+        assertTrue("Inline script block should be split into JS asset", !html.contains("<script>"))
+        assertTrue(css.contains(".chat-window"))
+        assertTrue(js.contains("new WebSocket"))
+        assertTrue(js.contains("/ws/chat"))
+        assertTrue(js.contains("Polling cadangan"))
+        assertTrue("Kotlin interpolation escape should not leak into JS", !js.contains("\${'$'}{"))
+    }
+
+    @Test
+    fun rootAndAssetEndpointsUseInjectedBrowserClientAssets() {
+        val port = freePort()
+        server = NadiHttpServer(
+            port = port,
+            roomManager = RoomManager(),
+            fileStore = FakeFileStore(),
+            browserClientHtml = { "<!doctype html><link rel=\"stylesheet\" href=\"/assets/browser-client.css\">" },
+            browserClientAsset = { fileName ->
+                when (fileName) {
+                    BrowserClientAssets.CSS_FILE_NAME -> BrowserClientAsset(
+                        fileName = fileName,
+                        mimeType = "text/css; charset=utf-8",
+                        content = "body { color: green; }"
+                    )
+                    BrowserClientAssets.JS_FILE_NAME -> BrowserClientAsset(
+                        fileName = fileName,
+                        mimeType = "application/javascript; charset=utf-8",
+                        content = "window.nadiInjected = true;"
+                    )
+                    else -> null
+                }
+            }
+        ).also {
+            it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
+        }
+
+        val root = request("http://127.0.0.1:$port/")
+        val css = request("http://127.0.0.1:$port/assets/browser-client.css")
+        val js = request("http://127.0.0.1:$port/assets/browser-client.js")
+        val missing = request("http://127.0.0.1:$port/assets/unknown.js")
+
+        assertEquals(200, root.code)
+        assertEquals("<!doctype html><link rel=\"stylesheet\" href=\"/assets/browser-client.css\">", root.body)
+        assertEquals(200, css.code)
+        assertEquals("text/css; charset=utf-8", css.headers["Content-Type"])
+        assertEquals("body { color: green; }", css.body)
+        assertEquals(200, js.code)
+        assertEquals("application/javascript; charset=utf-8", js.headers["Content-Type"])
+        assertEquals("window.nadiInjected = true;", js.body)
+        assertEquals(404, missing.code)
+    }
+
+    @Test
     fun roomEndpointRequiresValidToken() {
         val scenario = startActiveRoom()
 
@@ -50,6 +129,25 @@ class NadiHttpServerTest {
         assertEquals(200, valid.code)
         assertTrue(valid.body.contains("Kelas Lokal"))
         assertTrue(valid.body.contains("active"))
+    }
+
+    @Test
+    fun roomAndIdentityEndpointsAcceptRoomPinAccess() {
+        val scenario = startActiveRoom(registerClient = false, pin = "123456")
+        val body = "clientId=client-42&nim=22010042&name=${URLEncoder.encode("Rabbany Daniswara", "UTF-8")}"
+
+        val room = request("http://127.0.0.1:${scenario.port}/api/room?pin=${scenario.pin}")
+        val identity = request(
+            url = "http://127.0.0.1:${scenario.port}/api/identity?pin=${scenario.pin}",
+            method = "POST",
+            body = body,
+            contentType = "application/x-www-form-urlencoded"
+        )
+
+        assertEquals(200, room.code)
+        assertEquals(200, identity.code)
+        assertTrue(room.body.contains("Kelas Lokal"))
+        assertEquals("22010042 - Rabbany Daniswara", scenario.manager.clientById("client-42")?.displayName)
     }
 
     @Test
@@ -75,9 +173,30 @@ class NadiHttpServerTest {
 
         assertEquals(200, response.code)
         assertTrue(response.body.contains("Terhubung ke Nadi"))
+        assertTrue(response.body.contains("id=\"files\""))
+        assertTrue(response.body.contains("id=\"messages\""))
         assertTrue(response.body.contains("uploadProgress"))
-        assertTrue(response.body.contains("downloadProgress"))
-        assertTrue(response.body.contains("downloadFile"))
+        assertTrue(response.body.contains("browser-client.css"))
+        assertTrue(response.body.contains("browser-client.js"))
+        assertTrue("Root shell should not contain inline JS after asset split", !response.body.contains("new WebSocket"))
+    }
+
+    @Test
+    fun browserClientAssetEndpointsServeCssAndJavaScript() {
+        val scenario = startActiveRoom()
+
+        val css = request("http://127.0.0.1:${scenario.port}/assets/browser-client.css")
+        val js = request("http://127.0.0.1:${scenario.port}/assets/browser-client.js")
+
+        assertEquals(200, css.code)
+        assertEquals("text/css; charset=utf-8", css.headers["Content-Type"])
+        assertTrue(css.body.contains(".chat-window"))
+        assertEquals(200, js.code)
+        assertEquals("application/javascript; charset=utf-8", js.headers["Content-Type"])
+        assertTrue(js.body.contains("downloadFile"))
+        assertTrue(js.body.contains("/ws/chat"))
+        assertTrue(js.body.contains("new WebSocket"))
+        assertTrue(js.body.contains("Polling cadangan"))
     }
 
     @Test
@@ -205,6 +324,31 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun uploadEndpointRejectsOversizedFileRoomUpload() {
+        val scenario = startActiveRoom(maxFileRoomUploadBytes = 8)
+        val boundary = "NadiBoundary"
+        val body = "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"clientId\"\r\n\r\n" +
+            "${scenario.clientId}\r\n" +
+            "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"file\"; filename=\"big.txt\"\r\n" +
+            "Content-Type: text/plain\r\n\r\n" +
+            "0123456789abcdef\r\n" +
+            "--$boundary--\r\n"
+
+        val response = request(
+            url = "http://127.0.0.1:${scenario.port}/api/upload?token=${scenario.token}",
+            method = "POST",
+            body = body,
+            contentType = "multipart/form-data; boundary=$boundary"
+        )
+
+        assertEquals(400, response.code)
+        assertTrue(response.body.contains("file_too_large"))
+        assertTrue(scenario.manager.receivedFiles().isEmpty())
+    }
+
+    @Test
     fun chatEndpointsSendAndListMessages() {
         val scenario = startActiveRoom()
         val body = "clientId=${scenario.clientId}&text=${URLEncoder.encode("Halo host", "UTF-8")}"
@@ -221,6 +365,117 @@ class NadiHttpServerTest {
         assertEquals(200, list.code)
         assertTrue(list.body.contains("Halo host"))
         assertTrue(list.body.contains("22010001 - Rabbany Daniswara"))
+    }
+
+    @Test
+    fun chatWebSocketReceivesPostedMessages() {
+        val scenario = startActiveRoom()
+        val received = mutableListOf<String>()
+        val latch = CountDownLatch(1)
+        val socket = HttpClient.newHttpClient()
+            .newWebSocketBuilder()
+            .buildAsync(
+                URI.create("ws://127.0.0.1:${scenario.port}/ws/chat?${scenario.clientQuery}"),
+                object : WebSocket.Listener {
+                    override fun onOpen(webSocket: WebSocket) {
+                        webSocket.request(1)
+                    }
+
+                    override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
+                        val text = data.toString()
+                        received.add(text)
+                        if (text.contains("Halo realtime")) {
+                            latch.countDown()
+                        }
+                        webSocket.request(1)
+                        return CompletableFuture.completedFuture(null)
+                    }
+                }
+            )
+            .get(3, TimeUnit.SECONDS)
+
+        try {
+            val body = "clientId=${scenario.clientId}&text=${URLEncoder.encode("Halo realtime", "UTF-8")}"
+            val send = request(
+                url = "http://127.0.0.1:${scenario.port}/api/chat?token=${scenario.token}",
+                method = "POST",
+                body = body,
+                contentType = "application/x-www-form-urlencoded"
+            )
+
+            assertEquals(200, send.code)
+            assertTrue("Expected websocket chat payload, got $received", latch.await(3, TimeUnit.SECONDS))
+            assertTrue(received.any { it.contains("\"type\":\"chat_messages\"") })
+        } finally {
+            socket.sendClose(WebSocket.NORMAL_CLOSURE, "done").get(3, TimeUnit.SECONDS)
+        }
+    }
+
+    @Test
+    fun chatWebSocketReceivesHostMessagesFromRoomManager() {
+        val scenario = startActiveRoom()
+        val received = mutableListOf<String>()
+        val latch = CountDownLatch(1)
+        val socket = HttpClient.newHttpClient()
+            .newWebSocketBuilder()
+            .buildAsync(
+                URI.create("ws://127.0.0.1:${scenario.port}/ws/chat?${scenario.clientQuery}"),
+                object : WebSocket.Listener {
+                    override fun onOpen(webSocket: WebSocket) {
+                        webSocket.request(1)
+                    }
+
+                    override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
+                        val text = data.toString()
+                        received.add(text)
+                        if (text.contains("Info dari host")) {
+                            latch.countDown()
+                        }
+                        webSocket.request(1)
+                        return CompletableFuture.completedFuture(null)
+                    }
+                }
+            )
+            .get(3, TimeUnit.SECONDS)
+
+        try {
+            scenario.manager.addMessage(
+                senderId = "host",
+                senderName = "Danis",
+                text = "Info dari host"
+            )
+
+            assertTrue("Expected websocket host payload, got $received", latch.await(3, TimeUnit.SECONDS))
+            assertTrue(received.any { it.contains("\"type\":\"chat_messages\"") })
+        } finally {
+            socket.sendClose(WebSocket.NORMAL_CLOSURE, "done").get(3, TimeUnit.SECONDS)
+        }
+    }
+
+    @Test
+    fun protectedEndpointsRestoreKnownIdentityAfterPresenceTimeout() {
+        var now = 1000L
+        val scenario = startActiveRoom(
+            clock = { now },
+            activeClientTimeoutMillis = 5_000L
+        )
+        now = 7_000L
+
+        assertEquals(0, scenario.manager.snapshot().clients.size)
+
+        val chat = request("http://127.0.0.1:${scenario.port}/api/chat?${scenario.clientQuery}&after=0")
+        val body = "clientId=${scenario.clientId}&text=${URLEncoder.encode("Masih masuk", "UTF-8")}"
+        val send = request(
+            url = "http://127.0.0.1:${scenario.port}/api/chat?token=${scenario.token}",
+            method = "POST",
+            body = body,
+            contentType = "application/x-www-form-urlencoded"
+        )
+
+        assertEquals(200, chat.code)
+        assertEquals(200, send.code)
+        assertTrue(send.body.contains("22010001 - Rabbany Daniswara"))
+        assertEquals(1, scenario.manager.snapshot().clients.size)
     }
 
     @Test
@@ -257,10 +512,18 @@ class NadiHttpServerTest {
         assertTrue(scenario.manager.receivedFiles().isEmpty())
     }
 
-    private fun startActiveRoom(registerClient: Boolean = true): ServerScenario {
+    private fun startActiveRoom(
+        registerClient: Boolean = true,
+        pin: String? = null,
+        maxFileRoomUploadBytes: Long = 100L * 1024L * 1024L,
+        clock: () -> Long = { 1000L },
+        activeClientTimeoutMillis: Long? = null
+    ): ServerScenario {
         val port = freePort()
-        val manager = RoomManager(clock = { 1000L })
-        val session = manager.startPreparing(roomName = "Kelas Lokal", hostName = "Danis")
+        val manager = activeClientTimeoutMillis?.let { timeout ->
+            RoomManager(clock = clock, activeClientTimeoutMillis = timeout)
+        } ?: RoomManager(clock = clock)
+        val session = manager.startPreparing(roomName = "Kelas Lokal", hostName = "Danis", pin = pin)
         manager.activate("http://127.0.0.1:$port/?token=${session.token}")
         val clientId = "client-1"
         if (registerClient) {
@@ -272,10 +535,10 @@ class NadiHttpServerTest {
                 ipAddress = "127.0.0.1"
             )
         }
-        server = NadiHttpServer(port, manager, FakeFileStore()).also {
+        server = NadiHttpServer(port, manager, FakeFileStore(), maxFileRoomUploadBytes).also {
             it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
         }
-        return ServerScenario(port, manager, session.token, clientId)
+        return ServerScenario(port, manager, session.token, session.pin.orEmpty(), clientId)
     }
 
     private fun request(
@@ -309,6 +572,13 @@ class NadiHttpServerTest {
 
     private fun freePort(): Int {
         return ServerSocket(0).use { it.localPort }
+    }
+
+    private fun browserClientAssetFile(fileName: String): File {
+        return listOf(
+            File("app/src/main/assets/$fileName"),
+            File("src/main/assets/$fileName")
+        ).first { it.isFile }
     }
 }
 
@@ -346,6 +616,7 @@ private data class ServerScenario(
     val port: Int,
     val manager: RoomManager,
     val token: String,
+    val pin: String,
     val clientId: String
 ) {
     val clientQuery: String

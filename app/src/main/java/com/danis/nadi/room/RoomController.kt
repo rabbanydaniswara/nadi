@@ -9,6 +9,8 @@ import com.danis.nadi.history.TransferHistoryItem
 import com.danis.nadi.history.toHistoryItem
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferItem
+import com.danis.nadi.network.server.BrowserClientAsset
+import com.danis.nadi.network.server.BrowserClientAssets
 import com.danis.nadi.network.hotspot.LocalHotspotManager
 import com.danis.nadi.network.server.NadiHttpServer
 import com.danis.nadi.settings.NadiSettingsStore
@@ -36,13 +38,13 @@ class RoomController(context: Context) {
     var hotspotPassword: String? = null
         private set
 
-    fun prepareRoom(roomName: String, hostName: String, mode: NetworkMode): RoomStartResult {
+    fun prepareRoom(roomName: String, hostName: String, mode: NetworkMode, pin: String? = null): RoomStartResult {
         stopDashboardRuntime()
         activeNetworkMode = mode
         hotspotSsid = null
         hotspotPassword = null
         lifecycleState = RoomLifecycleState.PREPARING
-        val session = roomManager.startPreparing(roomName = roomName, hostName = hostName)
+        val session = roomManager.startPreparing(roomName = roomName, hostName = hostName, pin = pin)
         lifecycleState = RoomLifecycleState.STARTING_SERVER
         val start = startServerOnAvailablePort()
         return if (!start) {
@@ -146,8 +148,19 @@ class RoomController(context: Context) {
     }
 
     private fun startServerOnAvailablePort(): Boolean {
+        val browserClientAssets = loadBrowserClientAssets()
         for (port in PORT_CANDIDATES) {
-            val candidate = NadiHttpServer(port, roomManager, fileStore)
+            val candidate = NadiHttpServer(
+                port = port,
+                roomManager = roomManager,
+                fileStore = fileStore,
+                browserClientHtml = {
+                    browserClientAssets[BrowserClientAssets.HTML_FILE_NAME]?.content ?: BrowserClientAssets.html()
+                },
+                browserClientAsset = { fileName ->
+                    browserClientAssets[fileName] ?: BrowserClientAssets.asset(fileName)
+                }
+            )
             try {
                 candidate.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
                 server = candidate
@@ -158,6 +171,24 @@ class RoomController(context: Context) {
             }
         }
         return false
+    }
+
+    private fun loadBrowserClientAssets(): Map<String, BrowserClientAsset> {
+        return BrowserClientAssets.ASSET_FILE_NAMES.mapNotNull { fileName ->
+            val content = runCatching {
+                appContext.assets.open(fileName)
+                    .bufferedReader()
+                    .use { it.readText() }
+            }.getOrNull()
+            content?.let {
+                fileName to BrowserClientAsset(
+                    fileName = fileName,
+                    mimeType = BrowserClientAssets.mimeType(fileName),
+                    content = it
+                )
+            }
+        }
+            .toMap()
     }
 
     private fun buildJoinUrl(token: String, mode: NetworkMode): String {
