@@ -915,7 +915,8 @@ class MainActivity : AppCompatActivity() {
         val hostName = controller.roomManager.currentSession()?.hostName.orEmpty()
         messages.forEach { message ->
             val isHost = message.senderId == hostId || message.senderName == hostName
-            chatMessagesContainer.addView(messageBubble(message, isHost))
+            val attachment = message.attachmentTransferId?.let { controller.roomManager.transferById(it) }
+            chatMessagesContainer.addView(messageBubble(message, attachment, isHost))
         }
         if (shouldScrollToBottom) {
             chatMessagesScrollView.post { chatMessagesScrollView.fullScroll(View.FOCUS_DOWN) }
@@ -929,7 +930,7 @@ class MainActivity : AppCompatActivity() {
         return distanceToBottom <= 48.dp()
     }
 
-    private fun messageBubble(message: ChatMessage, isHost: Boolean): View {
+    private fun messageBubble(message: ChatMessage, attachment: TransferItem?, isHost: Boolean): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = if (isHost) Gravity.END else Gravity.START
@@ -966,6 +967,23 @@ class MainActivity : AppCompatActivity() {
             textSize = 15f
             maxWidth = chatBubbleMaxWidth()
         })
+        if (attachment?.isPreviewableImage() == true) {
+            val imageUri = attachment.previewUri()
+            if (imageUri != null) {
+                bubble.addView(ImageView(this).apply {
+                    setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_line))
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription = attachment.fileName
+                    layoutParams = LinearLayout.LayoutParams(
+                        chatBubbleMaxWidth(),
+                        180.dp()
+                    ).apply {
+                        topMargin = 8.dp()
+                    }
+                    runCatching { setImageURI(imageUri) }
+                })
+            }
+        }
         if (!message.attachmentFileName.isNullOrBlank()) {
             bubble.addView(TextView(this).apply {
                 text = getString(R.string.chat_attachment_line, message.attachmentFileName)
@@ -986,6 +1004,23 @@ class MainActivity : AppCompatActivity() {
 
         row.addView(bubble)
         return row
+    }
+
+    private fun TransferItem.isPreviewableImage(): Boolean {
+        return mimeType.orEmpty().lowercase().startsWith("image/") || fileName.isImageFileName()
+    }
+
+    private fun TransferItem.previewUri(): Uri? {
+        val value = localUri?.takeIf { it.isNotBlank() } ?: return null
+        return if (value.startsWith("content://") || value.startsWith("file://")) {
+            Uri.parse(value)
+        } else {
+            Uri.fromFile(File(value))
+        }
+    }
+
+    private fun String.isImageFileName(): Boolean {
+        return substringAfterLast('.', missingDelimiterValue = "").lowercase() in IMAGE_ATTACHMENT_EXTENSIONS
     }
 
     private fun chatBubbleBackground(isHost: Boolean): GradientDrawable {
@@ -1343,6 +1378,7 @@ private data class SelectedFile(
 private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L
 private const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
 private const val MAX_CHAT_ATTACHMENT_BYTES = 10L * 1024L * 1024L
+private val IMAGE_ATTACHMENT_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp")
 private val ALLOWED_CHAT_ATTACHMENT_EXTENSIONS = setOf(
     "jpg",
     "jpeg",
