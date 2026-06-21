@@ -57,6 +57,13 @@
     <string name="chat_attachment_line">Lampiran: %1$s</string>
     <string name="connected_devices_title">Perangkat terhubung</string>
     <string name="connected_devices_empty">Belum ada browser yang terhubung. Setelah client membuka QR, perangkat akan tampil di sini.</string>
+    <string name="participants_title">Peserta Room</string>
+    <string name="participants_copy">Identitas NIM dan Nama menjadi jejak utama untuk chat dan file selama room berjalan.</string>
+    <string name="participants_summary_empty">0 peserta aktif</string>
+    <string name="participants_summary">%1$d peserta aktif</string>
+    <string name="participants_identity_policy">Identitas peserta dikunci selama room aktif. Jika ada identitas yang salah, minta peserta keluar dan bergabung ulang dengan data yang benar.</string>
+    <string name="participants_empty">Belum ada peserta. Bagikan QR atau instruksi join agar peserta masuk dengan NIM dan Nama.</string>
+    <string name="participant_status_active">Status: aktif di room ini</string>
     <string name="room_privacy_title">Privasi room</string>
     <string name="room_privacy_copy">Nadi bekerja lokal. Siapa pun yang memiliki QR/URL dan berada di jaringan yang sama dapat mencoba bergabung. Perbarui link untuk menutup akses link lama.</string>
     <string name="diagnostics_title">Diagnostics lokal</string>

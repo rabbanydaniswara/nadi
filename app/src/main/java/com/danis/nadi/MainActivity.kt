@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sharedFilesText: TextView
     private lateinit var receivedFilesText: TextView
     private lateinit var chatMessagesContainer: LinearLayout
+    private lateinit var participantSummaryText: TextView
     private lateinit var clientListText: TextView
     private lateinit var diagnosticsText: TextView
     private lateinit var historyListText: TextView
@@ -207,6 +208,7 @@ class MainActivity : AppCompatActivity() {
         sharedFilesText = findViewById(R.id.sharedFilesText)
         receivedFilesText = findViewById(R.id.receivedFilesText)
         chatMessagesContainer = findViewById(R.id.chatMessagesContainer)
+        participantSummaryText = findViewById(R.id.participantSummaryText)
         clientListText = findViewById(R.id.clientListText)
         diagnosticsText = findViewById(R.id.diagnosticsText)
         historyListText = findViewById(R.id.historyListText)
@@ -538,10 +540,11 @@ class MainActivity : AppCompatActivity() {
         fileRoomLocationText.text = controller.currentRoomFolderPath()
             ?.let { getString(R.string.file_room_location, it) }
             ?: getString(R.string.file_room_location_pending)
+        participantSummaryText.text = getString(R.string.participants_summary, snapshot.clients.size)
         clientListText.text = if (snapshot.clients.isEmpty()) {
-            getString(R.string.connected_devices_empty)
+            getString(R.string.participants_empty)
         } else {
-            snapshot.clients.joinToString(separator = "\n\n") { it.displayLine() }
+            snapshot.clients.joinToString(separator = "\n\n") { it.participantLine() }
         }
         sharedFilesText.text = if (shared.isEmpty()) {
             getString(R.string.shared_files_empty)
@@ -579,6 +582,17 @@ class MainActivity : AppCompatActivity() {
             displayName
         }
         return "$identity\n${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
+    }
+
+    private fun ConnectedClient.participantLine(): String {
+        val identityLine = if (nim.isNotBlank() || name.isNotBlank()) {
+            "${nim.ifBlank { "-" }} - ${name.ifBlank { displayName }}"
+        } else {
+            displayName
+        }
+        val statusLine = getString(R.string.participant_status_active)
+        val deviceLine = "${ipAddress.ifBlank { "-" }} - ${userAgent.shortUserAgent()}"
+        return "$identityLine\n$statusLine\n$deviceLine"
     }
 
     private fun renderChatMessages(messages: List<ChatMessage>) {
