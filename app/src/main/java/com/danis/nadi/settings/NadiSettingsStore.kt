@@ -13,7 +13,8 @@ class NadiSettingsStore(context: Context) {
         return NadiSettings(
             defaultHostName = preferences.getString(KEY_DEFAULT_HOST_NAME, DEFAULT_HOST_NAME).orEmpty()
                 .ifBlank { DEFAULT_HOST_NAME },
-            defaultNetworkMode = mode
+            defaultNetworkMode = mode,
+            fileRoomTreeUri = preferences.getString(KEY_FILE_ROOM_TREE_URI, null)
         )
     }
 
@@ -21,6 +22,7 @@ class NadiSettingsStore(context: Context) {
         preferences.edit()
             .putString(KEY_DEFAULT_HOST_NAME, settings.defaultHostName.trim().ifBlank { DEFAULT_HOST_NAME })
             .putString(KEY_DEFAULT_NETWORK_MODE, settings.defaultNetworkMode.name)
+            .putString(KEY_FILE_ROOM_TREE_URI, settings.fileRoomTreeUri)
             .apply()
     }
 
@@ -28,11 +30,13 @@ class NadiSettingsStore(context: Context) {
         const val PREFERENCES_NAME = "nadi_settings"
         const val KEY_DEFAULT_HOST_NAME = "default_host_name"
         const val KEY_DEFAULT_NETWORK_MODE = "default_network_mode"
+        const val KEY_FILE_ROOM_TREE_URI = "file_room_tree_uri"
         const val DEFAULT_HOST_NAME = "Host Nadi"
     }
 }
 
 data class NadiSettings(
     val defaultHostName: String,
-    val defaultNetworkMode: NetworkMode
+    val defaultNetworkMode: NetworkMode,
+    val fileRoomTreeUri: String? = null
 )

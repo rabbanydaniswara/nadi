@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var roomNameInput: EditText
     private lateinit var hostNameInput: EditText
     private lateinit var defaultHostNameInput: EditText
+    private lateinit var fileRoomStorageText: TextView
     private lateinit var hostChatInput: EditText
     private lateinit var openFileRoomButton: MaterialButton
     private lateinit var activeStatusText: TextView
@@ -113,6 +114,15 @@ class MainActivity : AppCompatActivity() {
         controller.createSharedTransfer(uri)
         refreshHostDashboard()
         Toast.makeText(this, "File siap dibagikan.", Toast.LENGTH_SHORT).show()
+    }
+
+    private val fileRoomFolderPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        val uri = result.data?.data ?: return@registerForActivityResult
+        persistTreePermissionIfPossible(uri, result.data)
+        settingsStore.save(settingsStore.settings().copy(fileRoomTreeUri = uri.toString()))
+        applySettingsToSettingsScreen()
+        Toast.makeText(this, "Folder File Room disimpan.", Toast.LENGTH_SHORT).show()
     }
 
     private val hotspotPermissionLauncher = registerForActivityResult(
@@ -197,6 +207,7 @@ class MainActivity : AppCompatActivity() {
         roomNameInput = findViewById(R.id.roomNameInput)
         hostNameInput = findViewById(R.id.hostNameInput)
         defaultHostNameInput = findViewById(R.id.defaultHostNameInput)
+        fileRoomStorageText = findViewById(R.id.fileRoomStorageText)
         hostChatInput = findViewById(R.id.hostChatInput)
         openFileRoomButton = findViewById(R.id.openFileRoomButton)
         activeStatusText = findViewById(R.id.activeStatusText)
@@ -238,6 +249,14 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialButton>(R.id.saveSettingsButton).setOnClickListener {
             saveSettings()
+        }
+        findViewById<MaterialButton>(R.id.chooseFileRoomFolderButton).setOnClickListener {
+            openFileRoomFolderPicker()
+        }
+        findViewById<MaterialButton>(R.id.resetFileRoomFolderButton).setOnClickListener {
+            settingsStore.save(settingsStore.settings().copy(fileRoomTreeUri = null))
+            applySettingsToSettingsScreen()
+            Toast.makeText(this, "Lokasi File Room kembali ke Download/Nadi.", Toast.LENGTH_SHORT).show()
         }
         findViewById<MaterialButton>(R.id.clearHistoryButton).setOnClickListener {
             controller.clearHistory()
@@ -315,6 +334,9 @@ class MainActivity : AppCompatActivity() {
                 R.id.defaultSameWifiModeRadio
             }
         )
+        fileRoomStorageText.text = settings.fileRoomTreeUri?.let {
+            getString(R.string.file_room_storage_custom, it)
+        } ?: getString(R.string.file_room_storage_default)
     }
 
     private fun saveSettings() {
@@ -326,7 +348,8 @@ class MainActivity : AppCompatActivity() {
         settingsStore.save(
             NadiSettings(
                 defaultHostName = defaultHostNameInput.text?.toString().orEmpty(),
-                defaultNetworkMode = mode
+                defaultNetworkMode = mode,
+                fileRoomTreeUri = settingsStore.settings().fileRoomTreeUri
             )
         )
         applySettingsToSetup()
@@ -504,6 +527,25 @@ class MainActivity : AppCompatActivity() {
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
         }
+    }
+
+    private fun persistTreePermissionIfPossible(uri: Uri, data: Intent?) {
+        val flags = data?.flags ?: return
+        val takeFlags = flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        if (takeFlags != 0) {
+            runCatching {
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+            }
+        }
+    }
+
+    private fun openFileRoomFolderPicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        fileRoomFolderPicker.launch(intent)
     }
 
     private fun sendHostMessage() {
@@ -827,6 +869,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFileRoomLocation() {
         val path = controller.currentRoomFolderPath() ?: return
+        if (!path.startsWith("/")) {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Lokasi File Room Nadi", path))
+            Toast.makeText(this, "Lokasi file room disalin: $path", Toast.LENGTH_LONG).show()
+            return
+        }
         val folder = File(path)
         if (!folder.exists()) {
             folder.mkdirs()

@@ -81,4 +81,9 @@
     <string name="save_settings">Simpan Pengaturan</string>
     <string name="local_data_title">Data lokal</string>
     <string name="local_data_copy">Nadi tidak memakai cloud untuk file dan chat room. Riwayat yang disimpan hanya metadata transfer lokal.</string>
+    <string name="file_room_storage_title">Lokasi penyimpanan File Room</string>
+    <string name="file_room_storage_default">Default: Download/Nadi/. File diterima akan masuk ke Download/Nadi/&lt;Room&gt;/received/.</string>
+    <string name="file_room_storage_custom">Folder pilihan aktif:\n%1$s\nNadi akan membuat Nadi/&lt;Room&gt;/received/ di dalam folder ini.</string>
+    <string name="choose_file_room_folder">Pilih Folder File Room</string>
+    <string name="reset_file_room_folder">Gunakan Default Download/Nadi</string>
 </resources>

@@ -283,6 +283,49 @@
                     android:text="@string/local_data_copy"
                     android:textColor="@color/nadi_soft_ink"
                     android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/file_room_storage_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/fileRoomStorageText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@color/nadi_mist"
+                    android:lineSpacingExtra="3dp"
+                    android:padding="12dp"
+                    android:text="@string/file_room_storage_default"
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textIsSelectable="true"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chooseFileRoomFolderButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/choose_file_room_folder"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_green"
+                    app:cornerRadius="10dp"
+                    app:strokeColor="@color/nadi_green" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/resetFileRoomFolderButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/reset_file_room_folder"
+                    android:textAllCaps="false"
+                    android:textColor="@color/nadi_soft_ink" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton

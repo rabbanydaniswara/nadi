@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.danis.nadi.model.TransferDirection
@@ -17,7 +18,8 @@ import java.io.InputStream
 class AndroidFileStore(
     private val context: Context,
     private val tokenGenerator: TokenGenerator = TokenGenerator(),
-    private val clock: () -> Long = { System.currentTimeMillis() }
+    private val clock: () -> Long = { System.currentTimeMillis() },
+    private val fileRoomTreeUriProvider: () -> String? = { null }
 ) : FileStore {
 
     fun createSharedTransfer(uri: Uri): TransferItem {
@@ -85,6 +87,14 @@ class AndroidFileStore(
 
     fun roomFolder(roomId: String?, folderName: String): File = publicRoomDirectory(roomId, folderName)
 
+    fun roomFolderLabel(roomId: String?, folderName: String): String {
+        return if (!fileRoomTreeUriProvider().isNullOrBlank() && folderName == RECEIVED_FOLDER) {
+            "Folder pilihan/$PUBLIC_ROOT_FOLDER/${roomId.safePathSegment()}/${folderName.safePathSegment()}"
+        } else {
+            roomFolder(roomId, folderName).absolutePath
+        }
+    }
+
     private fun savePublicReceivedFile(
         fileName: String,
         mimeType: String?,
@@ -93,6 +103,11 @@ class AndroidFileStore(
         direction: TransferDirection,
         senderName: String?
     ): TransferItem {
+        fileRoomTreeUriProvider()?.takeIf { it.isNotBlank() }?.let { treeUri ->
+            saveTreeReceivedFile(fileName, mimeType, inputStream, roomId, direction, senderName, Uri.parse(treeUri))?.let {
+                return it
+            }
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
         }
@@ -143,6 +158,58 @@ class AndroidFileStore(
         )
     }
 
+    private fun saveTreeReceivedFile(
+        fileName: String,
+        mimeType: String?,
+        inputStream: InputStream,
+        roomId: String?,
+        direction: TransferDirection,
+        senderName: String?,
+        treeUri: Uri
+    ): TransferItem? = runCatching {
+        val rootDocument = DocumentsContract.buildDocumentUriUsingTree(
+            treeUri,
+            DocumentsContract.getTreeDocumentId(treeUri)
+        )
+        val nadiDirectory = findOrCreateDirectory(treeUri, rootDocument, PUBLIC_ROOT_FOLDER) ?: return null
+        val roomDirectory = findOrCreateDirectory(treeUri, nadiDirectory, roomId.safePathSegment()) ?: return null
+        val receivedDirectory = findOrCreateDirectory(treeUri, roomDirectory, RECEIVED_FOLDER) ?: return null
+        val safeName = fileName.safeFileName()
+        val targetName = FileNameResolver.uniqueName(safeName) { documentExists(treeUri, receivedDirectory, it) }
+        val documentUri = DocumentsContract.createDocument(
+            context.contentResolver,
+            receivedDirectory,
+            mimeType ?: "application/octet-stream",
+            targetName
+        ) ?: return null
+
+        var bytesWritten = 0L
+        context.contentResolver.openOutputStream(documentUri)?.use { output ->
+            inputStream.use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                    bytesWritten += read
+                }
+            }
+        } ?: return null
+
+        TransferItem(
+            transferId = tokenGenerator.newSessionId(16),
+            fileName = targetName,
+            mimeType = mimeType ?: "application/octet-stream",
+            sizeBytes = bytesWritten,
+            direction = direction,
+            status = TransferStatus.SUCCESS,
+            progress = 100,
+            createdAt = clock(),
+            localUri = documentUri.toString(),
+            senderName = senderName ?: "Browser"
+        )
+    }.getOrNull()
+
     private fun saveAppRoomFile(
         fileName: String,
         mimeType: String?,
@@ -189,6 +256,50 @@ class AndroidFileStore(
         } ?: false
     }
 
+    private fun findOrCreateDirectory(treeUri: Uri, parentDocumentUri: Uri, name: String): Uri? {
+        findChildDocument(treeUri, parentDocumentUri, name, DocumentsContract.Document.MIME_TYPE_DIR)?.let {
+            return it
+        }
+        return DocumentsContract.createDocument(
+            context.contentResolver,
+            parentDocumentUri,
+            DocumentsContract.Document.MIME_TYPE_DIR,
+            name
+        )
+    }
+
+    private fun documentExists(treeUri: Uri, parentDocumentUri: Uri, name: String): Boolean {
+        return findChildDocument(treeUri, parentDocumentUri, name, expectedMimeType = null) != null
+    }
+
+    private fun findChildDocument(
+        treeUri: Uri,
+        parentDocumentUri: Uri,
+        name: String,
+        expectedMimeType: String?
+    ): Uri? {
+        val parentDocumentId = DocumentsContract.getDocumentId(parentDocumentUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE
+        )
+        return context.contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+            val idIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            val mimeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
+            while (cursor.moveToNext()) {
+                val displayName = cursor.getString(nameIndex)
+                val mimeType = cursor.getString(mimeIndex)
+                if (displayName == name && (expectedMimeType == null || mimeType == expectedMimeType)) {
+                    return@use DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(idIndex))
+                }
+            }
+            null
+        }
+    }
+
     private fun publicRoomDirectory(roomId: String?, folderName: String): File {
         return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Nadi/${roomId.safePathSegment()}/${folderName.safePathSegment()}")
     }
@@ -233,6 +344,7 @@ class AndroidFileStore(
     }
 }
 
+private const val PUBLIC_ROOT_FOLDER = "Nadi"
 private const val RECEIVED_FOLDER = "received"
 
 private data class FileMetadata(

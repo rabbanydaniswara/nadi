@@ -11,6 +11,7 @@ import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferItem
 import com.danis.nadi.network.hotspot.LocalHotspotManager
 import com.danis.nadi.network.server.NadiHttpServer
+import com.danis.nadi.settings.NadiSettingsStore
 import com.danis.nadi.util.NetworkAddress
 import fi.iki.elonen.NanoHTTPD
 import java.io.IOException
@@ -18,7 +19,8 @@ import java.io.IOException
 class RoomController(context: Context) {
     private val appContext = context.applicationContext
     val roomManager = RoomManager()
-    val fileStore = AndroidFileStore(appContext)
+    private val settingsStore = NadiSettingsStore(appContext)
+    val fileStore = AndroidFileStore(appContext) { settingsStore.settings().fileRoomTreeUri }
     val hotspotManager = LocalHotspotManager(appContext)
 
     private val historyStore = NadiHistoryStore(appContext)
@@ -99,7 +101,7 @@ class RoomController(context: Context) {
 
     fun currentRoomFolderPath(folderName: String = "received"): String? {
         val roomId = roomManager.currentSession()?.sessionId ?: return null
-        return fileStore.roomFolder(roomId, folderName).absolutePath
+        return fileStore.roomFolderLabel(roomId, folderName)
     }
 
     fun diagnostics(): DiagnosticSnapshot {
