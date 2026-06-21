@@ -1,7 +1,11 @@
 package com.danis.nadi.file
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
@@ -73,11 +77,86 @@ class AndroidFileStore(
         direction: TransferDirection,
         senderName: String?
     ): TransferItem {
+        if (direction == TransferDirection.UPLOAD && folderName == RECEIVED_FOLDER) {
+            return savePublicReceivedFile(fileName, mimeType, inputStream, roomId, direction, senderName)
+        }
+        return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
+    }
+
+    fun roomFolder(roomId: String?, folderName: String): File = publicRoomDirectory(roomId, folderName)
+
+    private fun savePublicReceivedFile(
+        fileName: String,
+        mimeType: String?,
+        inputStream: InputStream,
+        roomId: String?,
+        direction: TransferDirection,
+        senderName: String?
+    ): TransferItem {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
+        }
+        val safeName = fileName.safeFileName()
+        val relativePath = publicRelativePath(roomId, RECEIVED_FOLDER)
+        val targetName = FileNameResolver.uniqueName(safeName) { mediaFileExists(relativePath, it) }
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, targetName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType ?: "application/octet-stream")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val uri = context.contentResolver.insert(collection, values)
+            ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
+
+        var bytesWritten = 0L
+        context.contentResolver.openOutputStream(uri)?.use { output ->
+            inputStream.use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                    bytesWritten += read
+                }
+            }
+        } ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, RECEIVED_FOLDER, direction, senderName)
+
+        context.contentResolver.update(
+            uri,
+            ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+            null,
+            null
+        )
+
+        return TransferItem(
+            transferId = tokenGenerator.newSessionId(16),
+            fileName = targetName,
+            mimeType = mimeType ?: "application/octet-stream",
+            sizeBytes = bytesWritten,
+            direction = direction,
+            status = TransferStatus.SUCCESS,
+            progress = 100,
+            createdAt = clock(),
+            localUri = uri.toString(),
+            senderName = senderName ?: "Browser"
+        )
+    }
+
+    private fun saveAppRoomFile(
+        fileName: String,
+        mimeType: String?,
+        inputStream: InputStream,
+        roomId: String?,
+        folderName: String,
+        direction: TransferDirection,
+        senderName: String?
+    ): TransferItem {
         val targetDir = roomDirectory(roomId, folderName)
         if (!targetDir.exists()) {
             targetDir.mkdirs()
         }
-        val safeName = fileName.replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "upload.bin" }
+        val safeName = fileName.safeFileName()
         val targetName = FileNameResolver.uniqueName(safeName) { File(targetDir, it).exists() }
         val targetFile = File(targetDir, targetName)
         inputStream.use { input ->
@@ -99,17 +178,39 @@ class AndroidFileStore(
         )
     }
 
-    fun roomFolder(roomId: String?, folderName: String): File = roomDirectory(roomId, folderName)
+    private fun mediaFileExists(relativePath: String, fileName: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val projection = arrayOf(MediaStore.MediaColumns._ID)
+        val selection = "${MediaStore.MediaColumns.RELATIVE_PATH}=? AND ${MediaStore.MediaColumns.DISPLAY_NAME}=?"
+        val args = arrayOf(relativePath, fileName)
+        return context.contentResolver.query(collection, projection, selection, args, null)?.use { cursor ->
+            cursor.moveToFirst()
+        } ?: false
+    }
+
+    private fun publicRoomDirectory(roomId: String?, folderName: String): File {
+        return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Nadi/${roomId.safePathSegment()}/${folderName.safePathSegment()}")
+    }
+
+    private fun publicRelativePath(roomId: String?, folderName: String): String {
+        return "${Environment.DIRECTORY_DOWNLOADS}/Nadi/${roomId.safePathSegment()}/${folderName.safePathSegment()}/"
+    }
 
     private fun roomDirectory(roomId: String?, folderName: String): File {
-        val safeRoomId = roomId
-            ?.replace(Regex("""[^A-Za-z0-9_-]"""), "_")
-            ?.takeIf { it.isNotBlank() }
-            ?: "legacy"
-        val safeFolder = folderName
-            .replace(Regex("""[^A-Za-z0-9_-]"""), "_")
-            .ifBlank { "received" }
+        val safeRoomId = roomId.safePathSegment()
+        val safeFolder = folderName.safePathSegment()
         return File(context.getExternalFilesDir(null), "rooms/$safeRoomId/$safeFolder")
+    }
+
+    private fun String?.safePathSegment(): String {
+        return orEmpty()
+            .replace(Regex("""[^A-Za-z0-9_-]"""), "_")
+            .ifBlank { "legacy" }
+    }
+
+    private fun String.safeFileName(): String {
+        return replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "upload.bin" }
     }
 
     private fun queryMetadata(uri: Uri): FileMetadata {
@@ -131,6 +232,8 @@ class AndroidFileStore(
         return FileMetadata(displayName, mimeType, sizeBytes)
     }
 }
+
+private const val RECEIVED_FOLDER = "received"
 
 private data class FileMetadata(
     val displayName: String,
