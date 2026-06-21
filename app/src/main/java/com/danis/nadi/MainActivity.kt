@@ -3,13 +3,15 @@ package com.danis.nadi
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Rect
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
@@ -26,6 +28,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
@@ -35,6 +38,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.NestedScrollView
@@ -996,6 +1000,10 @@ class MainActivity : AppCompatActivity() {
                     strokeColor = android.graphics.Color.parseColor(if (isHost) "#C0E8AA" else "#E5E5E5")
                     setCardBackgroundColor(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT))
                     clipToOutline = true
+                    isClickable = true
+                    isFocusable = true
+                    foreground = selectableItemBackground()
+                    setOnClickListener { showImageAttachmentPreview(attachment) }
 
                     layoutParams = LinearLayout.LayoutParams(
                         chatBubbleMaxWidth(),
@@ -1111,6 +1119,12 @@ class MainActivity : AppCompatActivity() {
             cardContent.addView(fileIcon)
             cardContent.addView(textLayout)
             card.addView(cardContent)
+            if (attachment != null) {
+                card.isClickable = true
+                card.isFocusable = true
+                card.foreground = selectableItemBackground()
+                card.setOnClickListener { openChatAttachment(attachment) }
+            }
             bubble.addView(card)
         }
 
@@ -1135,6 +1149,89 @@ class MainActivity : AppCompatActivity() {
         return row
     }
 
+    private fun showImageAttachmentPreview(attachment: TransferItem) {
+        val imageUri = attachment.previewUri() ?: return
+        Dialog(this).apply {
+            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+            val frame = FrameLayout(this@MainActivity).apply {
+                setBackgroundColor(Color.BLACK)
+                setOnClickListener { dismiss() }
+            }
+            val imageView = ImageView(this@MainActivity).apply {
+                adjustViewBounds = true
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                contentDescription = attachment.fileName
+                setImageURI(imageUri)
+                setOnClickListener { }
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    setMargins(12.dp(), 56.dp(), 12.dp(), 56.dp())
+                    gravity = Gravity.CENTER
+                }
+            }
+            val closeText = TextView(this@MainActivity).apply {
+                text = "Tutup"
+                setTextColor(Color.WHITE)
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setPadding(16.dp(), 10.dp(), 16.dp(), 10.dp())
+                setOnClickListener { dismiss() }
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.END
+                    setMargins(0, 18.dp(), 14.dp(), 0)
+                }
+            }
+            val titleText = TextView(this@MainActivity).apply {
+                text = attachment.fileName
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(16.dp(), 10.dp(), 96.dp(), 10.dp())
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    setMargins(0, 18.dp(), 0, 0)
+                }
+            }
+            frame.addView(imageView)
+            frame.addView(titleText)
+            frame.addView(closeText)
+            setContentView(frame)
+            show()
+            window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+            window?.setLayout(
+                android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                android.view.WindowManager.LayoutParams.MATCH_PARENT
+            )
+        }
+    }
+
+    private fun openChatAttachment(attachment: TransferItem) {
+        val uri = attachment.openableUri() ?: run {
+            Toast.makeText(this, "File lampiran belum tersedia.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val opened = runCatching {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, attachment.mimeType ?: attachment.fileName.inferredMimeType())
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(Intent.createChooser(intent, "Buka lampiran"))
+        }.isSuccess
+        if (!opened) {
+            Toast.makeText(this, "Tidak ada aplikasi untuk membuka file ini.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun TransferItem.isPreviewableImage(): Boolean {
         return mimeType.orEmpty().lowercase().startsWith("image/") || fileName.isImageFileName()
     }
@@ -1148,8 +1245,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun TransferItem.openableUri(): Uri? {
+        val value = localUri?.takeIf { it.isNotBlank() } ?: return null
+        return when {
+            value.startsWith("content://") || value.startsWith("file://") -> Uri.parse(value)
+            else -> {
+                val file = File(value).takeIf { it.exists() } ?: return null
+                FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", file)
+            }
+        }
+    }
+
     private fun String.isImageFileName(): Boolean {
         return substringAfterLast('.', missingDelimiterValue = "").lowercase() in IMAGE_ATTACHMENT_EXTENSIONS
+    }
+
+    private fun selectableItemBackground(): android.graphics.drawable.Drawable? {
+        val outValue = android.util.TypedValue()
+        theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+        return ContextCompat.getDrawable(this, outValue.resourceId)
     }
 
     private fun chatBubbleBackground(isHost: Boolean): GradientDrawable {

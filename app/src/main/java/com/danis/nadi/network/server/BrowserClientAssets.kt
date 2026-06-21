@@ -77,11 +77,33 @@ object BrowserClientAssets {
                   margin-top: 10px; padding: 10px; border: 1px solid var(--line);
                   border-radius: 8px; background: white;
                 }
+                .attachment-card[role=button] { cursor: pointer; }
                 .attachment-card p { color: var(--soft); }
                 .attachment-actions { display: grid; gap: 8px; margin-top: 8px; }
+                .image-preview-button {
+                  display: block; width: 100%; padding: 0; border: 0; border-radius: 8px;
+                  background: transparent; overflow: hidden;
+                }
                 .chat-image {
                   display: block; width: min(360px, 100%); max-height: 260px;
                   object-fit: contain; border-radius: 8px; background: #EEF6F3;
+                }
+                .image-lightbox {
+                  position: fixed; inset: 0; z-index: 20; display: grid;
+                  grid-template-rows: auto 1fr auto; gap: 10px;
+                  background: rgba(0, 0, 0, .92); padding: 14px;
+                }
+                .image-lightbox.hidden { display: none; }
+                .image-lightbox img {
+                  align-self: center; justify-self: center;
+                  max-width: 100%; max-height: 78vh; object-fit: contain;
+                }
+                .lightbox-close {
+                  justify-self: end; width: auto; min-height: 38px;
+                  background: rgba(255, 255, 255, .14); color: white;
+                }
+                .lightbox-caption {
+                  margin: 0; color: white; text-align: center; word-break: break-word;
                 }
                 .identity { margin-top: 14px; }
                 .identity-summary { margin-top: 10px; font-weight: 800; color: var(--green); }
@@ -175,6 +197,11 @@ object BrowserClientAssets {
                 </section>
                 <p>URL room: <code id="currentUrl"></code></p>
               </main>
+              <div id="imageLightbox" class="image-lightbox hidden" role="dialog" aria-modal="true" aria-label="Preview gambar">
+                <button id="closeImageLightbox" type="button" class="lightbox-close">Tutup</button>
+                <img id="lightboxImage" alt="">
+                <p id="lightboxCaption" class="lightbox-caption"></p>
+              </div>
               <script>
                 const params = new URLSearchParams(window.location.search);
                 const token = params.get("token") || "";
@@ -215,6 +242,23 @@ object BrowserClientAssets {
                 function scrollMessagesToBottom() {
                   const holder = messagesHolder();
                   holder.scrollTop = holder.scrollHeight;
+                }
+
+                function openImageLightbox(src, name) {
+                  const lightbox = document.getElementById("imageLightbox");
+                  const image = document.getElementById("lightboxImage");
+                  const caption = document.getElementById("lightboxCaption");
+                  image.src = src;
+                  image.alt = name || "Preview gambar";
+                  caption.textContent = name || "";
+                  lightbox.classList.remove("hidden");
+                }
+
+                function closeImageLightbox() {
+                  const lightbox = document.getElementById("imageLightbox");
+                  const image = document.getElementById("lightboxImage");
+                  lightbox.classList.add("hidden");
+                  image.removeAttribute("src");
                 }
 
                 function clientId() {
@@ -305,9 +349,9 @@ object BrowserClientAssets {
                   const url = attachmentUrl(id, true);
                   const downloadButton = `<button type="button" class="chatAttachmentDownload" data-id="${'$'}{esc(id)}" data-name="${'$'}{esc(name)}" data-status="${'$'}{esc(statusId)}">Download</button><p id="${'$'}{esc(statusId)}" class="muted"></p>`;
                   if (isImageAttachment(message)) {
-                    return `<div class="attachment-card"><img class="chat-image" src="${'$'}{esc(url)}" alt="Preview ${'$'}{esc(name)}" loading="lazy"><p class="muted">${'$'}{esc(name)} - ${'$'}{meta}</p><div class="attachment-actions">${'$'}{downloadButton}</div></div>`;
+                    return `<div class="attachment-card"><button type="button" class="imagePreviewButton" data-src="${'$'}{esc(url)}" data-name="${'$'}{esc(name)}"><img class="chat-image" src="${'$'}{esc(url)}" alt="Preview ${'$'}{esc(name)}" loading="lazy"></button><p class="muted">${'$'}{esc(name)} - ${'$'}{meta}</p><div class="attachment-actions">${'$'}{downloadButton}</div></div>`;
                   }
-                  return `<div class="attachment-card"><strong>${'$'}{esc(name)}</strong><p>${'$'}{meta} - Download dulu untuk membuka file ini.</p><div class="attachment-actions">${'$'}{downloadButton}</div></div>`;
+                  return `<div class="attachment-card chatAttachmentCard" role="button" tabindex="0" data-id="${'$'}{esc(id)}" data-name="${'$'}{esc(name)}" data-status="${'$'}{esc(statusId)}"><strong>${'$'}{esc(name)}</strong><p>${'$'}{meta} - Ketuk untuk download, lalu buka dari hasil download browser.</p><div class="attachment-actions">${'$'}{downloadButton}</div></div>`;
                 }
                 async function refreshRoom() {
                   if (!token) { showLocked(); return; }
@@ -479,7 +523,23 @@ object BrowserClientAssets {
                     holder.appendChild(div);
                     appended += 1;
                     div.querySelectorAll(".chatAttachmentDownload").forEach(button => {
-                      button.addEventListener("click", () => downloadChatAttachment(button.dataset.id, button.dataset.name, button.dataset.status));
+                      button.addEventListener("click", event => {
+                        event.stopPropagation();
+                        downloadChatAttachment(button.dataset.id, button.dataset.name, button.dataset.status);
+                      });
+                    });
+                    div.querySelectorAll(".chatAttachmentCard").forEach(card => {
+                      const download = () => downloadChatAttachment(card.dataset.id, card.dataset.name, card.dataset.status);
+                      card.addEventListener("click", download);
+                      card.addEventListener("keydown", event => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          download();
+                        }
+                      });
+                    });
+                    div.querySelectorAll(".imagePreviewButton").forEach(button => {
+                      button.addEventListener("click", () => openImageLightbox(button.dataset.src, button.dataset.name));
                     });
                   }
                   if (!seenMessages.size) holder.innerHTML = `<p class="muted">Belum ada pesan.</p>`;
@@ -557,6 +617,13 @@ object BrowserClientAssets {
                 document.getElementById("sendButton").addEventListener("click", sendChat);
                 document.getElementById("sendAttachmentButton").addEventListener("click", sendChatAttachment);
                 document.getElementById("chatInput").addEventListener("keydown", event => { if (event.key === "Enter") sendChat(); });
+                document.getElementById("closeImageLightbox").addEventListener("click", closeImageLightbox);
+                document.getElementById("imageLightbox").addEventListener("click", event => {
+                  if (event.target.id === "imageLightbox") closeImageLightbox();
+                });
+                document.addEventListener("keydown", event => {
+                  if (event.key === "Escape") closeImageLightbox();
+                });
                 document.querySelectorAll(".tab-button").forEach(button => {
                   button.addEventListener("click", () => switchClientTab(button.dataset.clientTab));
                 });
