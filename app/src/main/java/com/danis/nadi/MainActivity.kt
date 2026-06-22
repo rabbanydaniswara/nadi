@@ -396,6 +396,12 @@ class MainActivity : AppCompatActivity() {
         openFileRoomButton.setOnClickListener {
             openFileRoomLocation()
         }
+        findViewById<MaterialButton>(R.id.openChatAttachmentsFolderButton).setOnClickListener {
+            openChatAttachmentsLocation()
+        }
+        findViewById<MaterialButton>(R.id.clearChatAttachmentsButton).setOnClickListener {
+            clearChatAttachments()
+        }
         findViewById<MaterialButton>(R.id.regenerateLinkButton).setOnClickListener {
             regenerateJoinLink()
         }
@@ -1529,10 +1535,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFileRoomLocation() {
         val path = controller.currentRoomFolderPath() ?: return
+        openFolderLocation(path, "Lokasi File Room Nadi")
+    }
+
+    private fun openChatAttachmentsLocation() {
+        val path = controller.currentRoomFolderPath(ServerFileRules.CHAT_DOWNLOADS_FOLDER) ?: return
+        openFolderLocation(path, "Lokasi Lampiran Chat Nadi")
+    }
+
+    private fun clearChatAttachments() {
+        val cleared = controller.clearChatAttachments()
+        refreshHostDashboard()
+        val message = if (cleared > 0) {
+            getString(R.string.chat_attachments_cleared, cleared)
+        } else {
+            getString(R.string.chat_attachments_empty)
+        }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun openFolderLocation(path: String, clipLabel: String) {
         if (!path.startsWith("/")) {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Lokasi File Room Nadi", path))
-            Toast.makeText(this, "Lokasi file room disalin: $path", Toast.LENGTH_LONG).show()
+            clipboard.setPrimaryClip(ClipData.newPlainText(clipLabel, path))
+            Toast.makeText(this, "Lokasi folder disalin: $path", Toast.LENGTH_LONG).show()
             return
         }
         val folder = File(path)
@@ -1548,8 +1574,8 @@ class MainActivity : AppCompatActivity() {
         }.isSuccess
         if (!opened) {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Lokasi File Room Nadi", path))
-            Toast.makeText(this, "Lokasi file room disalin: $path", Toast.LENGTH_LONG).show()
+            clipboard.setPrimaryClip(ClipData.newPlainText(clipLabel, path))
+            Toast.makeText(this, "Lokasi folder disalin: $path", Toast.LENGTH_LONG).show()
         }
     }
 

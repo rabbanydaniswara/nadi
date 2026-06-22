@@ -22,6 +22,7 @@ let latestMessageAt = 0;
 let seenMessages = new Set();
 let messageSignatures = {};
 let forceChatScrollToBottom = false;
+let activeClientTab = "files";
 let chatSocket = null;
 let chatPollingTimer = null;
 let chatReconnectTimer = null;
@@ -31,13 +32,18 @@ const chatKeepAliveIntervalMs = 3000;
 document.getElementById("currentUrl").textContent = window.location.href;
 
 function switchClientTab(tab) {
+  activeClientTab = tab;
   document.querySelectorAll(".tab-button").forEach(button => {
     button.classList.toggle("active", button.dataset.clientTab === tab);
   });
   document.getElementById("clientFilesSection").classList.toggle("hidden", tab !== "files");
   document.getElementById("clientChatSection").classList.toggle("hidden", tab !== "chat");
   document.getElementById("clientInfoSection").classList.toggle("hidden", tab !== "info");
-  if (tab === "chat") requestAnimationFrame(scrollMessagesToBottom);
+  if (tab === "files") refreshFiles();
+  if (tab === "chat") {
+    refreshChat();
+    requestAnimationFrame(scrollMessagesToBottom);
+  }
 }
 
 function messagesHolder() {
@@ -191,6 +197,34 @@ function statusLabel(status) {
     default: return "";
   }
 }
+function friendlyError(errorCode, fallback) {
+  switch (String(errorCode || "")) {
+    case "file_too_large": return "File terlalu besar untuk File Room.";
+    case "attachment_not_allowed": return "Lampiran ditolak. Gunakan gambar, dokumen, teks, atau zip maksimal 10 MB.";
+    case "chat_attachment_storage_full": return "Storage lampiran chat room sudah penuh. Minta host membersihkan lampiran lama.";
+    case "file_expired": return "Lampiran sudah kedaluwarsa dan dibersihkan dari host.";
+    case "identity_required": return "Isi NIM dan Nama dulu sebelum memakai fitur ini.";
+    case "invalid_token": return "Akses room tidak valid. Minta QR/link terbaru atau masukkan PIN.";
+    case "unsafe_file_name": return "Nama file tidak aman. Ubah nama file lalu coba lagi.";
+    default: return fallback;
+  }
+}
+async function responseErrorMessage(response, fallback) {
+  try {
+    const payload = await response.clone().json();
+    return friendlyError(payload.error, fallback);
+  } catch (error) {
+    return fallback;
+  }
+}
+function xhrErrorMessage(xhr, fallback) {
+  try {
+    const payload = JSON.parse(xhr.responseText || "{}");
+    return friendlyError(payload.error, fallback);
+  } catch (error) {
+    return fallback;
+  }
+}
 function safeId(value) {
   return String(value ?? "").replace(/[^a-zA-Z0-9_-]/g, "_");
 }
@@ -221,6 +255,7 @@ function attachmentMarkup(message) {
   const meta = [formatBytes(size), status].filter(Boolean).join(" - ");
   const url = attachmentUrl(id, true);
   const expired = String(message.attachmentStatus || "").toLowerCase() === "expired";
+  const statusBadge = status ? `<span class="attachment-status${expired ? " expired" : ""}">${esc(status)}</span>` : "";
   const downloadButton = expired
     ? `<p id="${esc(statusId)}" class="muted">Lampiran sudah kedaluwarsa.</p>`
     : `<button type="button" class="chatAttachmentDownload" data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}">Download</button><p id="${esc(statusId)}" class="muted"></p>`;
@@ -228,12 +263,12 @@ function attachmentMarkup(message) {
     const preview = expired
       ? `<strong>${esc(name)}</strong>`
       : `<button type="button" class="imagePreviewButton image-preview-button" data-src="${esc(url)}" data-name="${esc(name)}"><img class="chat-image" src="${esc(url)}" alt="Preview ${esc(name)}" loading="lazy"></button>`;
-    return `<div class="attachment-card">${preview}<p class="muted">${esc(name)} - ${meta}</p><div class="attachment-actions">${downloadButton}</div></div>`;
+    return `<div class="attachment-card${expired ? " expired" : ""}">${preview}<p class="muted">${esc(name)} - ${meta}</p>${statusBadge}<div class="attachment-actions">${downloadButton}</div></div>`;
   }
-  const cardClass = expired ? "attachment-card" : "attachment-card chatAttachmentCard";
+  const cardClass = expired ? "attachment-card expired" : "attachment-card chatAttachmentCard";
   const role = expired ? "" : ` role="button" tabindex="0"`;
   const helper = expired ? "Lampiran sudah kedaluwarsa." : "Ketuk untuk download, lalu buka dari hasil download browser.";
-  return `<div class="${cardClass}"${role} data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}"><strong>${esc(name)}</strong><p>${meta} - ${helper}</p><div class="attachment-actions">${downloadButton}</div></div>`;
+  return `<div class="${cardClass}"${role} data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}"><strong>${esc(name)}</strong><p>${meta} - ${helper}</p>${statusBadge}<div class="attachment-actions">${downloadButton}</div></div>`;
 }
 async function refreshRoom() {
   if (!hasAccessCredential()) { showPinPrompt(); return; }
@@ -297,7 +332,7 @@ async function downloadFile(id, name) {
   progress.value = 0;
   try {
     const response = await fetch("/api/download/" + encodeURIComponent(id) + "?" + accessQuery() + "&" + clientQuery());
-    if (!response.ok) throw new Error("download_failed");
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Download gagal. Pastikan room masih aktif."));
     const total = Number(response.headers.get("content-length") || 0);
     const reader = response.body && response.body.getReader ? response.body.getReader() : null;
     if (!reader) {
@@ -329,7 +364,7 @@ async function downloadFile(id, name) {
     status.textContent = "Download selesai.";
     status.className = "success";
   } catch (error) {
-    status.textContent = "Download gagal. Pastikan room masih aktif.";
+    status.textContent = error.message || "Download gagal. Pastikan room masih aktif.";
     status.className = "error";
   }
 }
@@ -340,13 +375,13 @@ async function downloadChatAttachment(id, name, statusId) {
   status.className = "muted";
   try {
     const response = await fetch(attachmentUrl(id));
-    if (!response.ok) throw new Error("download_failed");
+    if (!response.ok) throw new Error(await responseErrorMessage(response, "Download lampiran gagal. Pastikan room masih aktif."));
     const blob = await response.blob();
     saveBlob(blob, name || "lampiran-nadi");
     status.textContent = "Download selesai. Buka file dari folder download browser.";
     status.className = "success";
   } catch (error) {
-    status.textContent = "Download gagal. Pastikan room masih aktif.";
+    status.textContent = error.message || "Download gagal. Pastikan room masih aktif.";
     status.className = "error";
   }
 }
@@ -387,7 +422,7 @@ function uploadFile() {
   };
   xhr.onload = () => {
     const ok = xhr.status >= 200 && xhr.status < 300;
-    status.textContent = ok ? "File terkirim ke host." : "File belum terkirim.";
+    status.textContent = ok ? "File terkirim ke host." : xhrErrorMessage(xhr, "File belum terkirim.");
     status.className = ok ? "success" : "error";
     progress.value = ok ? 100 : progress.value;
     input.value = "";
@@ -617,7 +652,7 @@ function sendChatAttachment() {
   xhr.open("POST", "/api/chat-attachment?" + accessQuery());
   xhr.onload = () => {
     const ok = xhr.status >= 200 && xhr.status < 300;
-    attachmentStatus.textContent = ok ? "Lampiran terkirim di chat." : "Lampiran ditolak. Gunakan gambar/dokumen kecil.";
+    attachmentStatus.textContent = ok ? "Lampiran terkirim di chat." : xhrErrorMessage(xhr, "Lampiran ditolak. Gunakan gambar/dokumen kecil.");
     attachmentStatus.className = ok ? "success" : "error";
     if (ok) {
       input.value = "";
@@ -657,8 +692,8 @@ document.querySelectorAll(".tab-button").forEach(button => {
 });
 switchClientTab("files");
 refreshRoom(); refreshFiles(); restartChatRealtime();
-window.setInterval(refreshRoom, 4000);
-window.setInterval(refreshFiles, 4000);
+window.setInterval(refreshRoom, 6000);
+window.setInterval(() => { if (activeClientTab === "files") refreshFiles(); }, 6000);
 window.addEventListener("online", connectChatSocket);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {

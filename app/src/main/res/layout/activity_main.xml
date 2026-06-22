@@ -1004,6 +1004,28 @@
                         app:cornerRadius="10dp"
                         app:strokeColor="@color/nadi_green" />
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/openChatAttachmentsFolderButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/open_chat_attachments_folder"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_green"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="@color/nadi_green" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/clearChatAttachmentsButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/clear_chat_attachments"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_error" />
+
                     <LinearLayout
                         android:id="@+id/activeRoomSharedFilesSection"
                         android:layout_width="match_parent"

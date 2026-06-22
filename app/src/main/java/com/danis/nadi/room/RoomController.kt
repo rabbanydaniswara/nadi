@@ -108,6 +108,15 @@ class RoomController(context: Context) {
         }
     }
 
+    fun clearChatAttachments(): Int {
+        val expired = roomManager.expireAllChatAttachments()
+        expired.forEach { transfer ->
+            fileStore.deleteStoredFile(transfer)
+        }
+        persistRecentTransfers()
+        return expired.size
+    }
+
     fun currentRoomFolderPath(folderName: String = "received"): String? {
         val roomId = roomManager.currentSession()?.sessionId ?: return null
         return fileStore.roomFolderLabel(roomId, folderName)

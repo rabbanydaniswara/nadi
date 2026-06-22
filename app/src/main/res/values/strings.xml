@@ -43,6 +43,8 @@
     <string name="wifi_qr_title">QR Wi-Fi Hotspot</string>
     <string name="copy_join_instructions">Salin Instruksi Join</string>
     <string name="open_file_room">Buka Folder File Room</string>
+    <string name="open_chat_attachments_folder">Buka Folder Lampiran Chat</string>
+    <string name="clear_chat_attachments">Bersihkan Lampiran Chat</string>
     <string name="regenerate_link">Perbarui Link</string>
     <string name="stop_room">Tutup Ruang</string>
     <string name="file_room_title">File Room</string>
@@ -51,6 +53,8 @@
     <string name="file_room_summary">Dibagikan: %1$d file - Diterima: %2$d file</string>
     <string name="file_room_location">Lokasi folder saat ini:\n%1$s</string>
     <string name="file_room_location_pending">Lokasi folder akan muncul saat room aktif.</string>
+    <string name="chat_attachments_cleared">Lampiran chat dibersihkan: %1$d file.</string>
+    <string name="chat_attachments_empty">Tidak ada lampiran chat aktif untuk dibersihkan.</string>
     <string name="shared_files_empty">Belum ada file yang dibagikan. Tekan Tambah File untuk menaruh materi di File Room.</string>
     <string name="received_files_empty">Belum ada file diterima dari peserta.</string>
     <string name="chat_empty">Belum ada pesan</string>

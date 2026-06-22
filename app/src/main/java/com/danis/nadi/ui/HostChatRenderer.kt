@@ -260,13 +260,19 @@ internal class HostChatRenderer(
     }
 
     private fun fileAttachmentCard(message: ChatMessage, attachment: TransferItem?): View {
+        val expired = attachment?.status == TransferStatus.EXPIRED || message.attachmentStatus == "expired"
         val card = MaterialCardView(context).apply {
             radius = 8.dp().toFloat()
             elevation = 0f
             strokeWidth = 1.dp()
-            strokeColor = ContextCompat.getColor(context, R.color.nadi_line)
+            strokeColor = ContextCompat.getColor(
+                context,
+                if (expired) R.color.nadi_soft_ink else R.color.nadi_line
+            )
             setCardBackgroundColor(
-                ColorStateList.valueOf(ContextCompat.getColor(context, R.color.nadi_surface))
+                ColorStateList.valueOf(
+                    ContextCompat.getColor(context, if (expired) R.color.nadi_mist else R.color.nadi_surface)
+                )
             )
             layoutParams = LinearLayout.LayoutParams(
                 chatBubbleMaxWidth(),
@@ -287,7 +293,9 @@ internal class HostChatRenderer(
 
         val fileIcon = ImageView(context).apply {
             setImageResource(R.drawable.ic_document)
-            imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.nadi_green))
+            imageTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(context, if (expired) R.color.nadi_soft_ink else R.color.nadi_green)
+            )
             layoutParams = LinearLayout.LayoutParams(32.dp(), 32.dp()).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 rightMargin = 8.dp()
@@ -318,9 +326,13 @@ internal class HostChatRenderer(
                 .substringAfterLast('.', missingDelimiterValue = "")
                 .uppercase()
             val status = attachment?.status?.label() ?: message.attachmentStatus.statusLabel()
-            text = listOf(extension, size, status).filter { it.isNotBlank() }.joinToString(" - ")
+            text = if (expired) {
+                listOf(extension, size, status, "file dibersihkan").filter { it.isNotBlank() }.joinToString(" - ")
+            } else {
+                listOf(extension, size, status).filter { it.isNotBlank() }.joinToString(" - ")
+            }
             textSize = 11f
-            setTextColor(ContextCompat.getColor(context, R.color.nadi_soft_ink))
+            setTextColor(ContextCompat.getColor(context, if (expired) R.color.nadi_error else R.color.nadi_soft_ink))
         }
 
         textLayout.addView(fileNameText)
