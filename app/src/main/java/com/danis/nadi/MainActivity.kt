@@ -1558,7 +1558,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFolderLocation(path: String, clipLabel: String) {
         if (!path.startsWith("/")) {
-            openFolderPickerFallback()
+            Toast.makeText(this, getString(R.string.folder_open_unsupported), Toast.LENGTH_LONG).show()
             return
         }
         val folder = File(path)
@@ -1571,7 +1571,7 @@ class MainActivity : AppCompatActivity() {
             }.isSuccess
         }
         if (!opened) {
-            openFolderPickerFallback(folder.externalStorageDocumentUri())
+            Toast.makeText(this, getString(R.string.folder_open_unsupported), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1581,13 +1581,7 @@ class MainActivity : AppCompatActivity() {
             intents.add(
                 Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-            )
-            intents.add(
-                Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                    putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                    addCategory(Intent.CATEGORY_DEFAULT)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
@@ -1600,26 +1594,13 @@ class MainActivity : AppCompatActivity() {
             intents.add(
                 Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(providerUri, "resource/folder")
+                    addCategory(Intent.CATEGORY_DEFAULT)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
             )
         }
         return intents
-    }
-
-    private fun openFolderPickerFallback(initialUri: Uri? = null) {
-        val opened = runCatching {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                initialUri?.let { putExtra(DocumentsContract.EXTRA_INITIAL_URI, it) }
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            }
-            startActivity(intent)
-        }.isSuccess
-        if (!opened) {
-            Toast.makeText(this, "File manager tidak bisa membuka folder ini.", Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun File.externalStorageDocumentUri(): Uri? {

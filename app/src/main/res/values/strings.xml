@@ -55,6 +55,7 @@
     <string name="file_room_location_pending">Lokasi folder akan muncul saat room aktif.</string>
     <string name="chat_attachments_cleared">Lampiran chat dibersihkan: %1$d file.</string>
     <string name="chat_attachments_empty">Tidak ada lampiran chat aktif untuk dibersihkan.</string>
+    <string name="folder_open_unsupported">File manager perangkat ini tidak mendukung buka folder langsung dari aplikasi.</string>
     <string name="shared_files_empty">Belum ada file yang dibagikan. Tekan Tambah File untuk menaruh materi di File Room.</string>
     <string name="received_files_empty">Belum ada file diterima dari peserta.</string>
     <string name="chat_empty">Belum ada pesan</string>
