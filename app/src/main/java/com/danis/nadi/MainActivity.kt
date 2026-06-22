@@ -18,6 +18,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
+import android.provider.DocumentsContract
+import android.os.Environment
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -1556,27 +1558,84 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFolderLocation(path: String, clipLabel: String) {
         if (!path.startsWith("/")) {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText(clipLabel, path))
-            Toast.makeText(this, "Lokasi folder disalin: $path", Toast.LENGTH_LONG).show()
+            openFolderPickerFallback()
             return
         }
         val folder = File(path)
         if (!folder.exists()) {
             folder.mkdirs()
         }
+        val opened = folderOpenIntents(folder).any { intent ->
+            runCatching {
+                startActivity(intent)
+            }.isSuccess
+        }
+        if (!opened) {
+            openFolderPickerFallback(folder.externalStorageDocumentUri())
+        }
+    }
+
+    private fun folderOpenIntents(folder: File): List<Intent> {
+        val intents = mutableListOf<Intent>()
+        folder.externalStorageDocumentUri()?.let { uri ->
+            intents.add(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+            )
+            intents.add(
+                Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                    putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+            )
+        }
+        val providerUri = runCatching {
+            FileProvider.getUriForFile(this, "$packageName.fileprovider", folder)
+        }.getOrNull()
+        if (providerUri != null) {
+            intents.add(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(providerUri, "resource/folder")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+            )
+        }
+        return intents
+    }
+
+    private fun openFolderPickerFallback(initialUri: Uri? = null) {
         val opened = runCatching {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.fromFile(folder), "resource/folder")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                initialUri?.let { putExtra(DocumentsContract.EXTRA_INITIAL_URI, it) }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
             startActivity(intent)
         }.isSuccess
         if (!opened) {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText(clipLabel, path))
-            Toast.makeText(this, "Lokasi folder disalin: $path", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "File manager tidak bisa membuka folder ini.", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun File.externalStorageDocumentUri(): Uri? {
+        val rootPath = Environment.getExternalStorageDirectory().absolutePath.trimEnd(File.separatorChar)
+        val folderPath = absolutePath.trimEnd(File.separatorChar)
+        if (!folderPath.startsWith(rootPath)) return null
+        val relativePath = folderPath
+            .removePrefix(rootPath)
+            .trimStart(File.separatorChar)
+            .replace(File.separatorChar, '/')
+        val documentId = if (relativePath.isBlank()) {
+            "primary:"
+        } else {
+            "primary:$relativePath"
+        }
+        return DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", documentId)
     }
 
     private fun regenerateJoinLink() {
