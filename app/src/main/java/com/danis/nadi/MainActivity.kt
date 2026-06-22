@@ -6,6 +6,7 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -1578,63 +1579,117 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun folderOpenIntents(folder: File?, folderUri: Uri?): List<Intent> {
+        val documentUri = folderUri ?: folder?.externalStorageDocumentUri()
         val contentUri = folder?.let {
             runCatching {
                 FileProvider.getUriForFile(this, "$packageName.fileprovider", it)
             }.getOrNull()
         }
         val intents = mutableListOf<Intent>()
-        intents.addAll(vendorFileManagerIntents(folder, contentUri ?: folderUri))
-        intents.addAll(documentsUiFolderIntents(folder, folderUri))
-        return intents
+        intents.addAll(samsungFileManagerIntents(folder, documentUri))
+        intents.addAll(miuiFileManagerIntents(folder, documentUri, contentUri))
+        intents.addAll(discoveredDirectoryHandlerIntents(folder, documentUri))
+        intents.addAll(knownFileManagerIntents(folder, documentUri, contentUri))
+        intents.addAll(documentsUiFolderIntents(folder, documentUri))
+        return intents.filter { it.resolveActivity(packageManager) != null }
     }
 
-    private fun vendorFileManagerIntents(folder: File?, uri: Uri?): List<Intent> {
-        val path = folder?.absolutePath
-        val targets = listOf(
-            "com.mi.android.globalFileexplorer",
-            "com.android.fileexplorer",
-            "com.sec.android.app.myfiles",
-            "com.google.android.apps.nbu.files",
-            "com.oplus.filemanager",
-            "com.coloros.filemanager",
-            "com.vivo.filemanager",
-            "com.huawei.hidisk"
-        ).filter { it.isPackageInstalled() }
+    private fun samsungFileManagerIntents(folder: File?, folderUri: Uri?): List<Intent> {
+        val path = folder?.absolutePath ?: return emptyList()
+        return listOf(
+            Intent(SAMSUNG_MY_FILES_ACTION).apply {
+                setPackage(SAMSUNG_MY_FILES_PACKAGE)
+                putFolderPathExtras(path)
+                folderUri?.let { putExtra(DocumentsContract.EXTRA_INITIAL_URI, it) }
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            },
+            Intent(Intent.ACTION_VIEW).apply {
+                setPackage(SAMSUNG_MY_FILES_PACKAGE)
+                folderUri?.let { setDataAndType(it, DocumentsContract.Document.MIME_TYPE_DIR) }
+                putFolderPathExtras(path)
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        )
+    }
 
-        return targets.flatMap { packageName ->
-            buildList {
-                if (packageName in setOf("com.mi.android.globalFileexplorer", "com.android.fileexplorer")) {
-                    add(
-                        Intent(MIUI_FILE_MANAGER_OPEN_ACTION).apply {
-                            setPackage(packageName)
-                            uri?.let { data = it }
-                            path?.let { putExtra(MIUI_EXPLORER_PATH_EXTRA, it) }
-                            addCategory(Intent.CATEGORY_DEFAULT)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        }
-                    )
-                    add(
-                        Intent(MIUI_FILE_MANAGER_HOME_ACTION).apply {
-                            setPackage(packageName)
-                            path?.let { putExtra(MIUI_EXPLORER_PATH_EXTRA, it) }
-                            addCategory(Intent.CATEGORY_DEFAULT)
-                        }
-                    )
+    private fun miuiFileManagerIntents(folder: File?, documentUri: Uri?, contentUri: Uri?): List<Intent> {
+        val path = folder?.absolutePath ?: return emptyList()
+        return MIUI_FILE_MANAGER_PACKAGES.flatMap { targetPackage ->
+            listOf(
+                Intent(MIUI_FILE_MANAGER_OPEN_ACTION).apply {
+                    setPackage(targetPackage)
+                    putFolderPathExtras(path)
+                    documentUri?.let { putExtra(DocumentsContract.EXTRA_INITIAL_URI, it) }
+                    addCategory(Intent.CATEGORY_DEFAULT)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+                Intent(MIUI_FILE_MANAGER_HOME_ACTION).apply {
+                    setPackage(targetPackage)
+                    putFolderPathExtras(path)
+                    addCategory(Intent.CATEGORY_DEFAULT)
+                },
+                Intent(MIUI_FILE_MANAGER_OPEN_ACTION).apply {
+                    setPackage(targetPackage)
+                    (documentUri ?: contentUri)?.let { data = it }
+                    putFolderPathExtras(path)
+                    addCategory(Intent.CATEGORY_DEFAULT)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
-                if (uri != null) {
-                    add(
-                        Intent(Intent.ACTION_VIEW).apply {
-                            setPackage(packageName)
-                            data = uri
-                            path?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it) }
-                            addCategory(Intent.CATEGORY_DEFAULT)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        }
-                    )
+            )
+        }
+    }
+
+    private fun discoveredDirectoryHandlerIntents(folder: File?, folderUri: Uri?): List<Intent> {
+        val uri = folderUri ?: return emptyList()
+        val baseIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+            addCategory(Intent.CATEGORY_DEFAULT)
+        }
+        return packageManager.queryIntentActivities(baseIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { resolved ->
+                val activityInfo = resolved.activityInfo ?: return@mapNotNull null
+                ComponentName(activityInfo.packageName, activityInfo.name)
+            }
+            .distinct()
+            .map { target ->
+                Intent(baseIntent).apply {
+                    component = target
+                    putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                    folder?.let { putFolderPathExtras(it.absolutePath) }
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
+            }
+    }
+
+    private fun knownFileManagerIntents(folder: File?, documentUri: Uri?, contentUri: Uri?): List<Intent> {
+        val path = folder?.absolutePath
+        val folderDataUris = listOfNotNull(documentUri, contentUri).distinct()
+        return GENERAL_FILE_MANAGER_PACKAGES.flatMap { targetPackage ->
+            folderDataUris.flatMap { uri ->
+                listOf(
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setPackage(targetPackage)
+                        setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                        path?.let { putFolderPathExtras(it) }
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                        addCategory(Intent.CATEGORY_DEFAULT)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    },
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setPackage(targetPackage)
+                        data = uri
+                        path?.let { putFolderPathExtras(it) }
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                        addCategory(Intent.CATEGORY_DEFAULT)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    }
+                )
             }
         }
     }
@@ -1642,34 +1697,41 @@ class MainActivity : AppCompatActivity() {
     private fun documentsUiFolderIntents(folder: File?, folderUri: Uri?): List<Intent> {
         val intents = mutableListOf<Intent>()
         folderUri?.let { uri ->
-            intents.add(
-                Intent(Intent.ACTION_VIEW).apply {
-                    setPackage(DOCUMENTS_UI_PACKAGE)
-                    setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
-                    addCategory(Intent.CATEGORY_DEFAULT)
-                    folder?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it.absolutePath) }
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-            )
-            intents.add(
-                Intent(Intent.ACTION_VIEW).apply {
-                    setPackage(DOCUMENTS_UI_PACKAGE)
-                    data = uri
-                    addCategory(Intent.CATEGORY_DEFAULT)
-                    folder?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it.absolutePath) }
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-            )
+            DOCUMENTS_UI_TARGETS.forEach { target ->
+                intents.add(
+                    Intent(Intent.ACTION_VIEW).apply {
+                        component = target
+                        setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                        addCategory(Intent.CATEGORY_DEFAULT)
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                        folder?.let { putFolderPathExtras(it.absolutePath) }
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    }
+                )
+                intents.add(
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setPackage(target.packageName)
+                        setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                        addCategory(Intent.CATEGORY_DEFAULT)
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri)
+                        folder?.let { putFolderPathExtras(it.absolutePath) }
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    }
+                )
+            }
         }
         return intents
     }
 
-    private fun String.isPackageInstalled(): Boolean {
-        return runCatching {
-            packageManager.getPackageInfo(this, 0)
-        }.isSuccess
+    private fun Intent.putFolderPathExtras(path: String) {
+        putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, path)
+        putExtra(MIUI_EXPLORER_PATH_EXTRA, path)
+        putExtra(SAMSUNG_START_PATH_EXTRA, path)
+        putExtra(GENERIC_PATH_EXTRA, path)
+        putExtra(GENERIC_FOLDER_PATH_EXTRA, path)
+        putExtra(GENERIC_CURRENT_DIRECTORY_EXTRA, path)
     }
 
     private fun File.externalStorageDocumentUri(): Uri? {
@@ -1847,4 +1909,31 @@ private const val OPENINTENTS_EXTRA_ABSOLUTE_PATH = "org.openintents.extra.ABSOL
 private const val MIUI_FILE_MANAGER_OPEN_ACTION = "miui.intent.action.OPEN"
 private const val MIUI_FILE_MANAGER_HOME_ACTION = "com.android.fileexplorer.export.VIEW_HOME"
 private const val MIUI_EXPLORER_PATH_EXTRA = "explorer_path"
-private const val DOCUMENTS_UI_PACKAGE = "com.google.android.documentsui"
+private const val SAMSUNG_MY_FILES_PACKAGE = "com.sec.android.app.myfiles"
+private const val SAMSUNG_MY_FILES_ACTION = "samsung.myfiles.intent.action.LAUNCH_MY_FILES"
+private const val SAMSUNG_START_PATH_EXTRA = "samsung.myfiles.intent.extra.START_PATH"
+private const val GENERIC_PATH_EXTRA = "path"
+private const val GENERIC_FOLDER_PATH_EXTRA = "folder_path"
+private const val GENERIC_CURRENT_DIRECTORY_EXTRA = "current_directory"
+
+private val MIUI_FILE_MANAGER_PACKAGES = listOf(
+    "com.mi.android.globalFileexplorer",
+    "com.android.fileexplorer"
+)
+
+private val GENERAL_FILE_MANAGER_PACKAGES = listOf(
+    "com.google.android.apps.nbu.files",
+    "com.oplus.filemanager",
+    "com.coloros.filemanager",
+    "com.vivo.filemanager",
+    "com.huawei.hidisk",
+    "com.honor.filemanager",
+    "com.asus.filemanager",
+    "com.lenovo.FileBrowser2",
+    "me.zhanghai.android.files"
+)
+
+private val DOCUMENTS_UI_TARGETS = listOf(
+    ComponentName("com.google.android.documentsui", "com.android.documentsui.files.FilesActivity"),
+    ComponentName("com.android.documentsui", "com.android.documentsui.files.FilesActivity")
+)
