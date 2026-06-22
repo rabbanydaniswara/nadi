@@ -3,8 +3,10 @@ package com.danis.nadi.network.server
 internal object ServerFileRules {
     const val MAX_FILE_ROOM_UPLOAD_BYTES = 100L * 1024L * 1024L
     const val MAX_CHAT_ATTACHMENT_BYTES = 10L * 1024L * 1024L
+    const val CHAT_ATTACHMENT_TTL_MILLIS = 24L * 60L * 60L * 1000L
+    const val MAX_CHAT_ATTACHMENT_STORAGE_BYTES = 250L * 1024L * 1024L
     const val FILE_ROOM_RECEIVED_FOLDER = "received"
-    const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
+    const val CHAT_DOWNLOADS_FOLDER = "chat-attachments"
 
     private val previewableImageMimeTypes = setOf(
         "image/jpeg",
@@ -33,12 +35,23 @@ internal object ServerFileRules {
     )
 
     fun isAllowedChatAttachment(fileName: String, sizeBytes: Long): Boolean {
-        return isAllowedChatAttachmentName(fileName) && sizeBytes <= MAX_CHAT_ATTACHMENT_BYTES
+        return isSafeOriginalFileName(fileName) &&
+            isAllowedChatAttachmentName(fileName) &&
+            sizeBytes in 0..MAX_CHAT_ATTACHMENT_BYTES
     }
 
     fun isAllowedChatAttachmentName(fileName: String): Boolean {
         val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
         return extension in allowedChatAttachmentExtensions
+    }
+
+    fun isSafeOriginalFileName(fileName: String): Boolean {
+        val trimmed = fileName.trim()
+        if (trimmed.isBlank() || trimmed.length > 180) return false
+        if (trimmed == "." || trimmed == "..") return false
+        if (trimmed.any { it.code < 32 }) return false
+        if (trimmed.any { it == '/' || it == '\\' || it == ':' }) return false
+        return true
     }
 
     fun isPreviewableImageMime(mimeType: String?): Boolean {

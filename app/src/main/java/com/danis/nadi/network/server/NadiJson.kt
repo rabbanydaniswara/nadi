@@ -4,9 +4,16 @@ import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.model.ConnectedClient
 import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.TransferItem
+import com.danis.nadi.room.ChatAttachmentStorageStats
 
 internal object NadiJson {
-    fun roomSession(room: RoomSession, clientCount: Int, identityRequired: Boolean): String {
+    fun roomSession(
+        room: RoomSession,
+        clientCount: Int,
+        identityRequired: Boolean,
+        chatAttachmentStorageStats: ChatAttachmentStorageStats? = null,
+        maxChatAttachmentStorageBytes: Long = 0L
+    ): String {
         return buildString {
             append("{")
             append("\"sessionId\":\"").append(room.sessionId.escapeJson()).append("\",")
@@ -16,6 +23,9 @@ internal object NadiJson {
             append("\"localUrl\":\"").append((room.localUrl ?: "").escapeJson()).append("\",")
             append("\"clientCount\":").append(clientCount).append(",")
             append("\"identityRequired\":").append(identityRequired).append(",")
+            if (chatAttachmentStorageStats != null) {
+                append("\"chatAttachmentStorage\":").append(chatAttachmentStorage(chatAttachmentStorageStats, maxChatAttachmentStorageBytes)).append(",")
+            }
             append("\"startedAt\":").append(room.startedAt)
             append("}")
         }
@@ -66,7 +76,8 @@ internal object NadiJson {
             append("\"attachmentTransferId\":\"").append((message.attachmentTransferId ?: "").escapeJson()).append("\",")
             append("\"attachmentFileName\":\"").append((message.attachmentFileName ?: "").escapeJson()).append("\",")
             append("\"attachmentMimeType\":\"").append((message.attachmentMimeType ?: "").escapeJson()).append("\",")
-            append("\"attachmentSizeBytes\":").append(message.attachmentSizeBytes)
+            append("\"attachmentSizeBytes\":").append(message.attachmentSizeBytes).append(",")
+            append("\"attachmentStatus\":\"").append(message.attachmentStatus.escapeJson()).append("\"")
             append("}")
         }
     }
@@ -87,6 +98,18 @@ internal object NadiJson {
                     else -> append(char)
                 }
             }
+        }
+    }
+
+    private fun chatAttachmentStorage(stats: ChatAttachmentStorageStats, maxBytes: Long): String {
+        return buildString {
+            append("{")
+            append("\"totalCount\":").append(stats.totalCount).append(",")
+            append("\"availableCount\":").append(stats.availableCount).append(",")
+            append("\"expiredCount\":").append(stats.expiredCount).append(",")
+            append("\"totalBytes\":").append(stats.totalBytes).append(",")
+            append("\"maxBytes\":").append(maxBytes)
+            append("}")
         }
     }
 }

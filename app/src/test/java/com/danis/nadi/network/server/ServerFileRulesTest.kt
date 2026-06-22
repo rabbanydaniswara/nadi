@@ -15,6 +15,7 @@ class ServerFileRulesTest {
     @Test
     fun chatAttachmentRejectsUnsupportedExtensionOrOversizedFile() {
         assertFalse(ServerFileRules.isAllowedChatAttachment("script.apk", 1024L))
+        assertFalse(ServerFileRules.isAllowedChatAttachment("../materi.pdf", 1024L))
         assertFalse(
             ServerFileRules.isAllowedChatAttachment(
                 "materi.pdf",

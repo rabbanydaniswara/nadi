@@ -112,7 +112,8 @@ class NadiJsonTest {
             attachmentTransferId = "transfer-1",
             attachmentFileName = "foto.png",
             attachmentMimeType = "image/png",
-            attachmentSizeBytes = 512L
+            attachmentSizeBytes = 512L,
+            attachmentStatus = "success"
         )
 
         val payload = NadiJson.chatMessagesPayload(listOf(message))
@@ -130,7 +131,8 @@ class NadiJsonTest {
                 "\"attachmentTransferId\":\"transfer-1\"," +
                 "\"attachmentFileName\":\"foto.png\"," +
                 "\"attachmentMimeType\":\"image/png\"," +
-                "\"attachmentSizeBytes\":512" +
+                "\"attachmentSizeBytes\":512," +
+                "\"attachmentStatus\":\"success\"" +
                 "}]" +
                 "}",
             payload

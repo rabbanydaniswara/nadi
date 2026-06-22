@@ -49,6 +49,7 @@ import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
 import com.danis.nadi.model.TransferStatus
 import com.danis.nadi.network.hotspot.HotspotState
+import com.danis.nadi.network.server.ServerFileRules
 import com.danis.nadi.room.ActiveRoom
 import com.danis.nadi.room.NetworkMode
 import com.danis.nadi.room.RoomController
@@ -729,12 +730,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val metadata = querySelectedFile(uri)
-        if (!metadata.fileName.isAllowedChatAttachmentName()) {
+        if (!ServerFileRules.isAllowedChatAttachmentName(metadata.fileName)) {
             Toast.makeText(this, "Lampiran chat hanya untuk gambar, dokumen, teks, atau zip kecil.", Toast.LENGTH_LONG).show()
             return
         }
-        if (metadata.sizeBytes > MAX_CHAT_ATTACHMENT_BYTES) {
+        if (metadata.sizeBytes !in 0..ServerFileRules.MAX_CHAT_ATTACHMENT_BYTES) {
             Toast.makeText(this, "Lampiran chat maksimal 10 MB.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val chatStats = controller.roomManager.chatAttachmentStorageStats()
+        if (chatStats.totalBytes + metadata.sizeBytes > ServerFileRules.MAX_CHAT_ATTACHMENT_STORAGE_BYTES) {
+            Toast.makeText(this, "Storage lampiran chat room sudah penuh.", Toast.LENGTH_LONG).show()
             return
         }
         val hostName = session.hostName.ifBlank { getString(R.string.host_name_default) }
@@ -744,7 +750,7 @@ class MainActivity : AppCompatActivity() {
                 mimeType = metadata.mimeType,
                 inputStream = input,
                 roomId = session.sessionId,
-                folderName = CHAT_DOWNLOADS_FOLDER,
+                folderName = ServerFileRules.CHAT_DOWNLOADS_FOLDER,
                 direction = TransferDirection.CHAT_ATTACHMENT,
                 senderName = hostName
             )
@@ -814,11 +820,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun String.isAllowedChatAttachmentName(): Boolean {
-        val extension = substringAfterLast('.', missingDelimiterValue = "").lowercase()
-        return extension in ALLOWED_CHAT_ATTACHMENT_EXTENSIONS
-    }
-
     private fun String.inferredMimeType(): String {
         return when (substringAfterLast('.', missingDelimiterValue = "").lowercase()) {
             "jpg", "jpeg" -> "image/jpeg"
@@ -871,20 +872,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshHostDashboard() {
+        if (controller.lifecycleState == RoomLifecycleState.ACTIVE) {
+            controller.cleanupExpiredChatAttachments()
+        }
         val snapshot = controller.roomManager.snapshot()
         val shared = controller.roomManager.sharedFiles()
         val received = controller.roomManager.receivedFiles()
+        val chatStorage = controller.roomManager.chatAttachmentStorageStats()
         val messages = snapshot.messages
         if (controller.lifecycleState == RoomLifecycleState.ACTIVE) {
             controller.persistRecentTransfers()
             activeStatusText.text = buildStatusLine(controller.activeNetworkMode, snapshot.clients.size)
             diagnosticsText.text = controller.diagnostics().toDisplayText()
         }
-        fileRoomSummaryText.text = getString(
-            R.string.file_room_summary,
-            shared.size,
-            received.size
-        )
+        fileRoomSummaryText.text = buildString {
+            append(getString(R.string.file_room_summary, shared.size, received.size))
+            append("\n")
+            append("Lampiran chat: ")
+            append(chatStorage.availableCount)
+            append(" aktif")
+            if (chatStorage.expiredCount > 0) {
+                append(", ")
+                append(chatStorage.expiredCount)
+                append(" kedaluwarsa")
+            }
+            append(" - ")
+            append(FileSizeFormatter.format(chatStorage.totalBytes))
+            append(" / ")
+            append(FileSizeFormatter.format(ServerFileRules.MAX_CHAT_ATTACHMENT_STORAGE_BYTES))
+        }
         fileRoomLocationText.text = controller.currentRoomFolderPath()
             ?.let { getString(R.string.file_room_location, it) }
             ?: getString(R.string.file_room_location_pending)
@@ -1375,7 +1391,9 @@ class MainActivity : AppCompatActivity() {
         return when (this) {
             TransferStatus.PENDING -> "Menunggu"
             TransferStatus.RUNNING -> "Berjalan $progress%"
-            TransferStatus.SUCCESS -> "Selesai"
+            TransferStatus.SUCCESS -> "Tersedia"
+            TransferStatus.DOWNLOADED -> "Diunduh"
+            TransferStatus.EXPIRED -> "Kedaluwarsa"
             TransferStatus.FAILED -> "Gagal"
         }
     }
@@ -1690,21 +1708,3 @@ private data class SelectedFile(
 )
 
 private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L
-private const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
-private const val MAX_CHAT_ATTACHMENT_BYTES = 10L * 1024L * 1024L
-private val ALLOWED_CHAT_ATTACHMENT_EXTENSIONS = setOf(
-    "jpg",
-    "jpeg",
-    "png",
-    "gif",
-    "webp",
-    "pdf",
-    "txt",
-    "doc",
-    "docx",
-    "ppt",
-    "pptx",
-    "xls",
-    "xlsx",
-    "zip"
-)

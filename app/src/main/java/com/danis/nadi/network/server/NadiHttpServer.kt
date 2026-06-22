@@ -15,6 +15,8 @@ class NadiHttpServer(
     private val roomManager: RoomManager,
     private val fileStore: FileStore,
     private val maxFileRoomUploadBytes: Long = ServerFileRules.MAX_FILE_ROOM_UPLOAD_BYTES,
+    private val maxChatAttachmentStorageBytes: Long = ServerFileRules.MAX_CHAT_ATTACHMENT_STORAGE_BYTES,
+    private val clock: () -> Long = { System.currentTimeMillis() },
     private val browserClientHtml: () -> String = BrowserClientAssets::html,
     private val browserClientAsset: (String) -> BrowserClientAsset? = BrowserClientAssets::asset
 ) : NanoWSD(port) {
@@ -94,6 +96,7 @@ class NadiHttpServer(
 
     private fun roomMetadata(session: IHTTPSession): Response {
         if (!hasRoomAccess(session)) return invalidToken()
+        cleanupExpiredChatAttachments()
         val client = roomManager.touchKnownClient(
             clientId = session.parameters["clientId"]?.firstOrNull(),
             userAgent = session.headers["user-agent"].orEmpty(),
@@ -105,7 +108,16 @@ class NadiHttpServer(
             Response.Status.NOT_FOUND,
             """{"error":"room_not_found"}"""
         )
-        return json(Response.Status.OK, NadiJson.roomSession(room, snapshot.clients.size, identityRequired = client == null))
+        return json(
+            Response.Status.OK,
+            NadiJson.roomSession(
+                room = room,
+                clientCount = snapshot.clients.size,
+                identityRequired = client == null,
+                chatAttachmentStorageStats = roomManager.chatAttachmentStorageStats(),
+                maxChatAttachmentStorageBytes = maxChatAttachmentStorageBytes
+            )
+        )
     }
 
     private fun registerIdentity(session: IHTTPSession): Response {
@@ -130,6 +142,7 @@ class NadiHttpServer(
 
     private fun downloadFile(session: IHTTPSession): Response {
         if (!hasRoomAccess(session)) return invalidToken()
+        cleanupExpiredChatAttachments()
         if (identifiedClient(session) == null) return identityRequired()
         val id = session.uri.removePrefix("/api/download/").decodeUrl()
         val transfer = roomManager.transferById(id) ?: return json(
@@ -139,10 +152,16 @@ class NadiHttpServer(
         if (transfer.direction != TransferDirection.SHARED && transfer.direction != TransferDirection.CHAT_ATTACHMENT) {
             return json(Response.Status.NOT_FOUND, """{"error":"file_not_downloadable"}""")
         }
+        if (transfer.status == com.danis.nadi.model.TransferStatus.EXPIRED) {
+            return json(Response.Status.GONE, """{"error":"file_expired"}""")
+        }
         val payload = fileStore.openForDownload(transfer) ?: return json(
             Response.Status.NOT_FOUND,
             """{"error":"file_unavailable"}"""
         )
+        if (transfer.direction == TransferDirection.CHAT_ATTACHMENT) {
+            roomManager.markTransferDownloaded(transfer.transferId)
+        }
         val preview = session.parameters["preview"]?.firstOrNull() == "1" &&
             transfer.direction == TransferDirection.CHAT_ATTACHMENT &&
             (ServerFileRules.isPreviewableImageMime(payload.mimeType) ||
@@ -194,6 +213,9 @@ class NadiHttpServer(
         val originalName = session.parameters["file"]?.firstOrNull()
             ?: session.parameters["filename"]?.firstOrNull()
             ?: "upload.bin"
+        if (!ServerFileRules.isSafeOriginalFileName(originalName)) {
+            return json(Response.Status.BAD_REQUEST, """{"error":"unsafe_file_name"}""")
+        }
         val tempFile = File(tempPath)
         if (tempFile.length() > maxFileRoomUploadBytes) {
             return json(
@@ -224,7 +246,12 @@ class NadiHttpServer(
     private fun listChat(session: IHTTPSession): Response {
         if (!hasRoomAccess(session)) return invalidToken()
         if (identifiedClient(session) == null) return identityRequired()
-        val after = session.parameters["after"]?.firstOrNull()?.toLongOrNull() ?: 0L
+        val hadCleanup = cleanupExpiredChatAttachments()
+        val after = if (hadCleanup) {
+            0L
+        } else {
+            session.parameters["after"]?.firstOrNull()?.toLongOrNull() ?: 0L
+        }
         val messages = roomManager.messagesAfter(after)
         return json(Response.Status.OK, """{"messages":${NadiJson.messageArray(messages)}}""")
     }
@@ -257,6 +284,14 @@ class NadiHttpServer(
         val tempFile = File(tempPath)
         if (!ServerFileRules.isAllowedChatAttachment(originalName, tempFile.length())) {
             return json(Response.Status.BAD_REQUEST, """{"error":"attachment_not_allowed"}""")
+        }
+        cleanupExpiredChatAttachments()
+        val storageStats = roomManager.chatAttachmentStorageStats()
+        if (storageStats.totalBytes + tempFile.length() > maxChatAttachmentStorageBytes) {
+            return json(
+                Response.Status.BAD_REQUEST,
+                """{"error":"chat_attachment_storage_full","maxBytes":$maxChatAttachmentStorageBytes}"""
+            )
         }
         val mimeType = ServerFileRules.resolvedUploadMimeType(
             fileName = originalName,
@@ -302,6 +337,15 @@ class NadiHttpServer(
             userAgent = session.headers["user-agent"].orEmpty(),
             ipAddress = session.remoteIpAddress.orEmpty()
         )
+    }
+
+    private fun cleanupExpiredChatAttachments(): Boolean {
+        val cutoff = clock() - ServerFileRules.CHAT_ATTACHMENT_TTL_MILLIS
+        val expired = roomManager.expireChatAttachmentsOlderThan(cutoff)
+        expired.forEach { transfer ->
+            fileStore.deleteStoredFile(transfer)
+        }
+        return expired.isNotEmpty()
     }
 
     private fun IHTTPSession.clientIdParameter(): String? {
@@ -351,7 +395,8 @@ class NadiHttpServer(
 
     private fun String.headerSafe(): String = replace("\"", "'").replace("\r", "").replace("\n", "")
 
-    private companion object {
-        const val CHAT_WEBSOCKET_PATH = "/ws/chat"
+    companion object {
+        const val ROOM_SERVER_READ_TIMEOUT_MILLIS = 70_000
+        private const val CHAT_WEBSOCKET_PATH = "/ws/chat"
     }
 }

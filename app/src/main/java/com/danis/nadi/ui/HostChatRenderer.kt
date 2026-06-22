@@ -18,6 +18,7 @@ import com.danis.nadi.R
 import com.danis.nadi.file.FileSizeFormatter
 import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.model.TransferItem
+import com.danis.nadi.model.TransferStatus
 import com.google.android.material.card.MaterialCardView
 import java.io.File
 import java.text.SimpleDateFormat
@@ -38,6 +39,7 @@ internal class HostChatRenderer(
     private val chatTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private var lastRenderedRoomId: String? = null
     private val renderedMessageIds = linkedSetOf<String>()
+    private val renderedMessageSignatures = mutableMapOf<String, String>()
 
     var forceScrollToBottom: Boolean = false
 
@@ -47,10 +49,17 @@ internal class HostChatRenderer(
 
         val roomId = roomIdProvider()
         val currentMessageIds = messages.mapTo(mutableSetOf()) { it.messageId }
-        val shouldRebuild = roomId != lastRenderedRoomId || !currentMessageIds.containsAll(renderedMessageIds)
+        val hasStatusChange = messages.any { message ->
+            renderedMessageSignatures[message.messageId] != null &&
+                renderedMessageSignatures[message.messageId] != message.renderSignature()
+        }
+        val shouldRebuild = roomId != lastRenderedRoomId ||
+            !currentMessageIds.containsAll(renderedMessageIds) ||
+            hasStatusChange
         if (shouldRebuild) {
             container.removeAllViews()
             renderedMessageIds.clear()
+            renderedMessageSignatures.clear()
             lastRenderedRoomId = roomId
         }
 
@@ -75,6 +84,7 @@ internal class HostChatRenderer(
             val attachment = message.attachmentTransferId?.let(attachmentProvider)
             container.addView(messageBubble(message, attachment, isHost))
             renderedMessageIds.add(message.messageId)
+            renderedMessageSignatures[message.messageId] = message.renderSignature()
         }
 
         if (shouldScrollToBottom) {
@@ -171,11 +181,9 @@ internal class HostChatRenderer(
         }
 
         val isImage = attachment?.isPreviewableImage() == true
-        if (isImage) {
-            val imageUri = attachment?.previewUri()
-            if (imageUri != null) {
-                bubble.addView(imageAttachmentCard(attachment, imageUri, isHost))
-            }
+        val imageUri = if (isImage && attachment?.status != TransferStatus.EXPIRED) attachment.previewUri() else null
+        if (imageUri != null && attachment != null) {
+            bubble.addView(imageAttachmentCard(attachment, imageUri, isHost))
         }
 
         if (message.text.isNotBlank()) {
@@ -195,7 +203,7 @@ internal class HostChatRenderer(
         }
 
         val hasFile = !message.attachmentFileName.isNullOrBlank()
-        if (hasFile && !isImage) {
+        if (hasFile && imageUri == null) {
             bubble.addView(fileAttachmentCard(message, attachment))
         }
 
@@ -210,7 +218,7 @@ internal class HostChatRenderer(
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 gravity = Gravity.END
-                val top = if (hasFile && !isImage) 2.dp() else 4.dp()
+                val top = if (hasFile && imageUri == null) 2.dp() else 4.dp()
                 setMargins(12.dp(), top, 12.dp(), 6.dp())
             }
         })
@@ -309,7 +317,8 @@ internal class HostChatRenderer(
             val extension = message.attachmentFileName.orEmpty()
                 .substringAfterLast('.', missingDelimiterValue = "")
                 .uppercase()
-            text = listOf(extension, size).filter { it.isNotBlank() }.joinToString(" - ")
+            val status = attachment?.status?.label() ?: message.attachmentStatus.statusLabel()
+            text = listOf(extension, size, status).filter { it.isNotBlank() }.joinToString(" - ")
             textSize = 11f
             setTextColor(ContextCompat.getColor(context, R.color.nadi_soft_ink))
         }
@@ -320,13 +329,47 @@ internal class HostChatRenderer(
         cardContent.addView(textLayout)
         card.addView(cardContent)
 
-        if (attachment != null) {
+        if (attachment != null && attachment.status != TransferStatus.EXPIRED) {
             card.isClickable = true
             card.isFocusable = true
             card.foreground = selectableItemBackground()
             card.setOnClickListener { onOpenAttachment(attachment) }
         }
         return card
+    }
+
+    private fun TransferStatus.label(): String {
+        return when (this) {
+            TransferStatus.PENDING -> "Menunggu"
+            TransferStatus.RUNNING -> "Berjalan"
+            TransferStatus.SUCCESS -> "Tersedia"
+            TransferStatus.DOWNLOADED -> "Diunduh"
+            TransferStatus.EXPIRED -> "Kedaluwarsa"
+            TransferStatus.FAILED -> "Gagal"
+        }
+    }
+
+    private fun String.statusLabel(): String {
+        return when (lowercase()) {
+            "pending" -> "Menunggu"
+            "running" -> "Berjalan"
+            "success" -> "Tersedia"
+            "downloaded" -> "Diunduh"
+            "expired" -> "Kedaluwarsa"
+            "failed" -> "Gagal"
+            else -> ""
+        }
+    }
+
+    private fun ChatMessage.renderSignature(): String {
+        val transferStatus = attachmentTransferId?.let(attachmentProvider)?.status?.name.orEmpty()
+        return listOf(
+            text,
+            attachmentTransferId.orEmpty(),
+            attachmentFileName.orEmpty(),
+            attachmentStatus,
+            transferStatus
+        ).joinToString("|")
     }
 
     private fun TransferItem.isPreviewableImage(): Boolean {

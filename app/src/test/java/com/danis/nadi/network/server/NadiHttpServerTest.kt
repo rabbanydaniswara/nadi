@@ -64,6 +64,7 @@ class NadiHttpServerTest {
         assertEquals(jsAsset.readText(), js)
         assertTrue(html.startsWith("<!doctype html>"))
         assertTrue(html.contains("chatRealtimeStatus"))
+        assertTrue(html.contains("chatStorageText"))
         assertTrue(html.contains("browser-client.css"))
         assertTrue(html.contains("browser-client.js"))
         assertTrue("Inline style block should be split into CSS asset", !html.contains("<style>"))
@@ -71,6 +72,8 @@ class NadiHttpServerTest {
         assertTrue(css.contains(".chat-window"))
         assertTrue(js.contains("new WebSocket"))
         assertTrue(js.contains("/ws/chat"))
+        assertTrue(js.contains("chatKeepAliveIntervalMs = 3000"))
+        assertTrue(js.contains("maxChatAttachmentBytes"))
         assertTrue(js.contains("Polling cadangan"))
         assertTrue("Kotlin interpolation escape should not leak into JS", !js.contains("\${'$'}{"))
     }
@@ -196,6 +199,8 @@ class NadiHttpServerTest {
         assertTrue(js.body.contains("downloadFile"))
         assertTrue(js.body.contains("/ws/chat"))
         assertTrue(js.body.contains("new WebSocket"))
+        assertTrue(js.body.contains("chatKeepAliveIntervalMs = 3000"))
+        assertTrue(js.body.contains("maxChatAttachmentBytes"))
         assertTrue(js.body.contains("Polling cadangan"))
     }
 
@@ -453,6 +458,61 @@ class NadiHttpServerTest {
     }
 
     @Test
+    fun chatWebSocketStaysOpenPastDefaultReadTimeoutWhenIdle() {
+        val scenario = startActiveRoom()
+        val closeLatch = CountDownLatch(1)
+        val messageLatch = CountDownLatch(1)
+        val socket = HttpClient.newHttpClient()
+            .newWebSocketBuilder()
+            .buildAsync(
+                URI.create("ws://127.0.0.1:${scenario.port}/ws/chat?${scenario.clientQuery}"),
+                object : WebSocket.Listener {
+                    override fun onOpen(webSocket: WebSocket) {
+                        webSocket.request(1)
+                    }
+
+                    override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
+                        if (data.toString().contains("Setelah idle")) {
+                            messageLatch.countDown()
+                        }
+                        webSocket.request(1)
+                        return CompletableFuture.completedFuture(null)
+                    }
+
+                    override fun onClose(
+                        webSocket: WebSocket,
+                        statusCode: Int,
+                        reason: String
+                    ): CompletionStage<*> {
+                        closeLatch.countDown()
+                        return CompletableFuture.completedFuture(null)
+                    }
+                }
+            )
+            .get(3, TimeUnit.SECONDS)
+
+        try {
+            assertTrue(
+                "Test setup expects the default NanoHTTPD read timeout to be shorter than the room server timeout",
+                NanoHTTPD.SOCKET_READ_TIMEOUT < NadiHttpServer.ROOM_SERVER_READ_TIMEOUT_MILLIS
+            )
+            Thread.sleep(NanoHTTPD.SOCKET_READ_TIMEOUT + 1_000L)
+            assertEquals("WebSocket closed while idle", 1L, closeLatch.count)
+
+            scenario.manager.addMessage(
+                senderId = "host",
+                senderName = "Danis",
+                text = "Setelah idle"
+            )
+
+            assertTrue("Expected websocket payload after idle period", messageLatch.await(3, TimeUnit.SECONDS))
+            assertEquals("WebSocket closed after idle message", 1L, closeLatch.count)
+        } finally {
+            socket.sendClose(WebSocket.NORMAL_CLOSURE, "done").get(3, TimeUnit.SECONDS)
+        }
+    }
+
+    @Test
     fun protectedEndpointsRestoreKnownIdentityAfterPresenceTimeout() {
         var now = 1000L
         val scenario = startActiveRoom(
@@ -506,16 +566,80 @@ class NadiHttpServerTest {
         assertEquals(200, send.code)
         assertTrue(send.body.contains("catatan.pdf"))
         assertTrue(send.body.contains("chat_attachment"))
+        assertTrue(send.body.contains("\"attachmentStatus\":\"success\""))
         assertTrue(fileRoom.body.contains("\"files\":[]"))
         assertTrue(chat.body.contains("attachmentTransferId"))
+        assertTrue(chat.body.contains("\"attachmentStatus\":\"success\""))
         assertEquals(1, scenario.manager.chatAttachments().size)
         assertTrue(scenario.manager.receivedFiles().isEmpty())
+    }
+
+    @Test
+    fun chatAttachmentEndpointRejectsRoomStorageOverflow() {
+        val scenario = startActiveRoom(maxChatAttachmentStorageBytes = 12)
+        val boundary = "NadiBoundary"
+        val body = "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"clientId\"\r\n\r\n" +
+            "${scenario.clientId}\r\n" +
+            "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"file\"; filename=\"catatan.pdf\"\r\n" +
+            "Content-Type: application/pdf\r\n\r\n" +
+            "0123456789abcdef\r\n" +
+            "--$boundary--\r\n"
+
+        val send = request(
+            url = "http://127.0.0.1:${scenario.port}/api/chat-attachment?token=${scenario.token}",
+            method = "POST",
+            body = body,
+            contentType = "multipart/form-data; boundary=$boundary"
+        )
+
+        assertEquals(400, send.code)
+        assertTrue(send.body.contains("chat_attachment_storage_full"))
+        assertTrue(scenario.manager.chatAttachments().isEmpty())
+    }
+
+    @Test
+    fun expiredChatAttachmentIsMarkedUnavailableAndCannotDownload() {
+        var now = 1_000L
+        val scenario = startActiveRoom(clock = { now })
+        val attachment = TransferItem(
+            transferId = "old-chat-file",
+            fileName = "lama.pdf",
+            mimeType = "application/pdf",
+            sizeBytes = 4,
+            direction = TransferDirection.CHAT_ATTACHMENT,
+            status = TransferStatus.SUCCESS,
+            progress = 100,
+            createdAt = now,
+            localUri = "memory://old-chat-file",
+            senderName = "Browser"
+        )
+        scenario.manager.addTransfer(attachment)
+        scenario.manager.addMessage(
+            senderId = scenario.clientId,
+            senderName = "22010001 - Rabbany Daniswara",
+            text = "Lampiran lama",
+            attachment = attachment
+        )
+        now += ServerFileRules.CHAT_ATTACHMENT_TTL_MILLIS + 1
+
+        val room = request("http://127.0.0.1:${scenario.port}/api/room?${scenario.clientQuery}")
+        val chat = request("http://127.0.0.1:${scenario.port}/api/chat?${scenario.clientQuery}&after=0")
+        val download = request("http://127.0.0.1:${scenario.port}/api/download/old-chat-file?${scenario.clientQuery}")
+
+        assertEquals(200, room.code)
+        assertTrue(room.body.contains("\"expiredCount\":1"))
+        assertTrue(chat.body.contains("\"attachmentStatus\":\"expired\""))
+        assertEquals(410, download.code)
+        assertTrue(download.body.contains("file_expired"))
     }
 
     private fun startActiveRoom(
         registerClient: Boolean = true,
         pin: String? = null,
         maxFileRoomUploadBytes: Long = 100L * 1024L * 1024L,
+        maxChatAttachmentStorageBytes: Long = ServerFileRules.MAX_CHAT_ATTACHMENT_STORAGE_BYTES,
         clock: () -> Long = { 1000L },
         activeClientTimeoutMillis: Long? = null
     ): ServerScenario {
@@ -535,8 +659,15 @@ class NadiHttpServerTest {
                 ipAddress = "127.0.0.1"
             )
         }
-        server = NadiHttpServer(port, manager, FakeFileStore(), maxFileRoomUploadBytes).also {
-            it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
+        server = NadiHttpServer(
+            port = port,
+            roomManager = manager,
+            fileStore = FakeFileStore(),
+            maxFileRoomUploadBytes = maxFileRoomUploadBytes,
+            maxChatAttachmentStorageBytes = maxChatAttachmentStorageBytes,
+            clock = clock
+        ).also {
+            it.start(NadiHttpServer.ROOM_SERVER_READ_TIMEOUT_MILLIS, false)
         }
         return ServerScenario(port, manager, session.token, session.pin.orEmpty(), clientId)
     }

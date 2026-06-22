@@ -7,6 +7,8 @@ import java.io.InputStream
 interface FileStore {
     fun openForDownload(transfer: TransferItem): FilePayload?
 
+    fun deleteStoredFile(transfer: TransferItem): Boolean = false
+
     fun saveUpload(
         fileName: String,
         mimeType: String?,

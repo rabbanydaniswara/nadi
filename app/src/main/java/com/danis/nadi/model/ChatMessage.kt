@@ -10,5 +10,6 @@ data class ChatMessage(
     val attachmentTransferId: String? = null,
     val attachmentFileName: String? = null,
     val attachmentMimeType: String? = null,
-    val attachmentSizeBytes: Long = -1L
+    val attachmentSizeBytes: Long = -1L,
+    val attachmentStatus: String = ""
 )

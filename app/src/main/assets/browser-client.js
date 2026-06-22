@@ -5,6 +5,7 @@ const clientIdKey = "nadiClientId";
 const clientNimKey = "nadiClientNim";
 const clientNameKey = "nadiClientName";
 const maxFileRoomUploadBytes = 100 * 1024 * 1024;
+const maxChatAttachmentBytes = 10 * 1024 * 1024;
 const nimInput = document.getElementById("nimInput");
 const nameInput = document.getElementById("nameInput");
 const pinInput = document.getElementById("pinInput");
@@ -19,11 +20,14 @@ let preferPinAccess = false;
 pinInput.value = accessPin;
 let latestMessageAt = 0;
 let seenMessages = new Set();
+let messageSignatures = {};
 let forceChatScrollToBottom = false;
 let chatSocket = null;
 let chatPollingTimer = null;
 let chatReconnectTimer = null;
 let chatKeepAliveTimer = null;
+const chatReconnectDelayMs = 2500;
+const chatKeepAliveIntervalMs = 3000;
 document.getElementById("currentUrl").textContent = window.location.href;
 
 function switchClientTab(tab) {
@@ -176,12 +180,31 @@ function formatTime(timestamp) {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return hours + ":" + minutes;
 }
+function statusLabel(status) {
+  switch (String(status || "").toLowerCase()) {
+    case "success": return "Tersedia";
+    case "downloaded": return "Diunduh";
+    case "expired": return "Kedaluwarsa";
+    case "failed": return "Gagal";
+    case "running": return "Berjalan";
+    case "pending": return "Menunggu";
+    default: return "";
+  }
+}
 function safeId(value) {
   return String(value ?? "").replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 function attachmentUrl(id, preview = false) {
   const previewQuery = preview ? "&preview=1" : "";
   return "/api/download/" + encodeURIComponent(id) + "?" + accessQuery() + "&" + clientQuery() + previewQuery;
+}
+function messageSignature(message) {
+  return [
+    message.text || "",
+    message.attachmentTransferId || "",
+    message.attachmentFileName || "",
+    message.attachmentStatus || ""
+  ].join("|");
 }
 function isImageAttachment(message) {
   const mime = String(message.attachmentMimeType || "").toLowerCase();
@@ -194,13 +217,23 @@ function attachmentMarkup(message) {
   const statusId = "chatAttachmentStatus-" + safeId(id);
   const name = message.attachmentFileName || "Lampiran chat";
   const size = Number(message.attachmentSizeBytes || -1);
-  const meta = formatBytes(size);
+  const status = statusLabel(message.attachmentStatus);
+  const meta = [formatBytes(size), status].filter(Boolean).join(" - ");
   const url = attachmentUrl(id, true);
-  const downloadButton = `<button type="button" class="chatAttachmentDownload" data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}">Download</button><p id="${esc(statusId)}" class="muted"></p>`;
+  const expired = String(message.attachmentStatus || "").toLowerCase() === "expired";
+  const downloadButton = expired
+    ? `<p id="${esc(statusId)}" class="muted">Lampiran sudah kedaluwarsa.</p>`
+    : `<button type="button" class="chatAttachmentDownload" data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}">Download</button><p id="${esc(statusId)}" class="muted"></p>`;
   if (isImageAttachment(message)) {
-    return `<div class="attachment-card"><button type="button" class="imagePreviewButton" data-src="${esc(url)}" data-name="${esc(name)}"><img class="chat-image" src="${esc(url)}" alt="Preview ${esc(name)}" loading="lazy"></button><p class="muted">${esc(name)} - ${meta}</p><div class="attachment-actions">${downloadButton}</div></div>`;
+    const preview = expired
+      ? `<strong>${esc(name)}</strong>`
+      : `<button type="button" class="imagePreviewButton image-preview-button" data-src="${esc(url)}" data-name="${esc(name)}"><img class="chat-image" src="${esc(url)}" alt="Preview ${esc(name)}" loading="lazy"></button>`;
+    return `<div class="attachment-card">${preview}<p class="muted">${esc(name)} - ${meta}</p><div class="attachment-actions">${downloadButton}</div></div>`;
   }
-  return `<div class="attachment-card chatAttachmentCard" role="button" tabindex="0" data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}"><strong>${esc(name)}</strong><p>${meta} - Ketuk untuk download, lalu buka dari hasil download browser.</p><div class="attachment-actions">${downloadButton}</div></div>`;
+  const cardClass = expired ? "attachment-card" : "attachment-card chatAttachmentCard";
+  const role = expired ? "" : ` role="button" tabindex="0"`;
+  const helper = expired ? "Lampiran sudah kedaluwarsa." : "Ketuk untuk download, lalu buka dari hasil download browser.";
+  return `<div class="${cardClass}"${role} data-id="${esc(id)}" data-name="${esc(name)}" data-status="${esc(statusId)}"><strong>${esc(name)}</strong><p>${meta} - ${helper}</p><div class="attachment-actions">${downloadButton}</div></div>`;
 }
 async function refreshRoom() {
   if (!hasAccessCredential()) { showPinPrompt(); return; }
@@ -219,6 +252,12 @@ async function refreshRoom() {
     document.getElementById("infoRoomName").textContent = room.roomName;
     document.getElementById("infoHostName").textContent = "Host: " + room.hostName;
     document.getElementById("infoConnection").textContent = "Status: " + (room.status === "active" ? "Siap" : room.status);
+    if (room.chatAttachmentStorage) {
+      const storage = room.chatAttachmentStorage;
+      document.getElementById("chatStorageText").textContent =
+        "Lampiran chat: " + storage.availableCount + " aktif, " +
+        formatBytes(storage.totalBytes) + " / " + formatBytes(storage.maxBytes) + ".";
+    }
     document.getElementById("locked").style.display = "none";
     hidePinPrompt();
     updateIdentityUi(room.identityRequired);
@@ -410,7 +449,7 @@ function scheduleChatReconnect() {
   chatReconnectTimer = window.setTimeout(() => {
     chatReconnectTimer = null;
     connectChatSocket();
-  }, 2500);
+  }, chatReconnectDelayMs);
 }
 function connectChatSocket() {
   if (!hasAccessCredential() || !hasIdentity()) {
@@ -440,7 +479,7 @@ function connectChatSocket() {
       if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
         chatSocket.send("ping");
       }
-    }, 25000);
+    }, chatKeepAliveIntervalMs);
   };
   chatSocket.onmessage = event => {
     try {
@@ -473,11 +512,21 @@ function appendChatMessages(messages) {
   const holder = messagesHolder();
   const shouldScrollToBottom = forceChatScrollToBottom || isMessagesNearBottom();
   forceChatScrollToBottom = false;
+  const changedExisting = (messages || []).some(message =>
+    seenMessages.has(message.messageId) && messageSignatures[message.messageId] !== messageSignature(message)
+  );
+  if (changedExisting) {
+    holder.innerHTML = "";
+    seenMessages.clear();
+    messageSignatures = {};
+    latestMessageAt = 0;
+  }
   if (!seenMessages.size) holder.innerHTML = "";
   let appended = 0;
   for (const message of messages || []) {
     if (seenMessages.has(message.messageId)) continue;
     seenMessages.add(message.messageId);
+    messageSignatures[message.messageId] = messageSignature(message);
     latestMessageAt = Math.max(latestMessageAt, message.createdAt);
     const div = document.createElement("div");
     div.className = "message" + (message.senderId === clientId() ? " mine" : "");
@@ -553,9 +602,15 @@ function sendChatAttachment() {
     return;
   }
   const data = new FormData();
+  const file = input.files[0];
+  if (file.size > maxChatAttachmentBytes) {
+    attachmentStatus.textContent = "Lampiran chat maksimal 10 MB.";
+    attachmentStatus.className = "error";
+    return;
+  }
   data.append("clientId", clientId());
   data.append("text", document.getElementById("chatInput").value.trim());
-  data.append("file", input.files[0], input.files[0].name);
+  data.append("file", file, file.name);
   attachmentStatus.textContent = "Mengirim lampiran...";
   attachmentStatus.className = "muted";
   const xhr = new XMLHttpRequest();

@@ -13,9 +13,9 @@ import com.danis.nadi.network.server.BrowserClientAsset
 import com.danis.nadi.network.server.BrowserClientAssets
 import com.danis.nadi.network.hotspot.LocalHotspotManager
 import com.danis.nadi.network.server.NadiHttpServer
+import com.danis.nadi.network.server.ServerFileRules
 import com.danis.nadi.settings.NadiSettingsStore
 import com.danis.nadi.util.NetworkAddress
-import fi.iki.elonen.NanoHTTPD
 import java.io.IOException
 
 class RoomController(context: Context) {
@@ -101,6 +101,13 @@ class RoomController(context: Context) {
         historyStore.clear()
     }
 
+    fun cleanupExpiredChatAttachments(nowMillis: Long = System.currentTimeMillis()) {
+        val cutoff = nowMillis - ServerFileRules.CHAT_ATTACHMENT_TTL_MILLIS
+        roomManager.expireChatAttachmentsOlderThan(cutoff).forEach { transfer ->
+            fileStore.deleteStoredFile(transfer)
+        }
+    }
+
     fun currentRoomFolderPath(folderName: String = "received"): String? {
         val roomId = roomManager.currentSession()?.sessionId ?: return null
         return fileStore.roomFolderLabel(roomId, folderName)
@@ -129,6 +136,9 @@ class RoomController(context: Context) {
 
     fun stopActiveRoom() {
         lifecycleState = RoomLifecycleState.STOPPING
+        roomManager.expireAllChatAttachments().forEach { transfer ->
+            fileStore.deleteStoredFile(transfer)
+        }
         stopDashboardRuntime()
         roomManager.stopRoom()
         lifecycleState = RoomLifecycleState.STOPPED
@@ -162,7 +172,7 @@ class RoomController(context: Context) {
                 }
             )
             try {
-                candidate.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
+                candidate.start(NadiHttpServer.ROOM_SERVER_READ_TIMEOUT_MILLIS, false)
                 server = candidate
                 serverPort = port
                 return true

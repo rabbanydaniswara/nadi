@@ -4,5 +4,7 @@ enum class TransferStatus {
     PENDING,
     RUNNING,
     SUCCESS,
+    DOWNLOADED,
+    EXPIRED,
     FAILED
 }

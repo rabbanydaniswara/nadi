@@ -54,6 +54,17 @@ class AndroidFileStore(
         )
     }
 
+    override fun deleteStoredFile(transfer: TransferItem): Boolean {
+        val localUri = transfer.localUri ?: return false
+        return runCatching {
+            if (localUri.startsWith("content://")) {
+                context.contentResolver.delete(Uri.parse(localUri), null, null) > 0
+            } else {
+                File(localUri).delete()
+            }
+        }.getOrDefault(false)
+    }
+
     override fun saveUpload(
         fileName: String,
         mimeType: String?,
@@ -353,7 +364,7 @@ class AndroidFileStore(
 
 private const val PUBLIC_ROOT_FOLDER = "Nadi"
 private const val RECEIVED_FOLDER = "received"
-private const val CHAT_DOWNLOADS_FOLDER = "chat-downloads"
+private const val CHAT_DOWNLOADS_FOLDER = "chat-attachments"
 
 private data class FileMetadata(
     val displayName: String,

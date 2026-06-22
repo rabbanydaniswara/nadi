@@ -6,6 +6,7 @@ import com.danis.nadi.model.RoomSession
 import com.danis.nadi.model.RoomStatus
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
+import com.danis.nadi.model.TransferStatus
 import com.danis.nadi.security.IdentityValidator
 import com.danis.nadi.security.PinValidator
 import com.danis.nadi.security.TokenGenerator
@@ -229,8 +230,46 @@ class RoomManager(
         transfers.filter { it.direction == TransferDirection.CHAT_ATTACHMENT }
     }
 
+    fun chatAttachmentStorageStats(): ChatAttachmentStorageStats = synchronized(lock) {
+        val attachments = transfers.filter { it.direction == TransferDirection.CHAT_ATTACHMENT }
+        ChatAttachmentStorageStats(
+            totalCount = attachments.size,
+            availableCount = attachments.count { it.status == TransferStatus.SUCCESS || it.status == TransferStatus.DOWNLOADED },
+            expiredCount = attachments.count { it.status == TransferStatus.EXPIRED },
+            totalBytes = attachments
+                .filter { it.status != TransferStatus.EXPIRED }
+                .sumOf { it.sizeBytes.coerceAtLeast(0L) }
+        )
+    }
+
     fun transferById(transferId: String): TransferItem? = synchronized(lock) {
         transfers.firstOrNull { it.transferId == transferId }
+    }
+
+    fun markTransferDownloaded(transferId: String): TransferItem? = synchronized(lock) {
+        updateTransferStatusLocked(transferId, TransferStatus.DOWNLOADED)
+    }
+
+    fun expireChatAttachmentsOlderThan(cutoffMillis: Long): List<TransferItem> = synchronized(lock) {
+        val expired = transfers.filter {
+            it.direction == TransferDirection.CHAT_ATTACHMENT &&
+                it.status != TransferStatus.EXPIRED &&
+                it.createdAt < cutoffMillis
+        }
+        expired.forEach { transfer ->
+            updateTransferStatusLocked(transfer.transferId, TransferStatus.EXPIRED)
+        }
+        expired
+    }
+
+    fun expireAllChatAttachments(): List<TransferItem> = synchronized(lock) {
+        val expired = transfers.filter {
+            it.direction == TransferDirection.CHAT_ATTACHMENT && it.status != TransferStatus.EXPIRED
+        }
+        expired.forEach { transfer ->
+            updateTransferStatusLocked(transfer.transferId, TransferStatus.EXPIRED)
+        }
+        expired
     }
 
     fun addMessageListener(listener: (ChatMessage) -> Unit): AutoCloseable = synchronized(lock) {
@@ -261,7 +300,8 @@ class RoomManager(
                 attachmentTransferId = attachment?.transferId,
                 attachmentFileName = attachment?.fileName,
                 attachmentMimeType = attachment?.mimeType,
-                attachmentSizeBytes = attachment?.sizeBytes ?: -1L
+                attachmentSizeBytes = attachment?.sizeBytes ?: -1L,
+                attachmentStatus = attachment?.status?.name?.lowercase().orEmpty()
             )
             messages.add(nextMessage)
             trimMessages()
@@ -314,6 +354,24 @@ class RoomManager(
         }
     }
 
+    private fun updateTransferStatusLocked(transferId: String, status: TransferStatus): TransferItem? {
+        val index = transfers.indexOfFirst { it.transferId == transferId }
+        if (index < 0) return null
+        val updated = transfers[index].copy(
+            status = status,
+            progress = if (status == TransferStatus.EXPIRED) 0 else transfers[index].progress,
+            localUri = if (status == TransferStatus.EXPIRED) null else transfers[index].localUri
+        )
+        transfers[index] = updated
+        messages.indices.forEach { messageIndex ->
+            val message = messages[messageIndex]
+            if (message.attachmentTransferId == transferId) {
+                messages[messageIndex] = message.copy(attachmentStatus = status.name.lowercase())
+            }
+        }
+        return updated
+    }
+
     private fun String.cleanClientId(): String {
         return trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(64)
     }
@@ -330,4 +388,11 @@ data class RoomSnapshot(
     val clients: List<ConnectedClient>,
     val transfers: List<TransferItem>,
     val messages: List<ChatMessage>
+)
+
+data class ChatAttachmentStorageStats(
+    val totalCount: Int,
+    val availableCount: Int,
+    val expiredCount: Int,
+    val totalBytes: Long
 )
