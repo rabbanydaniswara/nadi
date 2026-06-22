@@ -122,6 +122,11 @@ class RoomController(context: Context) {
         return fileStore.roomFolderLabel(roomId, folderName)
     }
 
+    fun currentRoomFolderUri(folderName: String = "received"): Uri? {
+        val roomId = roomManager.currentSession()?.sessionId ?: return null
+        return fileStore.roomFolderUri(roomId, folderName)
+    }
+
     fun diagnostics(): DiagnosticSnapshot {
         val snapshot = roomManager.snapshot()
         return DiagnosticSnapshot(

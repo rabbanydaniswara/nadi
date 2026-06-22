@@ -103,8 +103,15 @@ class AndroidFileStore(
 
     fun roomFolder(roomId: String?, folderName: String): File = publicRoomDirectory(roomId, folderName)
 
+    fun roomFolderUri(roomId: String?, folderName: String): Uri? {
+        fileRoomTreeUriProvider()?.takeIf { it.isNotBlank() }?.let { treeUri ->
+            return treeRoomFolderUri(Uri.parse(treeUri), roomId, folderName)
+        }
+        return publicRoomDocumentUri(roomId, folderName)
+    }
+
     fun roomFolderLabel(roomId: String?, folderName: String): String {
-        return if (!fileRoomTreeUriProvider().isNullOrBlank() && folderName == RECEIVED_FOLDER) {
+        return if (!fileRoomTreeUriProvider().isNullOrBlank() && folderName in PUBLIC_ROOM_FOLDERS) {
             "Folder pilihan/$PUBLIC_ROOT_FOLDER/${roomId.safePathSegment()}/${folderName.safePathSegment()}"
         } else {
             roomFolder(roomId, folderName).absolutePath
@@ -228,6 +235,16 @@ class AndroidFileStore(
         )
     }.getOrNull()
 
+    private fun treeRoomFolderUri(treeUri: Uri, roomId: String?, folderName: String): Uri? = runCatching {
+        val rootDocument = DocumentsContract.buildDocumentUriUsingTree(
+            treeUri,
+            DocumentsContract.getTreeDocumentId(treeUri)
+        )
+        val nadiDirectory = findOrCreateDirectory(treeUri, rootDocument, PUBLIC_ROOT_FOLDER) ?: return null
+        val roomDirectory = findOrCreateDirectory(treeUri, nadiDirectory, roomId.safePathSegment()) ?: return null
+        findOrCreateDirectory(treeUri, roomDirectory, folderName.safePathSegment())
+    }.getOrNull()
+
     private fun saveAppRoomFile(
         fileName: String,
         mimeType: String?,
@@ -322,6 +339,11 @@ class AndroidFileStore(
         return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Nadi/${roomId.safePathSegment()}/${folderName.safePathSegment()}")
     }
 
+    private fun publicRoomDocumentUri(roomId: String?, folderName: String): Uri {
+        val documentId = "primary:${Environment.DIRECTORY_DOWNLOADS}/Nadi/${roomId.safePathSegment()}/${folderName.safePathSegment()}"
+        return DocumentsContract.buildDocumentUri(EXTERNAL_STORAGE_DOCUMENTS_AUTHORITY, documentId)
+    }
+
     private fun publicRelativePath(roomId: String?, folderName: String): String {
         return "${Environment.DIRECTORY_DOWNLOADS}/Nadi/${roomId.safePathSegment()}/${folderName.safePathSegment()}/"
     }
@@ -365,6 +387,8 @@ class AndroidFileStore(
 private const val PUBLIC_ROOT_FOLDER = "Nadi"
 private const val RECEIVED_FOLDER = "received"
 private const val CHAT_DOWNLOADS_FOLDER = "chat-attachments"
+private const val EXTERNAL_STORAGE_DOCUMENTS_AUTHORITY = "com.android.externalstorage.documents"
+private val PUBLIC_ROOM_FOLDERS = setOf(RECEIVED_FOLDER, CHAT_DOWNLOADS_FOLDER)
 
 private data class FileMetadata(
     val displayName: String,

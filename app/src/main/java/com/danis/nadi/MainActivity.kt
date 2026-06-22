@@ -1537,12 +1537,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFileRoomLocation() {
         val path = controller.currentRoomFolderPath() ?: return
-        openFolderLocation(path, "Lokasi File Room Nadi")
+        val uri = controller.currentRoomFolderUri()
+        openFolderLocation(path, uri)
     }
 
     private fun openChatAttachmentsLocation() {
         val path = controller.currentRoomFolderPath(ServerFileRules.CHAT_DOWNLOADS_FOLDER) ?: return
-        openFolderLocation(path, "Lokasi Lampiran Chat Nadi")
+        val uri = controller.currentRoomFolderUri(ServerFileRules.CHAT_DOWNLOADS_FOLDER)
+        openFolderLocation(path, uri)
     }
 
     private fun clearChatAttachments() {
@@ -1556,16 +1558,16 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
-    private fun openFolderLocation(path: String, clipLabel: String) {
-        if (!path.startsWith("/")) {
+    private fun openFolderLocation(path: String, folderUri: Uri?) {
+        if (!path.startsWith("/") && folderUri == null) {
             Toast.makeText(this, getString(R.string.folder_open_unsupported), Toast.LENGTH_LONG).show()
             return
         }
-        val folder = File(path)
-        if (!folder.exists()) {
+        val folder = path.takeIf { it.startsWith("/") }?.let(::File)
+        if (folder != null && !folder.exists()) {
             folder.mkdirs()
         }
-        val opened = folderOpenIntents(folder).any { intent ->
+        val opened = folderOpenIntents(folder, folderUri ?: folder?.externalStorageDocumentUri()).any { intent ->
             runCatching {
                 startActivity(intent)
             }.isSuccess
@@ -1575,26 +1577,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun folderOpenIntents(folder: File): List<Intent> {
+    private fun folderOpenIntents(folder: File?, folderUri: Uri?): List<Intent> {
         val intents = mutableListOf<Intent>()
-        folder.externalStorageDocumentUri()?.let { uri ->
+        folderUri?.let { uri ->
             intents.add(
                 Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
                     addCategory(Intent.CATEGORY_DEFAULT)
+                    folder?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it.absolutePath) }
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+            )
+            intents.add(
+                Intent(Intent.ACTION_VIEW).apply {
+                    data = uri
+                    addCategory(Intent.CATEGORY_DEFAULT)
+                    folder?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it.absolutePath) }
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
             )
         }
-        val providerUri = runCatching {
-            FileProvider.getUriForFile(this, "$packageName.fileprovider", folder)
-        }.getOrNull()
+        val providerUri = folder?.let {
+            runCatching {
+                FileProvider.getUriForFile(this, "$packageName.fileprovider", it)
+            }.getOrNull()
+        }
         if (providerUri != null) {
             intents.add(
                 Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(providerUri, "resource/folder")
                     addCategory(Intent.CATEGORY_DEFAULT)
+                    folder?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it.absolutePath) }
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+            )
+            intents.add(
+                Intent(Intent.ACTION_VIEW).apply {
+                    data = providerUri
+                    addCategory(Intent.CATEGORY_DEFAULT)
+                    folder?.let { putExtra(OPENINTENTS_EXTRA_ABSOLUTE_PATH, it.absolutePath) }
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
@@ -1774,3 +1798,4 @@ private data class SelectedFile(
 )
 
 private const val HOTSPOT_ADDRESS_SETTLE_DELAY_MS = 1500L
+private const val OPENINTENTS_EXTRA_ABSOLUTE_PATH = "org.openintents.extra.ABSOLUTE_PATH"
