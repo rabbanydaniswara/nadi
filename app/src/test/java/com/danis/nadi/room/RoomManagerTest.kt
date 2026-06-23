@@ -265,4 +265,20 @@ class RoomManagerTest {
 
         assertEquals(listOf("dua", "tiga", "empat"), messages.map { it.text })
     }
+
+    @Test
+    fun messagesRemainStrictlyOrderedWhenClockReturnsSameMillis() {
+        val manager = RoomManager(clock = { 1000L })
+        val session = manager.startPreparing(roomName = "Nadi Room", hostName = "Host")
+        manager.activate("http://127.0.0.1:8080/?token=${session.token}")
+
+        manager.addMessage(senderId = "a", senderName = "A", text = "satu")
+        manager.addMessage(senderId = "b", senderName = "B", text = "dua")
+        manager.addMessage(senderId = "c", senderName = "C", text = "tiga")
+
+        val messages = manager.messagesAfter(0)
+
+        assertEquals(listOf(1000L, 1001L, 1002L), messages.map { it.createdAt })
+        assertEquals(listOf("dua", "tiga"), manager.messagesAfter(1000L).map { it.text })
+    }
 }

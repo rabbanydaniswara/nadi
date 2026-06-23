@@ -10,10 +10,11 @@ class NadiHistoryStore(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     fun saveRecentTransfers(items: List<TransferHistoryItem>) {
-        val deduped = items
-            .distinctBy { it.transferId }
-            .sortedByDescending { it.createdAt }
-            .take(MAX_RECENT_TRANSFERS)
+        val deduped = mergeTransferHistory(
+            existing = recentTransfers(),
+            incoming = items,
+            limit = MAX_RECENT_TRANSFERS
+        )
         val payload = JSONArray()
         deduped.forEach { payload.put(it.toJson()) }
         preferences.edit().putString(KEY_RECENT_TRANSFERS, payload.toString()).apply()
@@ -67,4 +68,16 @@ class NadiHistoryStore(context: Context) {
         const val KEY_RECENT_TRANSFERS = "recent_transfers"
         const val MAX_RECENT_TRANSFERS = 20
     }
+}
+
+internal fun mergeTransferHistory(
+    existing: List<TransferHistoryItem>,
+    incoming: List<TransferHistoryItem>,
+    limit: Int
+): List<TransferHistoryItem> {
+    if (limit <= 0) return emptyList()
+    return (incoming + existing)
+        .distinctBy { it.transferId }
+        .sortedByDescending { it.createdAt }
+        .take(limit)
 }

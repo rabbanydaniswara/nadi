@@ -68,7 +68,7 @@ Known issues yang masih perlu dipantau:
 - Foreground service bisa terkena kebijakan battery optimization vendor tertentu.
 - Progress download browser belum sejelas progress upload.
 - Resume transfer belum tersedia.
-- WebSocket chat belum digunakan; chat masih memakai polling ringan.
+- Chat memakai WebSocket realtime dengan polling ringan sebagai fallback saat koneksi socket tidak tersedia.
 - Release signing produksi belum dikonfigurasi karena keystore final belum dibuat.
 
 ---

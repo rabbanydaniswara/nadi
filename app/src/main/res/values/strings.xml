@@ -24,6 +24,7 @@
     <string name="same_wifi_mode">Satu Wi-Fi</string>
     <string name="hotspot_mode">Hotspot lokal</string>
     <string name="hotspot_permission_reason">Nadi perlu izin Wi-Fi/lokasi untuk mencoba membuat hotspot lokal. Jika tidak berhasil, mode satu Wi-Fi tetap tersedia.</string>
+    <string name="preparing_hotspot">Menyiapkan hotspot lokal...</string>
     <string name="back_home">Kembali</string>
     <string name="join_room_title">Gabung Room</string>
     <string name="join_room_copy">Masukkan URL room Nadi dari host, lalu buka langsung dari aplikasi ini.</string>
@@ -78,6 +79,7 @@
     <string name="host_chat_subtitle">Identitas terkunci - lampiran tetap di chat</string>
     <string name="host_chat_attach_description">Lampirkan file chat</string>
     <string name="host_chat_send_description">Kirim pesan</string>
+    <string name="close">Tutup</string>
     <string name="chat_sender_you">Anda</string>
     <string name="chat_attachment_line">Lampiran: %1$s</string>
     <string name="connected_devices_title">Perangkat terhubung</string>

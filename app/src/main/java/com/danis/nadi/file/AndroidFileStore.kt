@@ -149,24 +149,33 @@ class AndroidFileStore(
             ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
 
         var bytesWritten = 0L
-        context.contentResolver.openOutputStream(uri)?.use { output ->
-            inputStream.use { input ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    output.write(buffer, 0, read)
-                    bytesWritten += read
+        val output = context.contentResolver.openOutputStream(uri)
+        if (output == null) {
+            context.contentResolver.delete(uri, null, null)
+            return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
+        }
+        try {
+            output.use {
+                inputStream.use { input ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        it.write(buffer, 0, read)
+                        bytesWritten += read
+                    }
                 }
             }
-        } ?: return saveAppRoomFile(fileName, mimeType, inputStream, roomId, folderName, direction, senderName)
-
-        context.contentResolver.update(
-            uri,
-            ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
-            null,
-            null
-        )
+            context.contentResolver.update(
+                uri,
+                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+                null,
+                null
+            )
+        } catch (error: Exception) {
+            runCatching { context.contentResolver.delete(uri, null, null) }
+            throw error
+        }
 
         return TransferItem(
             transferId = tokenGenerator.newSessionId(16),

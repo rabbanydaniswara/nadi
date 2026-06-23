@@ -3,7 +3,6 @@ package com.danis.nadi.network.hotspot
 import android.content.Context
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 
@@ -59,11 +58,7 @@ class LocalHotspotManager(
 
     @Suppress("DEPRECATION")
     private fun WifiManager.LocalOnlyHotspotReservation.wifiConfiguration(): WifiConfiguration? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            wifiConfiguration
-        } else {
-            null
-        }
+        return wifiConfiguration
     }
 
     private fun Int.toFailureMessage(): String {

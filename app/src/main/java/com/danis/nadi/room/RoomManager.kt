@@ -290,12 +290,18 @@ class RoomManager(
         val result = synchronized(lock) {
             val cleanText = text.trim().take(1000)
             if (cleanText.isBlank() && attachment == null) return@synchronized null
+            val createdAt = maxOf(
+                clock(),
+                messages.lastOrNull()?.createdAt?.let { previous ->
+                    if (previous == Long.MAX_VALUE) Long.MAX_VALUE else previous + 1
+                } ?: Long.MIN_VALUE
+            )
             val nextMessage = ChatMessage(
                 messageId = tokenGenerator.newSessionId(16),
                 senderId = senderId.trim().ifBlank { "unknown" },
                 senderName = senderName.trim().ifBlank { "Nadi" },
                 text = cleanText.ifBlank { attachment?.fileName ?: "" },
-                createdAt = clock(),
+                createdAt = createdAt,
                 status = "sent",
                 attachmentTransferId = attachment?.transferId,
                 attachmentFileName = attachment?.fileName,

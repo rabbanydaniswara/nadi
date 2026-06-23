@@ -239,3 +239,16 @@ Catatan penting: validasi identitas yang benar-benar resmi tidak mungkin dilakuk
 ### 2. Rencana Kerja Optimisasi Berikutnya (Planned & Researched)
 - Uji beban manual pada room dengan banyak gambar/lampiran untuk menentukan apakah perlu thumbnail terkompresi khusus, bukan langsung file asli.
 - Evaluasi virtualized chat list jika jumlah pesan dinaikkan jauh di atas batas room saat ini.
+
+## State MVP Terkini
+
+- Chat browser menggunakan WebSocket realtime melalui `/ws/chat`, dengan HTTP polling sebagai fallback.
+- Foreground service menjaga room aktif selama proses aplikasi tetap hidup; service tidak direstart sebagai room semu setelah process dihentikan sistem.
+- Identitas client memakai NIM dan Nama yang dikunci selama room berjalan.
+- File Room dan lampiran chat terpisah, termasuk batas ukuran, sanitasi nama file, dan storage per room.
+- File Room diterima disimpan di `Download/Nadi/<Room>/received/`.
+- Lampiran chat host disimpan di `Download/Nadi/<Room>/chat-attachments/`.
+- Riwayat transfer digabung lintas room dan tidak ditimpa ketika room baru mulai menerima file.
+- Timestamp chat dibuat berurutan agar polling fallback tidak melewatkan pesan yang dibuat pada milidetik sama.
+- CI menjalankan unit test, Android lint, dan assemble debug.
+- Logo, launcher icon, serta ikon navigasi minimalis dari branch `antigravity-main-dev` sudah diintegrasikan ke `main`.

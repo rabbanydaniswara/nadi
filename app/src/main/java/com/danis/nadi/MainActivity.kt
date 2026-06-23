@@ -21,7 +21,6 @@ import android.os.Looper
 import android.provider.OpenableColumns
 import android.provider.DocumentsContract
 import android.os.Environment
-import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.webkit.ValueCallback
@@ -571,7 +570,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startHotspotThenActivate(preparingSession: RoomSession) {
-        activeRoomCopyText.text = "Menyiapkan hotspot lokal..."
+        activeRoomCopyText.text = getString(R.string.preparing_hotspot)
         controller.hotspotManager.start { state ->
             when (state) {
                 HotspotState.Idle -> Unit
@@ -1279,7 +1278,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             val closeText = TextView(this@MainActivity).apply {
-                text = "Tutup"
+                text = getString(R.string.close)
                 setTextColor(Color.WHITE)
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
@@ -1360,7 +1359,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun currentHostId(): String {
-        return Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "host"
+        val roomId = controller.roomManager.currentSession()?.sessionId.orEmpty()
+        return if (roomId.isBlank()) "host" else "host-$roomId"
     }
 
     private fun String.shortUserAgent(): String {

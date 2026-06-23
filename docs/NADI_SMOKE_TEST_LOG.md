@@ -4,6 +4,57 @@ Catatan hasil smoke test manual. Update file ini setiap kali build kandidat diuj
 
 ---
 
+## MVP Refinement Verification
+
+```text
+Date: 2026-06-23
+Baseline: d3f1204 plus MVP refinement changes
+Tester: Codex
+Host device: 69019f47
+Network mode: Same-Wi-Fi
+APK: app/build/outputs/apk/debug/app-debug.apk
+```
+
+Automated:
+
+- [x] `./gradlew.bat :app:testDebugUnitTest`
+- [x] `./gradlew.bat :app:assembleDebug`
+- [x] `./gradlew.bat :app:lintDebug`
+- [x] `git diff --check`
+
+Device and room smoke:
+
+- [x] APK installed and launched successfully.
+- [x] New Nadi logo and navigation icons rendered.
+- [x] Same-Wi-Fi room started and showed QR, URL, and PIN.
+- [x] Foreground room notification appeared.
+- [x] `/health` and browser client returned HTTP 200.
+- [x] Browser client shell contained File Room and realtime client assets.
+- [x] NIM/Name identity registration returned HTTP 200.
+- [x] Browser-to-host chat returned HTTP 200 and appeared in the host Chat tab.
+- [x] File Room multipart upload returned HTTP 200.
+- [x] Uploaded file appeared in `Download/Nadi/<Room>/received/`.
+- [x] Host File tab reported one received file.
+- [x] Host Participants tab showed the identified active client.
+- [x] Stopping the room closed the local server.
+
+Refinement regression coverage:
+
+- [x] Transfer history merges entries across rooms instead of replacing older history.
+- [x] Chat timestamps remain strictly ordered when multiple messages share the same clock millisecond.
+- [x] MediaStore partial entries are cleaned up when public file writes fail.
+- [x] Foreground service no longer requests a sticky restart without recoverable room state.
+- [x] CI now runs Android lint in addition to unit tests and debug assembly.
+
+Scope note:
+
+```text
+This verifies the current MVP in the available Codex environment and connected Android device.
+Wide Android vendor testing, Safari/iOS, production signing, and final release testing remain owner-managed.
+```
+
+---
+
 ## UIX Separation Final Verification
 
 ```text
