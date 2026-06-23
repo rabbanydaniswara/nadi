@@ -27,6 +27,8 @@ let chatSocket = null;
 let chatPollingTimer = null;
 let chatReconnectTimer = null;
 let chatKeepAliveTimer = null;
+let chatConnectionStatusText = "";
+let chatReconnectAttempts = 0;
 const chatReconnectDelayMs = 2500;
 const chatKeepAliveIntervalMs = 3000;
 document.getElementById("currentUrl").textContent = window.location.href;
@@ -299,6 +301,8 @@ async function refreshRoom() {
   } catch (error) {
     document.getElementById("status").textContent = "Terputus";
     document.getElementById("roomCopy").textContent = "Koneksi lokal ke host terputus. Pastikan perangkat masih berada di jaringan yang sama.";
+    document.getElementById("infoConnection").textContent = "Status: terputus dari host.";
+    setChatRealtimeStatus("Terputus dari host", "offline");
   }
 }
 async function refreshFiles() {
@@ -437,8 +441,11 @@ function uploadFile() {
 function setChatRealtimeStatus(text, mode) {
   const status = document.getElementById("chatRealtimeStatus");
   if (!status) return;
+  const nextClass = "realtime-status" + (mode ? " " + mode : "");
+  if (chatConnectionStatusText === text && status.className === nextClass) return;
+  chatConnectionStatusText = text;
   status.textContent = text;
-  status.className = "realtime-status" + (mode ? " " + mode : "");
+  status.className = nextClass;
 }
 function chatWebSocketUrl() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -450,7 +457,7 @@ function stopChatPolling() {
     chatPollingTimer = null;
   }
 }
-function startChatPolling(intervalMs = 3000) {
+function startChatPolling(intervalMs = 3000, showStatus = true) {
   if (!hasAccessCredential() || !hasIdentity()) {
     setChatRealtimeStatus("Menunggu identitas", "fallback");
     return;
@@ -458,7 +465,9 @@ function startChatPolling(intervalMs = 3000) {
   if (!chatPollingTimer) {
     chatPollingTimer = window.setInterval(refreshChat, intervalMs);
   }
-  setChatRealtimeStatus("Polling cadangan", "fallback");
+  if (showStatus) {
+    setChatRealtimeStatus("Mode cadangan polling aktif", "fallback");
+  }
 }
 function closeChatSocket() {
   if (chatReconnectTimer) {
@@ -481,6 +490,12 @@ function closeChatSocket() {
 }
 function scheduleChatReconnect() {
   if (chatReconnectTimer || !hasAccessCredential() || !hasIdentity()) return;
+  chatReconnectAttempts += 1;
+  if (chatReconnectAttempts >= 2) {
+    setChatRealtimeStatus("Mode cadangan polling aktif", "fallback");
+  } else {
+    setChatRealtimeStatus("Realtime terputus, mencoba lagi...", "reconnecting");
+  }
   chatReconnectTimer = window.setTimeout(() => {
     chatReconnectTimer = null;
     connectChatSocket();
@@ -498,7 +513,9 @@ function connectChatSocket() {
     return;
   }
   if (chatSocket && (chatSocket.readyState === WebSocket.CONNECTING || chatSocket.readyState === WebSocket.OPEN)) return;
-  setChatRealtimeStatus("Menghubungkan realtime...", "");
+  if (chatReconnectAttempts === 0) {
+    setChatRealtimeStatus("Menghubungkan realtime...", "");
+  }
   try {
     chatSocket = new WebSocket(chatWebSocketUrl());
   } catch (error) {
@@ -506,6 +523,7 @@ function connectChatSocket() {
     return;
   }
   chatSocket.onopen = () => {
+    chatReconnectAttempts = 0;
     stopChatPolling();
     setChatRealtimeStatus("Realtime aktif", "active");
     refreshChat();
@@ -530,16 +548,17 @@ function connectChatSocket() {
       chatKeepAliveTimer = null;
     }
     chatSocket = null;
-    startChatPolling(2000);
+    startChatPolling(2000, false);
     scheduleChatReconnect();
   };
   chatSocket.onerror = () => {
-    setChatRealtimeStatus("Polling cadangan", "fallback");
+    setChatRealtimeStatus("Realtime bermasalah, menunggu koneksi ulang...", "reconnecting");
   };
 }
 function restartChatRealtime() {
   closeChatSocket();
   stopChatPolling();
+  chatReconnectAttempts = 0;
   refreshChat();
   connectChatSocket();
 }
@@ -672,6 +691,7 @@ function showLocked() {
   document.getElementById("status").textContent = "Terkunci";
   document.getElementById("roomName").textContent = "Akses room ditutup";
   document.getElementById("roomCopy").textContent = "Link ini tidak lagi valid. Minta QR terbaru atau masukkan PIN room dari host Nadi.";
+  setChatRealtimeStatus("Akses room terkunci", "offline");
   showPinPrompt("PIN belum cocok, atau link lama sudah ditutup.");
 }
 document.getElementById("savePinButton").addEventListener("click", savePin);
@@ -694,7 +714,13 @@ switchClientTab("files");
 refreshRoom(); refreshFiles(); restartChatRealtime();
 window.setInterval(refreshRoom, 6000);
 window.setInterval(() => { if (activeClientTab === "files") refreshFiles(); }, 6000);
-window.addEventListener("online", connectChatSocket);
+window.addEventListener("online", () => {
+  setChatRealtimeStatus("Menghubungkan ulang...", "reconnecting");
+  connectChatSocket();
+});
+window.addEventListener("offline", () => {
+  setChatRealtimeStatus("Perangkat offline", "offline");
+});
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     refreshRoom(); refreshFiles(); restartChatRealtime();

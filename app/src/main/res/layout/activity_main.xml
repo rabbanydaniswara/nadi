@@ -763,6 +763,82 @@
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
 
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/join_guide_title"
+                                android:textColor="@color/nadi_graphite"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/joinGuideSummaryText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="@string/join_guide_same_wifi_summary"
+                                android:textColor="@color/nadi_soft_ink"
+                                android:textSize="14sp" />
+
+                            <LinearLayout
+                                android:id="@+id/joinGuideStepsCard"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:background="@drawable/bg_outline_card"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <TextView
+                                    android:id="@+id/joinStepNetworkText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/join_step_same_wifi_network"
+                                    android:textColor="@color/nadi_graphite"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/joinStepOpenText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="@string/join_step_open_room"
+                                    android:textColor="@color/nadi_graphite"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/joinStepIdentityText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:text="@string/join_step_identity"
+                                    android:textColor="@color/nadi_graphite"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/joinNetworkDetailText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:lineSpacingExtra="3dp"
+                                    android:text="@string/join_network_same_wifi_detail"
+                                    android:textColor="@color/nadi_soft_ink"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="18dp"
+                                android:gravity="center"
+                                android:text="@string/qr_room_title"
+                                android:textColor="@color/nadi_graphite"
+                                android:textStyle="bold" />
+
                             <ImageView
                                 android:id="@+id/qrImage"
                                 android:layout_width="220dp"
@@ -770,7 +846,7 @@
                                 android:layout_gravity="center_horizontal"
                                 android:layout_marginTop="18dp"
                                 android:background="@color/white"
-                                android:contentDescription="@string/copy_url"
+                                android:contentDescription="@string/qr_room_description"
                                 android:padding="10dp" />
 
                             <TextView

@@ -69,7 +69,9 @@ progress { width: 100%; height: 10px; accent-color: var(--green); }
   background: var(--mist); color: var(--soft); font-size: 12px; font-weight: 800;
 }
 .realtime-status.active { background: #D1FAE5; color: var(--success); }
+.realtime-status.reconnecting { background: #DBEAFE; color: #1D4ED8; }
 .realtime-status.fallback { background: #FEF3C7; color: #92400E; }
+.realtime-status.offline { background: #FEE2E2; color: var(--error); }
 .chat-window {
   min-height: 300px; height: min(58vh, 520px); overflow-y: auto;
   overscroll-behavior: contain; scroll-behavior: smooth;

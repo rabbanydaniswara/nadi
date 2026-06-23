@@ -74,7 +74,7 @@ class NadiHttpServerTest {
         assertTrue(js.contains("/ws/chat"))
         assertTrue(js.contains("chatKeepAliveIntervalMs = 3000"))
         assertTrue(js.contains("maxChatAttachmentBytes"))
-        assertTrue(js.contains("Polling cadangan"))
+        assertTrue(js.contains("Mode cadangan polling aktif"))
         assertTrue("Kotlin interpolation escape should not leak into JS", !js.contains("\${'$'}{"))
     }
 
@@ -201,7 +201,7 @@ class NadiHttpServerTest {
         assertTrue(js.body.contains("new WebSocket"))
         assertTrue(js.body.contains("chatKeepAliveIntervalMs = 3000"))
         assertTrue(js.body.contains("maxChatAttachmentBytes"))
-        assertTrue(js.body.contains("Polling cadangan"))
+        assertTrue(js.body.contains("Mode cadangan polling aktif"))
     }
 
     @Test

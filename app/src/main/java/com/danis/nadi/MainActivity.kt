@@ -115,6 +115,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var activeStatusText: TextView
     private lateinit var activeRoomNameText: TextView
     private lateinit var activeRoomCopyText: TextView
+    private lateinit var joinGuideSummaryText: TextView
+    private lateinit var joinStepNetworkText: TextView
+    private lateinit var joinStepOpenText: TextView
+    private lateinit var joinStepIdentityText: TextView
+    private lateinit var joinNetworkDetailText: TextView
     private lateinit var joinUrlText: TextView
     private lateinit var activeRoomPinText: TextView
     private lateinit var fileRoomSummaryText: TextView
@@ -278,6 +283,11 @@ class MainActivity : AppCompatActivity() {
         activeStatusText = findViewById(R.id.activeStatusText)
         activeRoomNameText = findViewById(R.id.activeRoomNameText)
         activeRoomCopyText = findViewById(R.id.activeRoomCopyText)
+        joinGuideSummaryText = findViewById(R.id.joinGuideSummaryText)
+        joinStepNetworkText = findViewById(R.id.joinStepNetworkText)
+        joinStepOpenText = findViewById(R.id.joinStepOpenText)
+        joinStepIdentityText = findViewById(R.id.joinStepIdentityText)
+        joinNetworkDetailText = findViewById(R.id.joinNetworkDetailText)
         joinUrlText = findViewById(R.id.joinUrlText)
         activeRoomPinText = findViewById(R.id.activeRoomPinText)
         fileRoomSummaryText = findViewById(R.id.fileRoomSummaryText)
@@ -644,6 +654,7 @@ class MainActivity : AppCompatActivity() {
             NetworkMode.SAME_WIFI_FALLBACK -> getString(R.string.hotspot_fallback_note)
             NetworkMode.SAME_WIFI -> getString(R.string.same_wifi_note)
         }
+        renderJoinGuide(activeRoom)
         joinUrlText.text = joinUrl
         activeRoomPinText.text = getString(R.string.room_pin_active, session.pin.orEmpty())
         if (joinUrl.isNotBlank()) {
@@ -655,6 +666,39 @@ class MainActivity : AppCompatActivity() {
         renderWifiQr(activeRoom)
         refreshHostDashboard()
         showActiveRoom()
+    }
+
+    private fun renderJoinGuide(activeRoom: ActiveRoom) {
+        joinStepOpenText.text = getString(R.string.join_step_open_room)
+        joinStepIdentityText.text = getString(R.string.join_step_identity)
+        when (activeRoom.mode) {
+            NetworkMode.HOTSPOT -> {
+                val ssid = activeRoom.hotspotSsid.orEmpty()
+                val password = activeRoom.hotspotPassword.orEmpty()
+                joinStepNetworkText.text = getString(R.string.join_step_hotspot_network)
+                if (ssid.isBlank()) {
+                    joinGuideSummaryText.text = getString(R.string.join_guide_hotspot_unknown_summary)
+                    joinNetworkDetailText.text = getString(R.string.join_network_hotspot_unknown_detail)
+                } else {
+                    joinGuideSummaryText.text = getString(R.string.join_guide_hotspot_summary)
+                    joinNetworkDetailText.text = getString(
+                        R.string.join_network_hotspot_detail,
+                        "\nWi-Fi: $ssid",
+                        password.takeIf { it.isNotBlank() }?.let { "\nPassword: $it" }.orEmpty()
+                    )
+                }
+            }
+            NetworkMode.SAME_WIFI_FALLBACK -> {
+                joinGuideSummaryText.text = getString(R.string.join_guide_same_wifi_summary)
+                joinStepNetworkText.text = getString(R.string.join_step_same_wifi_network)
+                joinNetworkDetailText.text = getString(R.string.join_network_fallback_detail)
+            }
+            NetworkMode.SAME_WIFI -> {
+                joinGuideSummaryText.text = getString(R.string.join_guide_same_wifi_summary)
+                joinStepNetworkText.text = getString(R.string.join_step_same_wifi_network)
+                joinNetworkDetailText.text = getString(R.string.join_network_same_wifi_detail)
+            }
+        }
     }
 
     private fun renderWifiQr(activeRoom: ActiveRoom) {
