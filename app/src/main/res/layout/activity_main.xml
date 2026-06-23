@@ -35,9 +35,18 @@
                     android:orientation="vertical"
                     android:padding="24dp">
 
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_nadi_logo"
+                        android:contentDescription="@string/app_name"
+                        android:tint="@color/white"
+                        app:tint="@color/white" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
                         android:background="@drawable/bg_chip"
                         android:text="@string/nadi_tagline"
                         android:textColor="@color/nadi_deep_green"
@@ -72,7 +81,10 @@
                     android:textAllCaps="false"
                     android:textStyle="bold"
                     app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp" />
+                    app:cornerRadius="10dp"
+                    app:icon="@drawable/ic_hotspot"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/white" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/joinRoomButton"
@@ -84,7 +96,10 @@
                     android:textAllCaps="false"
                     android:textColor="@color/nadi_green"
                     app:cornerRadius="10dp"
-                    app:strokeColor="@color/nadi_line" />
+                    app:strokeColor="@color/nadi_line"
+                    app:icon="@drawable/ic_qr_scan"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/nadi_green" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/homeHistoryButton"
@@ -103,7 +118,10 @@
                     android:layout_height="52dp"
                     android:text="@string/settings"
                     android:textAllCaps="false"
-                    android:textColor="@color/nadi_soft_ink" />
+                    android:textColor="@color/nadi_soft_ink"
+                    app:icon="@drawable/ic_settings"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/nadi_soft_ink" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1058,7 +1076,10 @@
                             android:text="@string/add_shared_file"
                             android:textAllCaps="false"
                             app:backgroundTint="@color/nadi_green"
-                            app:cornerRadius="10dp" />
+                            app:cornerRadius="10dp"
+                            app:icon="@drawable/ic_send_file"
+                            app:iconGravity="textStart"
+                            app:iconTint="@color/white" />
 
                         <LinearLayout
                             android:id="@+id/sharedFilesList"
