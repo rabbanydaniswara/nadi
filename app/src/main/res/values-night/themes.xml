@@ -2,6 +2,7 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.Nadi" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:fontFamily">sans</item>
+        <item name="android:windowBackground">@color/nadi_mist</item>
         <item name="android:statusBarColor">@color/nadi_deep_green</item>
         <item name="android:navigationBarColor">@color/nadi_deep_green</item>
         <item name="colorPrimary">@color/nadi_green</item>
