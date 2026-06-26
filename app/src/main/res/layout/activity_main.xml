@@ -1518,101 +1518,114 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="24dp"
         android:background="@color/nadi_mist"
         android:visibility="gone">
 
-        <TextView
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Identitas Peserta"
-            android:textColor="@color/nadi_graphite"
-            android:textSize="32sp"
-            android:textStyle="bold" />
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:clipToPadding="false">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:lineSpacingExtra="4dp"
-            android:text="Masukkan NIM dan Nama lengkap Anda untuk bergabung ke dalam room."
-            android:textColor="@color/nadi_soft_ink"
-            android:textSize="15sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bg_outline_card"
-            android:orientation="vertical"
-            android:padding="24dp">
-
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="NIM (Nomor Induk Mahasiswa)"
-                android:textColor="@color/nadi_graphite"
-                android:textStyle="bold"
-                android:textSize="14sp" />
+                android:orientation="vertical"
+                android:padding="24dp">
 
-            <EditText
-                android:id="@+id/clientNimInput"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input_field"
-                android:hint="Contoh: 2201010001"
-                android:inputType="number"
-                android:singleLine="true"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="15sp"
-                android:paddingHorizontal="16dp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Identitas Peserta"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Nama Lengkap"
-                android:textColor="@color/nadi_graphite"
-                android:textStyle="bold"
-                android:textSize="14sp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="4dp"
+                    android:text="Masukkan NIM dan Nama lengkap Anda untuk bergabung ke dalam room."
+                    android:textColor="@color/nadi_soft_ink"
+                    android:textSize="15sp" />
 
-            <EditText
-                android:id="@+id/clientNameInput"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input_field"
-                android:hint="Contoh: Budi Santoso"
-                android:inputType="textCapWords"
-                android:singleLine="true"
-                android:textColor="@color/nadi_graphite"
-                android:textSize="15sp"
-                android:paddingHorizontal="16dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/bg_outline_card"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/clientJoinButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="24dp"
-                android:text="Masuk ke Room"
-                android:textAllCaps="false"
-                android:textStyle="bold"
-                app:backgroundTint="@color/nadi_green"
-                app:cornerRadius="24dp" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="NIM (Nomor Induk Mahasiswa)"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold"
+                        android:textSize="14sp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/clientJoinCancelButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="Batal"
-                android:textAllCaps="false"
-                android:textColor="@color/nadi_green"
-                app:cornerRadius="24dp"
-                app:strokeColor="@color/nadi_green" />
-        </LinearLayout>
+                    <EditText
+                        android:id="@+id/clientNimInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_input_field"
+                        android:hint="Contoh: 2201010001"
+                        android:inputType="text"
+                        android:singleLine="true"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="15sp"
+                        android:paddingHorizontal="16dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Nama Lengkap"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold"
+                        android:textSize="14sp" />
+
+                    <EditText
+                        android:id="@+id/clientNameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_input_field"
+                        android:hint="Contoh: Budi Santoso"
+                        android:inputType="textCapWords"
+                        android:singleLine="true"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="15sp"
+                        android:paddingHorizontal="16dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/clientJoinButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="24dp"
+                        android:text="Masuk ke Room"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/nadi_green"
+                        app:cornerRadius="24dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/clientJoinCancelButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Batal"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_green"
+                        app:cornerRadius="24dp"
+                        app:strokeColor="@color/nadi_green" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
     </LinearLayout>
 
     <!-- Active Client Room Panel (Native UI version of Joined Room) -->
@@ -1793,6 +1806,7 @@
                             android:background="@drawable/bg_chat_input"
                             android:hint="Tulis pesan..."
                             android:inputType="textShortMessage"
+                            android:imeOptions="actionSend"
                             android:paddingHorizontal="16dp"
                             android:singleLine="true"
                             android:textColor="@color/nadi_graphite"

@@ -591,6 +591,24 @@ class MainActivity : AppCompatActivity() {
                 clientChatScrollView.fullScroll(View.FOCUS_DOWN)
             }
         }
+        clientChatInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) {
+                sendClientChatMessage()
+                true
+            } else false
+        }
+
+        // Keyboard-aware bottom nav: hide when keyboard opens to give more space to chat
+        activeClientRoomPanel.viewTreeObserver.addOnGlobalLayoutListener {
+            val rect = android.graphics.Rect()
+            activeClientRoomPanel.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = activeClientRoomPanel.rootView.height
+            val keypadHeight = screenHeight - rect.bottom
+            val isKeyboardVisible = keypadHeight > screenHeight * 0.15
+            if (activeClientRoomPanel.visibility == View.VISIBLE) {
+                activeClientRoomNavigation.visibility = if (isKeyboardVisible) View.GONE else View.VISIBLE
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -1816,6 +1834,11 @@ class MainActivity : AppCompatActivity() {
             clientInfoHostNameText.text = "Host: $hostName | Peserta: $clientCount"
         }
 
+        client.onReconnected = {
+            // Catch up on any missed messages after WebSocket reconnection
+            fetchLatestClientChat()
+        }
+
         // Authenticate
         client.authenticate { success, errorMsg ->
             clientJoinButton.isEnabled = true
@@ -2148,22 +2171,82 @@ class MainActivity : AppCompatActivity() {
                     clientChatInput.setText("")
                     clientPendingAttachmentUri = null
                     Toast.makeText(this@MainActivity, "Pesan lampiran terkirim.", Toast.LENGTH_SHORT).show()
+                    // Fetch latest messages to catch the attachment message
+                    fetchLatestClientChat()
                 } else {
                     Toast.makeText(this@MainActivity, "Gagal mengirim lampiran.", Toast.LENGTH_SHORT).show()
                 }
             })
         } else {
+            // Optimistic rendering: show message immediately before server confirms
+            val prefs = getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE)
+            val senderId = prefs.getString("client_id", "").orEmpty()
+            val senderName = prefs.getString("client_name", "").orEmpty()
+            val optimisticMessage = ChatMessage(
+                messageId = "opt_${System.currentTimeMillis()}_${(0..9999).random()}",
+                senderId = senderId,
+                senderName = senderName,
+                text = text,
+                createdAt = System.currentTimeMillis(),
+                status = "sent"
+            )
+            clientChatMessages.add(optimisticMessage)
+            clientChatMessages.sortBy { it.createdAt }
+            clientChatRenderer.render(clientChatMessages)
+            clientChatInput.setText("")
+            clientChatScrollView.post {
+                clientChatScrollView.fullScroll(View.FOCUS_DOWN)
+            }
+
             client.sendChatMessage(text) { success ->
                 clientChatInput.isEnabled = true
                 clientSendChatButton.isEnabled = true
                 clientAttachButton.isEnabled = true
                 if (success) {
-                    clientChatInput.setText("")
-                    clientChatScrollView.post {
-                        clientChatScrollView.fullScroll(View.FOCUS_DOWN)
-                    }
+                    // Fetch latest messages from server to replace optimistic with real message
+                    fetchLatestClientChat()
                 } else {
+                    // Remove optimistic message on failure
+                    clientChatMessages.removeAll { it.messageId == optimisticMessage.messageId }
+                    clientChatRenderer.render(clientChatMessages)
                     Toast.makeText(this@MainActivity, "Gagal mengirim pesan.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    /**
+     * Fetch latest chat messages from server to sync with any new messages.
+     * Replaces optimistic messages with real server messages.
+     */
+    private fun fetchLatestClientChat() {
+        val client = roomClient ?: return
+        val lastTimestamp = clientChatMessages
+            .filter { !it.messageId.startsWith("opt_") }
+            .maxByOrNull { it.createdAt }?.createdAt ?: 0L
+        client.fetchChatHistory(after = lastTimestamp) { messages ->
+            var changed = false
+            for (msg in messages) {
+                if (clientChatMessages.none { it.messageId == msg.messageId }) {
+                    // Remove matching optimistic message (same text + same sender)
+                    val matchingOpt = clientChatMessages.find {
+                        it.messageId.startsWith("opt_") &&
+                        it.senderId == msg.senderId &&
+                        it.text == msg.text
+                    }
+                    if (matchingOpt != null) {
+                        clientChatMessages.remove(matchingOpt)
+                    }
+                    clientChatMessages.add(msg)
+                    ensureClientAttachmentTransfer(msg)
+                    changed = true
+                }
+            }
+            if (changed) {
+                clientChatMessages.sortBy { it.createdAt }
+                clientChatRenderer.render(clientChatMessages)
+                clientChatScrollView.post {
+                    clientChatScrollView.fullScroll(View.FOCUS_DOWN)
                 }
             }
         }
@@ -2251,6 +2334,8 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 roomClient?.fetchFiles()
                 roomClient?.fetchRoomInfo()
+                // Chat polling fallback: fetch latest messages in case WebSocket missed any
+                fetchLatestClientChat()
                 clientPollHandler.postDelayed(this, 5000)
             }
         }

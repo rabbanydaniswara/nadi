@@ -36,12 +36,14 @@ class RoomClient(
 
     private var webSocket: WebSocket? = null
     private var isClosed = false
+    private var hasConnectedBefore = false
 
     // Callbacks
     var onConnectionStatusChanged: ((String) -> Unit)? = null
     var onMessageReceived: ((ChatMessage) -> Unit)? = null
     var onFilesChanged: ((List<JSONObject>) -> Unit)? = null
     var onRoomInfoChanged: ((JSONObject) -> Unit)? = null
+    var onReconnected: (() -> Unit)? = null
 
     private fun getAccessParams(): String {
         return when {
@@ -111,7 +113,13 @@ class RoomClient(
 
         webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                runOnMain { onConnectionStatusChanged?.invoke("Terhubung") }
+                runOnMain {
+                    onConnectionStatusChanged?.invoke("Terhubung")
+                    if (hasConnectedBefore) {
+                        onReconnected?.invoke()
+                    }
+                    hasConnectedBefore = true
+                }
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
