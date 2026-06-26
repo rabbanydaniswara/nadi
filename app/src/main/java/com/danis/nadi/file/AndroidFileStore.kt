@@ -91,7 +91,7 @@ class AndroidFileStore(
         senderName: String?
     ): TransferItem {
         val publicFolder = when {
-            direction == TransferDirection.UPLOAD && folderName == RECEIVED_FOLDER -> folderName
+            (direction == TransferDirection.UPLOAD || direction == TransferDirection.DOWNLOAD) && folderName == RECEIVED_FOLDER -> folderName
             direction == TransferDirection.CHAT_ATTACHMENT && folderName == CHAT_DOWNLOADS_FOLDER -> folderName
             else -> null
         }

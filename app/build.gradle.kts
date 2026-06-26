@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.nanohttpd)
     implementation(libs.nanohttpd.websocket)
     implementation(libs.zxing.core)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

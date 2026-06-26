@@ -32,6 +32,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
@@ -61,6 +62,12 @@ import com.danis.nadi.room.RoomRuntime
 import com.danis.nadi.room.RoomStartResult
 import com.danis.nadi.settings.NadiSettings
 import com.danis.nadi.settings.NadiSettingsStore
+import com.danis.nadi.network.client.RoomClient
+import com.danis.nadi.model.ChatMessage
+import java.io.FileInputStream
+import java.util.UUID
+import org.json.JSONObject
+import org.json.JSONArray
 import com.danis.nadi.ui.HostChatRenderer
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
@@ -144,6 +151,55 @@ class MainActivity : AppCompatActivity() {
     private var chatKeyboardCompactMode = false
     private lateinit var hostChatRenderer: HostChatRenderer
 
+    // Native Client Room properties
+    private var roomClient: RoomClient? = null
+    private var clientRoomUrl: String? = null
+    private val clientChatMessages = ArrayList<ChatMessage>()
+    private val clientTransfersMap = HashMap<String, TransferItem>()
+    private lateinit var clientChatRenderer: HostChatRenderer
+    private var clientPendingAttachmentUri: Uri? = null
+    private val clientPollHandler = Handler(Looper.getMainLooper())
+    private var clientPollRunnable: Runnable? = null
+    private var activeClientRoomDestinationId = R.id.client_tab_files
+
+    private lateinit var joinIdentityPanel: LinearLayout
+    private lateinit var clientNimInput: EditText
+    private lateinit var clientNameInput: EditText
+    private lateinit var clientJoinButton: MaterialButton
+    private lateinit var clientJoinCancelButton: MaterialButton
+    private lateinit var activeClientRoomPanel: LinearLayout
+    private lateinit var clientTabFilesScroll: NestedScrollView
+    private lateinit var clientUploadFileButton: MaterialButton
+    private lateinit var clientUploadProgress: ProgressBar
+    private lateinit var clientUploadStatusText: TextView
+    private lateinit var clientSharedFilesList: LinearLayout
+    private lateinit var clientTabChatLayout: LinearLayout
+    private lateinit var clientChatScrollView: NestedScrollView
+    private lateinit var clientChatMessagesContainer: LinearLayout
+    private lateinit var clientChatInput: EditText
+    private lateinit var clientSendChatButton: MaterialButton
+    private lateinit var clientAttachButton: MaterialButton
+    private lateinit var clientAttachmentStatus: TextView
+    private lateinit var clientTabInfoScroll: NestedScrollView
+    private lateinit var clientInfoStatusText: TextView
+    private lateinit var clientInfoRoomNameText: TextView
+    private lateinit var clientInfoHostNameText: TextView
+    private lateinit var clientInfoSelfIdentityText: TextView
+    private lateinit var clientExitRoomButton: MaterialButton
+    private lateinit var activeClientRoomNavigation: BottomNavigationView
+
+    private val clientFilePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        val uri = result.data?.data ?: return@registerForActivityResult
+        handleClientFileUpload(uri, isAttachment = false)
+    }
+
+    private val clientChatAttachmentPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        val uri = result.data?.data ?: return@registerForActivityResult
+        handleClientChatAttachmentSelected(uri)
+    }
+
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
         val uri = result.data?.data ?: return@registerForActivityResult
@@ -215,6 +271,30 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    joinIdentityPanel.visibility == View.VISIBLE -> {
+                        showJoin()
+                    }
+                    activeClientRoomPanel.visibility == View.VISIBLE -> {
+                        confirmExitClientRoom()
+                    }
+                    activeRoomPanel.visibility == View.VISIBLE -> {
+                        stopActiveRoom()
+                    }
+                    joinPanel.visibility == View.VISIBLE || historyPanel.visibility == View.VISIBLE || settingsPanel.visibility == View.VISIBLE || setupPanel.visibility == View.VISIBLE -> {
+                        showHome()
+                    }
+                    else -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        })
+
         bindViews()
         setupHostChatRenderer()
         setupWindowInsets()
@@ -238,11 +318,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         stopDashboardPolling()
+        clientPollHandler.removeCallbacksAndMessages(null)
         super.onStop()
     }
 
     override fun onDestroy() {
         stopDashboardPolling()
+        clientPollHandler.removeCallbacksAndMessages(null)
+        roomClient?.close()
         super.onDestroy()
     }
 
@@ -308,6 +391,32 @@ class MainActivity : AppCompatActivity() {
         qrImage = findViewById(R.id.qrImage)
         wifiQrImage = findViewById(R.id.wifiQrImage)
         joinWebView = findViewById(R.id.joinWebView)
+
+        joinIdentityPanel = findViewById(R.id.joinIdentityPanel)
+        clientNimInput = findViewById(R.id.clientNimInput)
+        clientNameInput = findViewById(R.id.clientNameInput)
+        clientJoinButton = findViewById(R.id.clientJoinButton)
+        clientJoinCancelButton = findViewById(R.id.clientJoinCancelButton)
+        activeClientRoomPanel = findViewById(R.id.activeClientRoomPanel)
+        clientTabFilesScroll = findViewById(R.id.clientTabFilesScroll)
+        clientUploadFileButton = findViewById(R.id.clientUploadFileButton)
+        clientUploadProgress = findViewById(R.id.clientUploadProgress)
+        clientUploadStatusText = findViewById(R.id.clientUploadStatusText)
+        clientSharedFilesList = findViewById(R.id.clientSharedFilesList)
+        clientTabChatLayout = findViewById(R.id.clientTabChatLayout)
+        clientChatScrollView = findViewById(R.id.clientChatScrollView)
+        clientChatMessagesContainer = findViewById(R.id.clientChatMessagesContainer)
+        clientChatInput = findViewById(R.id.clientChatInput)
+        clientSendChatButton = findViewById(R.id.clientSendChatButton)
+        clientAttachButton = findViewById(R.id.clientAttachButton)
+        clientAttachmentStatus = findViewById(R.id.clientAttachmentStatus)
+        clientTabInfoScroll = findViewById(R.id.clientTabInfoScroll)
+        clientInfoStatusText = findViewById(R.id.clientInfoStatusText)
+        clientInfoRoomNameText = findViewById(R.id.clientInfoRoomNameText)
+        clientInfoHostNameText = findViewById(R.id.clientInfoHostNameText)
+        clientInfoSelfIdentityText = findViewById(R.id.clientInfoSelfIdentityText)
+        clientExitRoomButton = findViewById(R.id.clientExitRoomButton)
+        activeClientRoomNavigation = findViewById(R.id.activeClientRoomNavigation)
     }
 
     private fun setupHostChatRenderer() {
@@ -456,6 +565,30 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.hotspot_permission_reason)
             } else {
                 getString(R.string.same_wifi_note)
+            }
+        }
+
+        // Native Client listeners
+        clientJoinButton.setOnClickListener { submitClientIdentity() }
+        clientJoinCancelButton.setOnClickListener { showJoin() }
+        clientExitRoomButton.setOnClickListener { confirmExitClientRoom() }
+        clientUploadFileButton.setOnClickListener { selectClientUploadFile() }
+        clientSendChatButton.setOnClickListener { sendClientChatMessage() }
+        clientAttachButton.setOnClickListener { selectClientChatAttachment() }
+        activeClientRoomNavigation.setOnItemSelectedListener { item ->
+            showActiveClientRoomSection(item.itemId)
+            true
+        }
+        clientChatInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                clientChatScrollView.post {
+                    clientChatScrollView.fullScroll(View.FOCUS_DOWN)
+                }
+            }
+        }
+        clientChatInput.setOnClickListener {
+            clientChatScrollView.post {
+                clientChatScrollView.fullScroll(View.FOCUS_DOWN)
             }
         }
     }
@@ -1531,15 +1664,628 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Masukkan URL room Nadi yang valid.", Toast.LENGTH_SHORT).show()
             return
         }
-        joinedRoomUrlText.text = url
-        showJoinedRoom()
-        joinWebView.loadUrl(url)
+        clientRoomUrl = url
+        showJoinIdentityScreen()
     }
 
     private fun closeJoinedRoom() {
         joinWebView.stopLoading()
         joinWebView.loadUrl("about:blank")
         showHome()
+    }
+
+    private fun showJoinIdentityScreen() {
+        mainScrollView.gone()
+        homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.gone()
+        historyPanel.gone()
+        settingsPanel.gone()
+        setupPanel.gone()
+        activeRoomPanel.gone()
+        activeClientRoomPanel.gone()
+
+        val prefs = getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE)
+        clientNimInput.setText(prefs.getString("client_nim", ""))
+        clientNameInput.setText(prefs.getString("client_name", ""))
+
+        joinIdentityPanel.visible()
+    }
+
+    private fun showActiveClientRoom() {
+        mainScrollView.gone()
+        homePanel.gone()
+        joinPanel.gone()
+        joinWebPanel.gone()
+        historyPanel.gone()
+        settingsPanel.gone()
+        setupPanel.gone()
+        activeRoomPanel.gone()
+        joinIdentityPanel.gone()
+
+        activeClientRoomPanel.visible()
+        activeClientRoomNavigation.selectedItemId = R.id.client_tab_files
+        showActiveClientRoomSection(R.id.client_tab_files)
+    }
+
+    private fun showActiveClientRoomSection(destinationId: Int) {
+        activeClientRoomDestinationId = destinationId
+        clientTabFilesScroll.gone()
+        clientTabChatLayout.gone()
+        clientTabInfoScroll.gone()
+        when (destinationId) {
+            R.id.client_tab_files -> {
+                clientTabFilesScroll.visible()
+            }
+            R.id.client_tab_chat -> {
+                clientTabChatLayout.visible()
+                clientChatInput.requestFocus()
+                clientChatScrollView.post {
+                    clientChatScrollView.fullScroll(View.FOCUS_DOWN)
+                }
+            }
+            R.id.client_tab_info -> {
+                clientTabInfoScroll.visible()
+            }
+        }
+    }
+
+    private fun submitClientIdentity() {
+        val nim = clientNimInput.text.toString().trim()
+        val name = clientNameInput.text.toString().trim()
+        if (nim.isEmpty()) {
+            clientNimInput.error = "NIM tidak boleh kosong"
+            clientNimInput.requestFocus()
+            return
+        }
+        if (name.isEmpty()) {
+            clientNameInput.error = "Nama tidak boleh kosong"
+            clientNameInput.requestFocus()
+            return
+        }
+
+        val prefs = getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("client_nim", nim)
+            .putString("client_name", name)
+            .apply()
+
+        var clientId = prefs.getString("client_id", null)
+        if (clientId == null) {
+            clientId = UUID.randomUUID().toString()
+            prefs.edit().putString("client_id", clientId).apply()
+        }
+
+        val url = clientRoomUrl ?: return
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return
+        val cleanBaseUrl = "${uri.scheme}://${uri.host}" + if (uri.port != -1) ":${uri.port}" else ""
+        val token = uri.getQueryParameter("token")
+        val pin = uri.getQueryParameter("pin")
+
+        clientJoinButton.isEnabled = false
+        Toast.makeText(this, "Menghubungkan ke room...", Toast.LENGTH_SHORT).show()
+        connectToRoomNatively(cleanBaseUrl, token, pin, clientId, name, nim)
+    }
+
+    private fun connectToRoomNatively(
+        cleanBaseUrl: String,
+        token: String?,
+        pin: String?,
+        clientId: String,
+        name: String,
+        nim: String
+    ) {
+        val client = RoomClient(
+            baseUrl = cleanBaseUrl,
+            token = token,
+            pin = pin,
+            clientId = clientId,
+            clientName = name,
+            clientNim = nim
+        )
+        roomClient = client
+
+        // Setup callbacks
+        client.onConnectionStatusChanged = { status ->
+            clientInfoStatusText.text = status
+            if (status == "Terhubung") {
+                clientInfoStatusText.setTextColor(ContextCompat.getColor(this, R.color.nadi_green))
+            } else {
+                clientInfoStatusText.setTextColor(ContextCompat.getColor(this, R.color.nadi_error))
+            }
+        }
+
+        client.onMessageReceived = { message ->
+            if (clientChatMessages.none { it.messageId == message.messageId }) {
+                clientChatMessages.add(message)
+                ensureClientAttachmentTransfer(message)
+                clientChatMessages.sortBy { it.createdAt }
+                clientChatRenderer.render(clientChatMessages)
+            }
+        }
+
+        client.onFilesChanged = { filesList ->
+            renderClientFiles(filesList)
+        }
+
+        client.onRoomInfoChanged = { infoJson ->
+            val roomName = infoJson.optString("roomName", "-")
+            val hostName = infoJson.optString("hostName", "-")
+            val clientCount = infoJson.optInt("clientCount", 0)
+            clientInfoRoomNameText.text = roomName
+            clientInfoHostNameText.text = "Host: $hostName | Peserta: $clientCount"
+        }
+
+        // Authenticate
+        client.authenticate { success, errorMsg ->
+            clientJoinButton.isEnabled = true
+            if (success) {
+                setupClientChatRenderer()
+                showActiveClientRoom()
+
+                clientInfoSelfIdentityText.text = "$nim - $name"
+
+                client.startWebSocket()
+                client.fetchFiles()
+                client.fetchRoomInfo()
+
+                client.fetchChatHistory(after = 0L) { messages ->
+                    clientChatMessages.clear()
+                    clientChatMessages.addAll(messages)
+                    messages.forEach { ensureClientAttachmentTransfer(it) }
+                    clientChatMessages.sortBy { it.createdAt }
+                    clientChatRenderer.render(clientChatMessages)
+                }
+
+                startClientPolling()
+            } else {
+                if (errorMsg?.contains("invalid_token") == true || errorMsg?.contains("unauthorized") == true) {
+                    promptClientForPin { enteredPin ->
+                        client.pin = enteredPin
+                        clientJoinButton.isEnabled = false
+                        connectToRoomNatively(cleanBaseUrl, token, enteredPin, clientId, name, nim)
+                    }
+                } else {
+                    Toast.makeText(this, errorMsg ?: "Gagal masuk ke room", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun promptClientForPin(onPinEntered: (String) -> Unit) {
+        val input = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "Masukkan PIN Room"
+            setPadding(24.dp(), 16.dp(), 24.dp(), 16.dp())
+        }
+        val container = FrameLayout(this).apply {
+            addView(input, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(20.dp(), 8.dp(), 20.dp(), 8.dp())
+            })
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("PIN Diperlukan")
+            .setMessage("Room ini dilindungi PIN. Silakan masukkan PIN room:")
+            .setView(container)
+            .setPositiveButton("Masuk") { _, _ ->
+                val pin = input.text.toString().trim()
+                if (pin.isNotEmpty()) {
+                    onPinEntered(pin)
+                } else {
+                    Toast.makeText(this, "PIN tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun setupClientChatRenderer() {
+        clientChatRenderer = HostChatRenderer(
+            context = this,
+            scrollView = clientChatScrollView,
+            container = clientChatMessagesContainer,
+            hostIdProvider = { getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE).getString("client_id", "").orEmpty() },
+            hostNameProvider = { getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE).getString("client_name", "").orEmpty() },
+            roomIdProvider = { roomClient?.token ?: roomClient?.pin ?: "client_room" },
+            attachmentProvider = { transferId -> clientTransfersMap[transferId] },
+            onPreviewImage = ::showImageAttachmentPreview,
+            onOpenAttachment = ::openClientChatAttachment
+        )
+    }
+
+    private fun openClientChatAttachment(attachment: TransferItem) {
+        val localFile = File(attachment.localUri ?: "")
+        if (attachment.localUri != null && localFile.exists()) {
+            openChatAttachment(attachment)
+        } else {
+            downloadClientAttachment(attachment)
+        }
+    }
+
+    private fun ensureClientAttachmentTransfer(message: ChatMessage) {
+        val transferId = message.attachmentTransferId ?: return
+        if (clientTransfersMap.containsKey(transferId)) return
+
+        val publicFolder = controller.fileStore.roomFolder(null, ServerFileRules.CHAT_DOWNLOADS_FOLDER)
+        val localFile = File(publicFolder, message.attachmentFileName ?: "")
+        val exists = localFile.exists()
+
+        val transfer = TransferItem(
+            transferId = transferId,
+            fileName = message.attachmentFileName ?: "file",
+            mimeType = null,
+            sizeBytes = -1L,
+            direction = TransferDirection.CHAT_ATTACHMENT,
+            status = if (exists) TransferStatus.SUCCESS else if (message.attachmentStatus == "expired") TransferStatus.EXPIRED else TransferStatus.PENDING,
+            progress = if (exists) 100 else 0,
+            createdAt = message.createdAt,
+            localUri = if (exists) localFile.absolutePath else null,
+            senderName = message.senderName
+        )
+        clientTransfersMap[transferId] = transfer
+    }
+
+    private fun renderClientFiles(files: List<JSONObject>) {
+        clientSharedFilesList.removeAllViews()
+        if (files.isEmpty()) {
+            clientSharedFilesList.addView(simpleStateCard("Belum ada berkas yang dibagikan."))
+            return
+        }
+
+        files.forEachIndexed { index, fileJson ->
+            val transferId = fileJson.getString("transferId")
+            val fileName = fileJson.getString("fileName")
+            val sizeBytes = fileJson.getLong("sizeBytes")
+            val senderName = fileJson.optString("senderName", "Host")
+            val mimeType = fileJson.optString("mimeType").takeIf { it.isNotEmpty() }
+
+            val card = clientFileCard(transferId, fileName, sizeBytes, senderName, mimeType, index > 0)
+            clientSharedFilesList.addView(card)
+        }
+    }
+
+    private fun clientFileCard(
+        transferId: String,
+        fileName: String,
+        sizeBytes: Long,
+        senderName: String,
+        mimeType: String?,
+        hasTopMargin: Boolean
+    ): View {
+        val card = baseInfoCard(hasTopMargin)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(12.dp(), 10.dp(), 12.dp(), 10.dp())
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_document)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this@MainActivity, R.color.nadi_green)
+            )
+            layoutParams = LinearLayout.LayoutParams(34.dp(), 34.dp()).apply {
+                marginEnd = 10.dp()
+            }
+        }
+        val textColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        textColumn.addView(TextView(this).apply {
+            text = fileName
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_graphite))
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        textColumn.addView(TextView(this).apply {
+            text = FileSizeFormatter.format(sizeBytes) + " - Oleh: " + senderName
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_soft_ink))
+            textSize = 12f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 2.dp()
+            }
+        })
+
+        val targetFolder = controller.fileStore.roomFolder(null, "received")
+        val targetFile = File(targetFolder, fileName)
+        val exists = targetFile.exists()
+
+        val actionBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonStyle).apply {
+            text = if (exists) "Buka" else "Unduh"
+            textSize = 11f
+            setPadding(10.dp(), 0, 10.dp(), 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                36.dp()
+            ).apply {
+                marginStart = 8.dp()
+            }
+            if (exists) {
+                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+                strokeColor = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+                strokeWidth = 1.dp()
+            } else {
+                backgroundTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.nadi_green))
+                setTextColor(Color.WHITE)
+            }
+            setOnClickListener {
+                if (exists) {
+                    val uri = FileProvider.getUriForFile(this@MainActivity, "${packageName}.fileprovider", targetFile)
+                    val opened = runCatching {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, mimeType ?: fileName.inferredMimeType())
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(Intent.createChooser(intent, "Buka berkas"))
+                    }.isSuccess
+                    if (!opened) {
+                        Toast.makeText(this@MainActivity, "Tidak ada aplikasi untuk membuka file ini.", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    downloadClientSharedFile(transferId, fileName, mimeType, senderName)
+                }
+            }
+        }
+
+        row.addView(icon)
+        row.addView(textColumn)
+        row.addView(actionBtn)
+        card.addView(row)
+        return card
+    }
+
+    private fun downloadClientSharedFile(
+        transferId: String,
+        fileName: String,
+        mimeType: String?,
+        senderName: String
+    ) {
+        val client = roomClient ?: return
+        Toast.makeText(this, "Mengunduh $fileName...", Toast.LENGTH_SHORT).show()
+        val tempDir = File(cacheDir, "downloads")
+        client.downloadFile(transferId, fileName, tempDir) { success, tempFile ->
+            if (success && tempFile != null) {
+                try {
+                    val saved = tempFile.inputStream().use { input ->
+                        controller.fileStore.saveRoomFile(
+                            fileName = fileName,
+                            mimeType = mimeType,
+                            inputStream = input,
+                            roomId = null,
+                            folderName = "received",
+                            direction = TransferDirection.DOWNLOAD,
+                            senderName = senderName
+                        )
+                    }
+                    tempFile.delete()
+                    Toast.makeText(this, "Unduhan selesai: $fileName", Toast.LENGTH_SHORT).show()
+                    client.fetchFiles()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Gagal mengunduh file.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun downloadClientAttachment(attachment: TransferItem) {
+        val client = roomClient ?: return
+        Toast.makeText(this, "Mengunduh ${attachment.fileName}...", Toast.LENGTH_SHORT).show()
+        val tempDir = File(cacheDir, "downloads")
+        client.downloadFile(attachment.transferId, attachment.fileName, tempDir) { success, tempFile ->
+            if (success && tempFile != null) {
+                try {
+                    val saved = tempFile.inputStream().use { input ->
+                        controller.fileStore.saveRoomFile(
+                            fileName = attachment.fileName,
+                            mimeType = attachment.mimeType,
+                            inputStream = input,
+                            roomId = null,
+                            folderName = ServerFileRules.CHAT_DOWNLOADS_FOLDER,
+                            direction = TransferDirection.CHAT_ATTACHMENT,
+                            senderName = attachment.senderName
+                        )
+                    }
+                    tempFile.delete()
+                    clientTransfersMap[attachment.transferId] = saved
+                    clientChatRenderer.render(clientChatMessages)
+                    Toast.makeText(this, "Download selesai: ${attachment.fileName}", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Gagal mengunduh file.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun sendClientChatMessage() {
+        val client = roomClient ?: return
+        val text = clientChatInput.text.toString().trim()
+        val attachmentUri = clientPendingAttachmentUri
+
+        if (text.isEmpty() && attachmentUri == null) return
+
+        clientChatInput.isEnabled = false
+        clientSendChatButton.isEnabled = false
+        clientAttachButton.isEnabled = false
+
+        if (attachmentUri != null) {
+            val tempFile = copyUriToTempFile(attachmentUri)
+            if (tempFile == null) {
+                Toast.makeText(this, "Gagal memproses lampiran.", Toast.LENGTH_SHORT).show()
+                clientChatInput.isEnabled = true
+                clientSendChatButton.isEnabled = true
+                clientAttachButton.isEnabled = true
+                return
+            }
+
+            clientAttachmentStatus.text = "Mengirim lampiran..."
+            client.uploadFile(tempFile, isAttachment = true, text = text, onProgress = { progress ->
+                clientAttachmentStatus.text = "Mengirim lampiran: $progress%"
+            }, onFinished = { success, messageId ->
+                tempFile.delete()
+                clientChatInput.isEnabled = true
+                clientSendChatButton.isEnabled = true
+                clientAttachButton.isEnabled = true
+                clientAttachmentStatus.text = ""
+                if (success) {
+                    clientChatInput.setText("")
+                    clientPendingAttachmentUri = null
+                    Toast.makeText(this@MainActivity, "Pesan lampiran terkirim.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "Gagal mengirim lampiran.", Toast.LENGTH_SHORT).show()
+                }
+            })
+        } else {
+            client.sendChatMessage(text) { success ->
+                clientChatInput.isEnabled = true
+                clientSendChatButton.isEnabled = true
+                clientAttachButton.isEnabled = true
+                if (success) {
+                    clientChatInput.setText("")
+                    clientChatScrollView.post {
+                        clientChatScrollView.fullScroll(View.FOCUS_DOWN)
+                    }
+                } else {
+                    Toast.makeText(this@MainActivity, "Gagal mengirim pesan.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun selectClientUploadFile() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        clientFilePicker.launch(Intent.createChooser(intent, "Pilih file untuk dikirim"))
+    }
+
+    private fun selectClientChatAttachment() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        clientChatAttachmentPicker.launch(Intent.createChooser(intent, "Pilih lampiran chat"))
+    }
+
+    private fun handleClientChatAttachmentSelected(uri: Uri) {
+        clientPendingAttachmentUri = uri
+        val (name, _) = getUriMetadata(uri)
+        clientAttachmentStatus.text = "Lampiran: $name"
+    }
+
+    private fun handleClientFileUpload(uri: Uri, isAttachment: Boolean) {
+        val client = roomClient ?: return
+        val tempFile = copyUriToTempFile(uri)
+        if (tempFile == null) {
+            Toast.makeText(this, "Gagal memproses file.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (isAttachment) {
+            handleClientChatAttachmentSelected(uri)
+            tempFile.delete()
+        } else {
+            clientUploadProgress.visibility = View.VISIBLE
+            clientUploadProgress.progress = 0
+            clientUploadStatusText.visibility = View.VISIBLE
+            clientUploadStatusText.text = "Mengirim ${tempFile.name}..."
+            clientUploadFileButton.isEnabled = false
+            client.uploadFile(tempFile, isAttachment = false, text = null, onProgress = { progress ->
+                clientUploadProgress.progress = progress
+                clientUploadStatusText.text = "Mengirim ${tempFile.name}: $progress%"
+            }, onFinished = { success, _ ->
+                clientUploadFileButton.isEnabled = true
+                clientUploadProgress.visibility = View.GONE
+                clientUploadStatusText.visibility = View.GONE
+                tempFile.delete()
+                if (success) {
+                    Toast.makeText(this, "File berhasil dikirim ke room.", Toast.LENGTH_SHORT).show()
+                    client.fetchFiles()
+                } else {
+                    Toast.makeText(this, "Gagal mengirim file.", Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
+    }
+
+    private fun confirmExitClientRoom() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Keluar dari Room")
+            .setMessage("Apakah Anda yakin ingin keluar dari room ini?")
+            .setPositiveButton("Keluar") { _, _ -> closeClientRoom() }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun closeClientRoom() {
+        roomClient?.close()
+        roomClient = null
+        clientPollHandler.removeCallbacksAndMessages(null)
+        clientChatMessages.clear()
+        clientTransfersMap.clear()
+        clientPendingAttachmentUri = null
+        showJoin()
+    }
+
+    private fun startClientPolling() {
+        clientPollHandler.removeCallbacksAndMessages(null)
+        val runnable = object : Runnable {
+            override fun run() {
+                roomClient?.fetchFiles()
+                roomClient?.fetchRoomInfo()
+                clientPollHandler.postDelayed(this, 5000)
+            }
+        }
+        clientPollRunnable = runnable
+        clientPollHandler.post(runnable)
+    }
+
+    private fun copyUriToTempFile(uri: Uri): File? {
+        return try {
+            val (name, _) = getUriMetadata(uri)
+            val tempFile = File(cacheDir, name)
+            contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun getUriMetadata(uri: Uri): Pair<String, Long> {
+        var name = "file"
+        var size = 0L
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+            if (cursor.moveToFirst()) {
+                if (nameIndex != -1) name = cursor.getString(nameIndex)
+                if (sizeIndex != -1) size = cursor.getLong(sizeIndex)
+            }
+        }
+        return Pair(name, size)
     }
 
     private fun copyJoinInstructions() {

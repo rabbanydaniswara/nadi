@@ -1511,4 +1511,481 @@
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_active_room" />
     </LinearLayout>
+
+    <!-- Client Identity Entry Panel -->
+    <LinearLayout
+        android:id="@+id/joinIdentityPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="@color/nadi_mist"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Identitas Peserta"
+            android:textColor="@color/nadi_graphite"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:lineSpacingExtra="4dp"
+            android:text="Masukkan NIM dan Nama lengkap Anda untuk bergabung ke dalam room."
+            android:textColor="@color/nadi_soft_ink"
+            android:textSize="15sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_outline_card"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="NIM (Nomor Induk Mahasiswa)"
+                android:textColor="@color/nadi_graphite"
+                android:textStyle="bold"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/clientNimInput"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="Contoh: 2201010001"
+                android:inputType="number"
+                android:singleLine="true"
+                android:textColor="@color/nadi_graphite"
+                android:textSize="15sp"
+                android:paddingHorizontal="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Nama Lengkap"
+                android:textColor="@color/nadi_graphite"
+                android:textStyle="bold"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/clientNameInput"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="Contoh: Budi Santoso"
+                android:inputType="textCapWords"
+                android:singleLine="true"
+                android:textColor="@color/nadi_graphite"
+                android:textSize="15sp"
+                android:paddingHorizontal="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clientJoinButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="24dp"
+                android:text="Masuk ke Room"
+                android:textAllCaps="false"
+                android:textStyle="bold"
+                app:backgroundTint="@color/nadi_green"
+                app:cornerRadius="24dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clientJoinCancelButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="Batal"
+                android:textAllCaps="false"
+                android:textColor="@color/nadi_green"
+                app:cornerRadius="24dp"
+                app:strokeColor="@color/nadi_green" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Active Client Room Panel (Native UI version of Joined Room) -->
+    <LinearLayout
+        android:id="@+id/activeClientRoomPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- FrameLayout to hold the 3 tabs -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- Tab 1: File Room (Client View) -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/clientTabFilesScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="File Room"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Unduh materi dari host atau kirim file Anda sendiri ke room."
+                        android:textColor="@color/nadi_soft_ink"
+                        android:textSize="14sp" />
+
+                    <!-- Upload File Card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Kirim File Baru"
+                            android:textColor="@color/nadi_graphite"
+                            android:textStyle="bold"
+                            android:textSize="15sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/clientUploadFileButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:layout_marginTop="12dp"
+                            android:text="Pilih &amp; Kirim File"
+                            android:textAllCaps="false"
+                            app:backgroundTint="@color/nadi_green"
+                            app:cornerRadius="24dp"
+                            app:icon="@drawable/ic_send_file"
+                            app:iconTint="@color/white"
+                            app:iconGravity="textStart" />
+
+                        <ProgressBar
+                            android:id="@+id/clientUploadProgress"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="8dp"
+                            android:layout_marginTop="10dp"
+                            android:visibility="gone"
+                            android:progressTint="@color/nadi_green" />
+
+                        <TextView
+                            android:id="@+id/clientUploadStatusText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <!-- Shared Files List -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:text="Berkas yang Dibagikan"
+                        android:textColor="@color/nadi_graphite"
+                        android:textStyle="bold"
+                        android:textSize="16sp" />
+
+                    <LinearLayout
+                        android:id="@+id/clientSharedFilesList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Tab 2: Chat (Client View) -->
+            <LinearLayout
+                android:id="@+id/clientTabChatLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Header area -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/nadi_surface"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="12dp"
+                    android:elevation="1dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Chat Room"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Scrollable Chat list -->
+                <androidx.core.widget.NestedScrollView
+                    android:id="@+id/clientChatScrollView"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:fillViewport="true"
+                    android:background="@color/nadi_chat_canvas">
+
+                    <LinearLayout
+                        android:id="@+id/clientChatMessagesContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp" />
+                </androidx.core.widget.NestedScrollView>
+
+                <!-- Chat Composer Area -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/nadi_surface"
+                    android:orientation="vertical"
+                    android:elevation="4dp"
+                    android:padding="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <EditText
+                            android:id="@+id/clientChatInput"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_chat_input"
+                            android:hint="Tulis pesan..."
+                            android:inputType="textShortMessage"
+                            android:paddingHorizontal="16dp"
+                            android:singleLine="true"
+                            android:textColor="@color/nadi_graphite"
+                            android:textSize="15sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/clientSendChatButton"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="6dp"
+                            app:icon="@drawable/ic_send_chat"
+                            app:iconTint="@color/white"
+                            app:backgroundTint="@color/nadi_green" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/clientAttachButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:text="Kirim Lampiran"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:textColor="@color/nadi_green"
+                            app:strokeColor="@color/nadi_green"
+                            app:icon="@drawable/ic_attachment_chat"
+                            app:iconSize="16dp"
+                            app:iconTint="@color/nadi_green"
+                            app:cornerRadius="20dp" />
+
+                        <TextView
+                            android:id="@+id/clientAttachmentStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="11sp"
+                            android:ellipsize="end"
+                            android:maxLines="1" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Tab 3: Info (Client View) -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/clientTabInfoScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Informasi Room"
+                        android:textColor="@color/nadi_graphite"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+
+                    <!-- Status Card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="KONEKSI"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/clientInfoStatusText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Memeriksa koneksi..."
+                            android:textColor="@color/nadi_green"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Room Name Card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="NAMA ROOM"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/clientInfoRoomNameText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="-"
+                            android:textColor="@color/nadi_graphite"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/clientInfoHostNameText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Host: -"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <!-- Self Identity Card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_outline_card"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="IDENTITAS ANDA"
+                            android:textColor="@color/nadi_soft_ink"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/clientInfoSelfIdentityText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Belum terdaftar"
+                            android:textColor="@color/nadi_graphite"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Exit Room Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/clientExitRoomButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="24dp"
+                        android:text="Keluar dari Room"
+                        android:textAllCaps="false"
+                        android:textColor="@color/nadi_error"
+                        app:strokeColor="@color/nadi_error"
+                        app:cornerRadius="24dp" />
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </FrameLayout>
+
+        <!-- Bottom Navigation Bar for Client Room -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/activeClientRoomNavigation"
+            style="@style/Widget.Material3.BottomNavigationView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/nadi_surface"
+            app:itemIconTint="@color/nadi_green"
+            app:itemTextColor="@color/nadi_green"
+            app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/menu_active_client_room" />
+    </LinearLayout>
 </RelativeLayout>
