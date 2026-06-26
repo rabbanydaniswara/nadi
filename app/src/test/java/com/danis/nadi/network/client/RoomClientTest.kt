@@ -128,6 +128,50 @@ class RoomClientTest {
         assertEquals("12345 - Client User", messages[0].senderName)
     }
 
+    @Test
+    fun clientReceivesWebSocketMessages() {
+        val client = RoomClient(
+            baseUrl = "http://127.0.0.1:$port",
+            token = null,
+            pin = "123456",
+            clientId = "my-client-id",
+            clientName = "Client User",
+            clientNim = "12345"
+        )
+
+        // Pre-register client
+        val latchAuth = CountDownLatch(1)
+        client.authenticate { _, _ -> latchAuth.countDown() }
+        latchAuth.await(3, TimeUnit.SECONDS)
+
+        val latchWs = CountDownLatch(1)
+        var receivedMessage: ChatMessage? = null
+
+        client.onMessageReceived = { msg ->
+            receivedMessage = msg
+            latchWs.countDown()
+        }
+
+        client.startWebSocket()
+
+        // Wait a bit to ensure WebSocket is open and connected
+        Thread.sleep(1000)
+
+        // Send a message from host (adds it to RoomManager, which triggers broadcast via ChatWebSocketHub)
+        roomManager.addMessage(
+            senderId = "host",
+            senderName = "Host User",
+            text = "Hello from Host!"
+        )
+
+        assertTrue(latchWs.await(5, TimeUnit.SECONDS))
+        assertNotNull(receivedMessage)
+        assertEquals("Hello from Host!", receivedMessage?.text)
+        assertEquals("Host User", receivedMessage?.senderName)
+        
+        client.close()
+    }
+
     private fun freePort(): Int {
         return ServerSocket(0).use { it.localPort }
     }

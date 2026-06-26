@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.nanohttpd.websocket)
     implementation(libs.zxing.core)
     implementation(libs.okhttp)
+    testImplementation("org.json:json:20240303")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
