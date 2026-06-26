@@ -2,6 +2,8 @@
 
 > **Tetap mengalir, meski sinyal melemah.**
 
+[![Download APK & AAB](https://img.shields.io/badge/Download-APK%20%26%20AAB-forestgreen?style=for-the-badge&logo=android)](https://github.com/rabbanydaniswara/nadi/releases/latest)
+
 Nadi adalah aplikasi Android untuk berbagi file (*file sharing*) dan berkomunikasi (*chat*) dalam satu ruangan secara lokal tanpa memerlukan koneksi internet sama sekali. Aplikasi ini dirancang khusus untuk skenario seperti kelas, rapat, atau kegiatan lapangan di daerah yang minim sinyal atau saat kuota internet terbatas.
 
 ## Bagaimana Cara Kerjanya?
