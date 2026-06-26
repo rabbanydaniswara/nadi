@@ -501,6 +501,7 @@ function scheduleChatReconnect() {
     connectChatSocket();
   }, chatReconnectDelayMs);
 }
+let lastSocketActivityTime = 0;
 function connectChatSocket() {
   if (!hasAccessCredential() || !hasIdentity()) {
     closeChatSocket();
@@ -527,14 +528,21 @@ function connectChatSocket() {
     stopChatPolling();
     setChatRealtimeStatus("Realtime aktif", "active");
     refreshChat();
+    lastSocketActivityTime = Date.now();
     if (chatKeepAliveTimer) window.clearInterval(chatKeepAliveTimer);
     chatKeepAliveTimer = window.setInterval(() => {
       if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-        chatSocket.send("ping");
+        if (Date.now() - lastSocketActivityTime > 8000) {
+          // Zombie connection detected
+          chatSocket.close();
+        } else {
+          chatSocket.send("ping");
+        }
       }
     }, chatKeepAliveIntervalMs);
   };
   chatSocket.onmessage = event => {
+    lastSocketActivityTime = Date.now();
     try {
       const payload = JSON.parse(event.data);
       if (payload.type === "chat_messages") {

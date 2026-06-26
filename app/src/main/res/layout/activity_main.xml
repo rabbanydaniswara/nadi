@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="24dp">
 
             <LinearLayout
                 android:id="@+id/homePanel"
@@ -79,7 +79,7 @@
                     android:textAllCaps="false"
                     android:textStyle="bold"
                     app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp"
+                    app:cornerRadius="24dp"
                     app:icon="@drawable/ic_hotspot"
                     app:iconGravity="textStart"
                     app:iconTint="@color/white" />
@@ -93,7 +93,7 @@
                     android:text="@string/join_room"
                     android:textAllCaps="false"
                     android:textColor="@color/nadi_green"
-                    app:cornerRadius="10dp"
+                    app:cornerRadius="24dp"
                     app:strokeColor="@color/nadi_line"
                     app:icon="@drawable/ic_qr_scan"
                     app:iconGravity="textStart"
@@ -127,7 +127,7 @@
                     android:layout_marginTop="18dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="24dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -179,7 +179,7 @@
                     android:layout_marginTop="18dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="24dp">
 
                     <EditText
                         android:id="@+id/roomUrlInput"
@@ -201,7 +201,7 @@
                         android:text="@string/open_room_in_app"
                         android:textAllCaps="false"
                         app:backgroundTint="@color/nadi_green"
-                        app:cornerRadius="10dp" />
+                        app:cornerRadius="24dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/pasteRoomUrlButton"
@@ -212,7 +212,7 @@
                         android:text="@string/paste_url"
                         android:textAllCaps="false"
                         android:textColor="@color/nadi_green"
-                        app:cornerRadius="10dp"
+                        app:cornerRadius="24dp"
                         app:strokeColor="@color/nadi_green" />
                 </LinearLayout>
 
@@ -258,7 +258,7 @@
                     android:layout_marginTop="18dp"
                     android:background="@drawable/bg_outline_card"
                     android:lineSpacingExtra="3dp"
-                    android:padding="18dp"
+                    android:padding="24dp"
                     android:text="@string/history_empty"
                     android:textColor="@color/nadi_soft_ink"
                     android:textSize="14sp" />
@@ -272,7 +272,7 @@
                     android:text="@string/clear_history"
                     android:textAllCaps="false"
                     android:textColor="@color/nadi_error"
-                    app:cornerRadius="10dp"
+                    app:cornerRadius="24dp"
                     app:strokeColor="@color/nadi_error" />
 
                 <com.google.android.material.button.MaterialButton
@@ -316,7 +316,7 @@
                     android:layout_marginTop="18dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="24dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -377,7 +377,7 @@
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="24dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -425,7 +425,7 @@
                         android:text="@string/choose_file_room_folder"
                         android:textAllCaps="false"
                         android:textColor="@color/nadi_green"
-                        app:cornerRadius="10dp"
+                        app:cornerRadius="24dp"
                         app:strokeColor="@color/nadi_green" />
 
                     <com.google.android.material.button.MaterialButton
@@ -448,7 +448,7 @@
                     android:textAllCaps="false"
                     android:textStyle="bold"
                     app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp" />
+                    app:cornerRadius="24dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/settingsBackButton"
@@ -491,7 +491,7 @@
                     android:layout_marginTop="18dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="24dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -572,7 +572,7 @@
                     android:layout_marginTop="14dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="24dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -626,7 +626,7 @@
                     android:textAllCaps="false"
                     android:textStyle="bold"
                     app:backgroundTint="@color/nadi_green"
-                    app:cornerRadius="10dp" />
+                    app:cornerRadius="24dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/setupBackButton"
@@ -646,7 +646,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:padding="24dp"
         android:visibility="gone">
 
         <TextView
@@ -686,7 +686,7 @@
             android:text="@string/close_joined_room"
             android:textAllCaps="false"
             android:textColor="@color/nadi_green"
-            app:cornerRadius="10dp"
+            app:cornerRadius="24dp"
             app:strokeColor="@color/nadi_green" />
     </LinearLayout>
 
@@ -759,7 +759,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="20dp">
+                        android:padding="24dp">
 
                         <LinearLayout
                             android:id="@+id/activeRoomJoinSection"
@@ -913,7 +913,7 @@
                                     android:text="@string/copy_url"
                                     android:textAllCaps="false"
                                     app:backgroundTint="@color/nadi_green"
-                                    app:cornerRadius="10dp" />
+                                    app:cornerRadius="24dp" />
 
                                 <Space
                                     android:layout_width="10dp"
@@ -928,7 +928,7 @@
                                     android:text="@string/regenerate_link"
                                     android:textAllCaps="false"
                                     android:textColor="@color/nadi_green"
-                                    app:cornerRadius="10dp"
+                                    app:cornerRadius="24dp"
                                     app:strokeColor="@color/nadi_green" />
                             </LinearLayout>
 
@@ -941,7 +941,7 @@
                                 android:text="@string/stop_room"
                                 android:textAllCaps="false"
                                 android:textColor="@color/nadi_error"
-                                app:cornerRadius="10dp"
+                                app:cornerRadius="24dp"
                                 app:strokeColor="@color/nadi_error" />
 
                             <com.google.android.material.button.MaterialButton
@@ -953,7 +953,7 @@
                                 android:text="@string/copy_join_instructions"
                                 android:textAllCaps="false"
                                 android:textColor="@color/nadi_green"
-                                app:cornerRadius="10dp"
+                                app:cornerRadius="24dp"
                                 app:strokeColor="@color/nadi_green" />
                         </LinearLayout>
 
@@ -964,7 +964,7 @@
                             android:layout_marginTop="12dp"
                             android:background="@drawable/bg_outline_card"
                             android:orientation="vertical"
-                            android:padding="18dp">
+                            android:padding="24dp">
 
                             <TextView
                                 android:layout_width="match_parent"
@@ -991,7 +991,7 @@
                             android:layout_marginTop="12dp"
                             android:background="@drawable/bg_outline_card"
                             android:orientation="vertical"
-                            android:padding="18dp">
+                            android:padding="24dp">
 
                             <TextView
                                 android:layout_width="match_parent"
@@ -1020,7 +1020,7 @@
                                 android:text="@string/copy_diagnostics"
                                 android:textAllCaps="false"
                                 android:textColor="@color/nadi_green"
-                                app:cornerRadius="10dp"
+                                app:cornerRadius="24dp"
                                 app:strokeColor="@color/nadi_green" />
                         </LinearLayout>
                     </LinearLayout>
@@ -1039,7 +1039,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
 
                     <LinearLayout
                         android:id="@+id/activeRoomFileOverviewSection"
@@ -1047,7 +1047,7 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_outline_card"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="24dp">
 
                         <TextView
                             android:layout_width="match_parent"
@@ -1098,7 +1098,7 @@
                         android:text="@string/open_file_room"
                         android:textAllCaps="false"
                         android:textColor="@color/nadi_green"
-                        app:cornerRadius="10dp"
+                        app:cornerRadius="24dp"
                         app:strokeColor="@color/nadi_green" />
 
                     <com.google.android.material.button.MaterialButton
@@ -1110,7 +1110,7 @@
                         android:text="@string/open_chat_attachments_folder"
                         android:textAllCaps="false"
                         android:textColor="@color/nadi_green"
-                        app:cornerRadius="10dp"
+                        app:cornerRadius="24dp"
                         app:strokeColor="@color/nadi_green" />
 
                     <com.google.android.material.button.MaterialButton
@@ -1130,7 +1130,7 @@
                         android:layout_marginTop="18dp"
                         android:background="@drawable/bg_outline_card"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="24dp">
 
                         <TextView
                             android:layout_width="match_parent"
@@ -1155,7 +1155,7 @@
                             android:text="@string/add_shared_file"
                             android:textAllCaps="false"
                             app:backgroundTint="@color/nadi_green"
-                            app:cornerRadius="10dp"
+                            app:cornerRadius="24dp"
                             app:icon="@drawable/ic_send_file"
                             app:iconGravity="textStart"
                             app:iconTint="@color/white" />
@@ -1175,7 +1175,7 @@
                         android:layout_marginTop="12dp"
                         android:background="@drawable/bg_outline_card"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="24dp">
 
                         <TextView
                             android:layout_width="match_parent"
@@ -1349,7 +1349,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
 
                     <LinearLayout
                         android:id="@+id/activeRoomParticipantsSection"
@@ -1357,7 +1357,7 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_outline_card"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="24dp">
 
                         <TextView
                             android:layout_width="match_parent"
@@ -1419,7 +1419,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
 
                     <LinearLayout
                         android:id="@+id/activeRoomHistorySection"
@@ -1427,7 +1427,7 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_outline_card"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="24dp">
 
                         <TextView
                             android:layout_width="match_parent"
@@ -1450,11 +1450,13 @@
         <!-- Sticky Bottom Navigation Bar -->
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/activeRoomNavigation"
+            style="@style/Widget.Material3.BottomNavigationView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_outline_card"
+            android:background="@color/nadi_surface"
             app:itemIconTint="@color/nadi_green"
             app:itemTextColor="@color/nadi_green"
+            app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_active_room" />
     </LinearLayout>

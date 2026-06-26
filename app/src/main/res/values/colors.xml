@@ -2,20 +2,20 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="nadi_deep_green">#073B32</color>
-    <color name="nadi_green">#0E7A63</color>
-    <color name="nadi_teal_flow">#2DD4BF</color>
-    <color name="nadi_graphite">#111827</color>
-    <color name="nadi_soft_ink">#4B5563</color>
-    <color name="nadi_mist">#F7FAF9</color>
+    <color name="nadi_deep_green">#1F3D08</color>
+    <color name="nadi_green">#3B6D11</color>
+    <color name="nadi_teal_flow">#7CB342</color>
+    <color name="nadi_graphite">#1C2118</color>
+    <color name="nadi_soft_ink">#4E574B</color>
+    <color name="nadi_mist">#F4F7F2</color>
     <color name="nadi_surface">#FFFFFFFF</color>
-    <color name="nadi_line">#DDE7E3</color>
-    <color name="nadi_warning">#B45309</color>
-    <color name="nadi_error">#B91C1C</color>
-    <color name="nadi_success">#047857</color>
-    <color name="nadi_chip_background">#E8F5F1</color>
-    <color name="nadi_chat_canvas">#EFF6F3</color>
-    <color name="nadi_chat_outgoing">#0E7A63</color>
+    <color name="nadi_line">#D8E2D2</color>
+    <color name="nadi_warning">#D97706</color>
+    <color name="nadi_error">#DC2626</color>
+    <color name="nadi_success">#16A34A</color>
+    <color name="nadi_chip_background">#E3EEDB</color>
+    <color name="nadi_chat_canvas">#EEF4E9</color>
+    <color name="nadi_chat_outgoing">#3B6D11</color>
     <color name="nadi_chat_incoming">#FFFFFFFF</color>
-    <color name="nadi_chat_meta_on_outgoing">#D1FAE5</color>
+    <color name="nadi_chat_meta_on_outgoing">#CFF2AA</color>
 </resources>

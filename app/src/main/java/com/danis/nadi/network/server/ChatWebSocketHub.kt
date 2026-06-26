@@ -5,6 +5,7 @@ import fi.iki.elonen.NanoHTTPD.IHTTPSession
 import fi.iki.elonen.NanoWSD
 import fi.iki.elonen.NanoWSD.WebSocketFrame
 import java.io.IOException
+import java.util.concurrent.Executors
 
 internal class ChatWebSocketHub(
     private val path: String,
@@ -13,6 +14,9 @@ internal class ChatWebSocketHub(
 ) {
     private val lock = Any()
     private val sockets = mutableSetOf<ChatWebSocket>()
+    private val executor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "ChatWebSocketHub-Broadcast").apply { isDaemon = true }
+    }
 
     fun open(handshake: IHTTPSession): NanoWSD.WebSocket {
         return ChatWebSocket(handshake)
@@ -20,29 +24,31 @@ internal class ChatWebSocketHub(
 
     fun broadcast(messages: List<ChatMessage>) {
         if (messages.isEmpty()) return
-        val payload = NadiJson.chatMessagesPayload(messages)
-        val snapshot = synchronized(lock) { sockets.toList() }
-        val staleSockets = mutableListOf<ChatWebSocket>()
-        snapshot.forEach { socket ->
-            try {
-                if (socket.isOpen && socket.canReceiveChat()) {
-                    socket.send(payload)
-                } else {
-                    socket.closeAsUnauthorized()
+        executor.submit {
+            val payload = NadiJson.chatMessagesPayload(messages)
+            val snapshot = synchronized(lock) { sockets.toList() }
+            val staleSockets = mutableListOf<ChatWebSocket>()
+            snapshot.forEach { socket ->
+                try {
+                    if (socket.isOpen) {
+                        socket.send(payload)
+                    } else {
+                        staleSockets.add(socket)
+                    }
+                } catch (_: IOException) {
                     staleSockets.add(socket)
                 }
-            } catch (_: IOException) {
-                staleSockets.add(socket)
             }
-        }
-        if (staleSockets.isNotEmpty()) {
-            synchronized(lock) {
-                sockets.removeAll(staleSockets.toSet())
+            if (staleSockets.isNotEmpty()) {
+                synchronized(lock) {
+                    sockets.removeAll(staleSockets.toSet())
+                }
             }
         }
     }
 
     fun close() {
+        executor.shutdown()
         val snapshot = synchronized(lock) {
             sockets.toList().also { sockets.clear() }
         }
