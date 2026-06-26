@@ -176,30 +176,52 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="20dp"
                     android:background="@drawable/bg_outline_card"
                     android:orientation="vertical"
                     android:padding="24dp">
 
+                    <!-- Premium Badge for Join Room -->
+                    <LinearLayout
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginBottom="20dp"
+                        android:background="@drawable/bg_chip"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:src="@drawable/ic_qr_scan"
+                            app:tint="@color/nadi_green"
+                            android:contentDescription="@string/join_room_title" />
+                    </LinearLayout>
+
+                    <!-- Redesigned Outlined Input Field -->
                     <EditText
                         android:id="@+id/roomUrlInput"
                         android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:backgroundTint="@color/nadi_green"
+                        android:layout_height="54dp"
+                        android:background="@drawable/bg_input_field"
                         android:autofillHints="webUrl"
                         android:hint="@string/join_room_url_hint"
                         android:inputType="textUri"
                         android:singleLine="true"
                         android:textColor="@color/nadi_graphite"
-                        android:textSize="15sp" />
+                        android:textSize="15sp"
+                        android:paddingHorizontal="16dp"
+                        android:drawableStart="@drawable/ic_room"
+                        android:drawablePadding="12dp"
+                        android:drawableTint="@color/nadi_soft_ink" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/openRoomButton"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="16dp"
                         android:text="@string/open_room_in_app"
                         android:textAllCaps="false"
+                        android:textStyle="bold"
                         app:backgroundTint="@color/nadi_green"
                         app:cornerRadius="24dp" />
 
@@ -208,7 +230,7 @@
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="10dp"
                         android:text="@string/paste_url"
                         android:textAllCaps="false"
                         android:textColor="@color/nadi_green"
@@ -221,7 +243,7 @@
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="12dp"
                     android:text="@string/back_home"
                     android:textAllCaps="false"
                     android:textColor="@color/nadi_soft_ink" />
@@ -646,34 +668,62 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="20dp"
+        android:background="@color/nadi_mist"
         android:visibility="gone">
 
-        <TextView
+        <!-- Header Information Card -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/joined_room_title"
-            android:textColor="@color/nadi_graphite"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/joinedRoomUrlText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:background="@drawable/bg_outline_card"
-            android:padding="12dp"
-            android:textColor="@color/nadi_green"
-            android:textIsSelectable="true"
-            android:textSize="13sp"
-            tools:text="http://192.168.1.5:8080/?token=..." />
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_room"
+                    app:tint="@color/nadi_green"
+                    android:contentDescription="@string/joined_room_title" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/joined_room_title"
+                    android:textColor="@color/nadi_graphite"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/joinedRoomUrlText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_field"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:textColor="@color/nadi_green"
+                android:textIsSelectable="true"
+                android:textSize="13sp"
+                tools:text="http://192.168.1.5:8080/?token=..." />
+        </LinearLayout>
+
+        <!-- WebView Area -->
         <WebView
             android:id="@+id/joinWebView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
             android:layout_weight="1"
             android:background="@color/white" />
 
@@ -682,10 +732,11 @@
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="12dp"
             android:text="@string/close_joined_room"
             android:textAllCaps="false"
             android:textColor="@color/nadi_green"
+            android:textStyle="bold"
             app:cornerRadius="24dp"
             app:strokeColor="@color/nadi_green" />
     </LinearLayout>
