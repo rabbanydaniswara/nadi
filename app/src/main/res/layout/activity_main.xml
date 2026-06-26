@@ -1503,11 +1503,13 @@
             android:id="@+id/activeRoomNavigation"
             style="@style/Widget.Material3.BottomNavigationView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:background="@color/nadi_surface"
             app:itemIconTint="@color/nadi_green"
             app:itemTextColor="@color/nadi_green"
             app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+            app:itemPaddingTop="8dp"
+            app:itemPaddingBottom="8dp"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_active_room" />
     </LinearLayout>
@@ -1994,11 +1996,13 @@
             android:id="@+id/activeClientRoomNavigation"
             style="@style/Widget.Material3.BottomNavigationView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:background="@color/nadi_surface"
             app:itemIconTint="@color/nadi_green"
             app:itemTextColor="@color/nadi_green"
             app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+            app:itemPaddingTop="8dp"
+            app:itemPaddingBottom="8dp"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_active_client_room" />
     </LinearLayout>
