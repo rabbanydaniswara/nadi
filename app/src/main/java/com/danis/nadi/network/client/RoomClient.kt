@@ -103,7 +103,7 @@ class RoomClient(
 
     fun startWebSocket() {
         if (isClosed) return
-        val wsUrl = buildUrl("/chat")
+        val wsUrl = buildUrl("/ws/chat")
             .replace("http://", "ws://")
             .replace("https://", "wss://")
 
@@ -126,7 +126,7 @@ class RoomClient(
                 try {
                     val json = JSONObject(text)
                     val type = json.optString("type")
-                    if (type == "messages") {
+                    if (type == "chat_messages") {
                         val messagesArray = json.optJSONArray("messages") ?: return
                         for (i in 0 until messagesArray.length()) {
                             val msgJson = messagesArray.getJSONObject(i)
