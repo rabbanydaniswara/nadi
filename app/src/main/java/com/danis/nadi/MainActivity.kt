@@ -1814,12 +1814,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         client.onMessageReceived = { message ->
-            if (clientChatMessages.none { it.messageId == message.messageId }) {
-                clientChatMessages.add(message)
-                ensureClientAttachmentTransfer(message)
-                clientChatMessages.sortBy { it.createdAt }
-                clientChatRenderer.render(clientChatMessages)
-            }
+            addRealMessage(message)
         }
 
         client.onFilesChanged = { filesList ->
@@ -2219,6 +2214,24 @@ class MainActivity : AppCompatActivity() {
      * Fetch latest chat messages from server to sync with any new messages.
      * Replaces optimistic messages with real server messages.
      */
+    private fun addRealMessage(msg: ChatMessage) {
+        if (clientChatMessages.none { it.messageId == msg.messageId }) {
+            // Remove matching optimistic message (same text + same sender)
+            val matchingOpt = clientChatMessages.find {
+                it.messageId.startsWith("opt_") &&
+                it.senderId == msg.senderId &&
+                it.text == msg.text
+            }
+            if (matchingOpt != null) {
+                clientChatMessages.remove(matchingOpt)
+            }
+            clientChatMessages.add(msg)
+            ensureClientAttachmentTransfer(msg)
+            clientChatMessages.sortBy { it.createdAt }
+            clientChatRenderer.render(clientChatMessages)
+        }
+    }
+
     private fun fetchLatestClientChat() {
         val client = roomClient ?: return
         val lastTimestamp = clientChatMessages
@@ -2228,23 +2241,11 @@ class MainActivity : AppCompatActivity() {
             var changed = false
             for (msg in messages) {
                 if (clientChatMessages.none { it.messageId == msg.messageId }) {
-                    // Remove matching optimistic message (same text + same sender)
-                    val matchingOpt = clientChatMessages.find {
-                        it.messageId.startsWith("opt_") &&
-                        it.senderId == msg.senderId &&
-                        it.text == msg.text
-                    }
-                    if (matchingOpt != null) {
-                        clientChatMessages.remove(matchingOpt)
-                    }
-                    clientChatMessages.add(msg)
-                    ensureClientAttachmentTransfer(msg)
+                    addRealMessage(msg)
                     changed = true
                 }
             }
             if (changed) {
-                clientChatMessages.sortBy { it.createdAt }
-                clientChatRenderer.render(clientChatMessages)
                 clientChatScrollView.post {
                     clientChatScrollView.fullScroll(View.FOCUS_DOWN)
                 }
@@ -2643,6 +2644,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showHome() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.visible()
         homePanel.visible()
         joinPanel.gone()
@@ -2655,6 +2658,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showJoin() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.visible()
         homePanel.gone()
         joinPanel.visible()
@@ -2666,6 +2671,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showJoinedRoom() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.gone()
         homePanel.gone()
         joinPanel.gone()
@@ -2677,6 +2684,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showHistory() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
@@ -2689,6 +2698,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
@@ -2701,6 +2712,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSetup() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.visible()
         homePanel.gone()
         joinPanel.gone()
@@ -2713,6 +2726,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showActiveRoom() {
+        joinIdentityPanel.gone()
+        activeClientRoomPanel.gone()
         mainScrollView.gone()
         joinWebPanel.gone()
         activeRoomPanel.visible()
