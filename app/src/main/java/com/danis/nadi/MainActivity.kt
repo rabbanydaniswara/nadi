@@ -222,15 +222,34 @@ fun MainActivity.refreshHostDashboard() {
     val activeRoom = controller.currentActiveRoom() ?: return
     val shared = controller.roomManager.sharedFiles()
     val received = controller.roomManager.receivedFiles()
-    val messages = controller.roomManager.snapshot().messages
+    val snapshot = controller.roomManager.snapshot()
+    val messages = snapshot.messages
+    val clients = snapshot.clients
 
     val allFiles = shared + received
-    if (hostViewModel.chatMessages.value.size != messages.size || hostViewModel.chatMessages.value != messages) {
+
+    // Optimasi: Perbandingan O(1) untuk chatMessages
+    val currentMessages = hostViewModel.chatMessages.value
+    val needsMessageUpdate = currentMessages.size != messages.size ||
+            (messages.isNotEmpty() && currentMessages.isNotEmpty() && messages.last().messageId != currentMessages.last().messageId)
+    if (needsMessageUpdate) {
         hostViewModel.addMessages(messages)
     }
-    if (hostViewModel.sharedFiles.value != allFiles) {
+
+    // Optimasi: Perbandingan O(1) untuk files
+    val currentFiles = hostViewModel.sharedFiles.value
+    val needsFileUpdate = currentFiles.size != allFiles.size ||
+            (allFiles.isNotEmpty() && currentFiles.isNotEmpty() && allFiles.last().transferId != currentFiles.last().transferId)
+    if (needsFileUpdate) {
         hostViewModel.addFiles(allFiles)
     }
+
+    // Update state flows tambahan secara reaktif
+    if (hostViewModel.connectedClients.value != clients) {
+        hostViewModel.connectedClients.value = clients
+    }
+    hostViewModel.diagnosticsText.value = controller.diagnostics().toDisplayText()
+    hostViewModel.chatAttachmentStats.value = controller.roomManager.chatAttachmentStorageStats()
 }
 
 fun MainActivity.saveSettings(hostName: String, mode: NetworkMode) {

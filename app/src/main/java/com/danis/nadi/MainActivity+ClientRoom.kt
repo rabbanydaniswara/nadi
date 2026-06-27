@@ -148,12 +148,7 @@ fun MainActivity.connectToRoomNatively(
 }
 
 fun MainActivity.confirmExitClientRoom() {
-    androidx.appcompat.app.AlertDialog.Builder(this)
-        .setTitle("Keluar dari Room")
-        .setMessage("Apakah Anda yakin ingin keluar dari room ini?")
-        .setPositiveButton("Keluar") { _, _ -> closeClientRoom() }
-        .setNegativeButton("Batal", null)
-        .show()
+    clientViewModel.showExitDialog.value = true
 }
 
 fun MainActivity.closeClientRoom() {
@@ -161,6 +156,7 @@ fun MainActivity.closeClientRoom() {
     roomClient = null
     clientPollHandler.removeCallbacksAndMessages(null)
     clientViewModel.clearRoomData()
+    clientViewModel.showExitDialog.value = false
     clientTransfersMap.clear()
     clientPendingAttachmentUri = null
     currentScreenState.value = Screen.Join
@@ -168,11 +164,25 @@ fun MainActivity.closeClientRoom() {
 
 fun MainActivity.startClientPolling() {
     clientPollHandler.removeCallbacksAndMessages(null)
+    var filePollCounter = 0
     val runnable = object : Runnable {
         override fun run() {
-            roomClient?.fetchFiles()
-            roomClient?.fetchRoomInfo()
-            fetchLatestClientChat()
+            val isConnected = clientViewModel.connectionStatus.value == "Terhubung"
+            if (isConnected) {
+                // WebSocket aktif. Tidak perlu poll chat/info.
+                // Cukup poll files setiap 15 detik (3 kali lipat dari 5 detik).
+                filePollCounter++
+                if (filePollCounter >= 3) {
+                    roomClient?.fetchFiles()
+                    filePollCounter = 0
+                }
+            } else {
+                // WebSocket terputus. Lakukan full fallback polling setiap 5 detik.
+                roomClient?.fetchFiles()
+                roomClient?.fetchRoomInfo()
+                fetchLatestClientChat()
+                filePollCounter = 0
+            }
             clientPollHandler.postDelayed(this, 5000)
         }
     }

@@ -2,7 +2,6 @@ package com.danis.nadi.ui.compose
 
 import android.content.Context
 import androidx.compose.foundation.background
-import com.danis.nadi.downloadClientSharedFile
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,6 +79,29 @@ fun ClientDashboardScreen(activity: MainActivity) {
     val roomName by activity.clientViewModel.roomName.collectAsState()
     val hostName by activity.clientViewModel.hostName.collectAsState()
     val clientCount by activity.clientViewModel.clientCount.collectAsState()
+
+    val showExitDialog by activity.clientViewModel.showExitDialog.collectAsState()
+    if (showExitDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { activity.clientViewModel.showExitDialog.value = false },
+            title = { Text("Keluar dari Room") },
+            text = { Text("Apakah Anda yakin ingin keluar dari room ini?") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { activity.closeClientRoom() }
+                ) {
+                    Text("Keluar")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { activity.clientViewModel.showExitDialog.value = false }
+                ) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = NadiBackground,
@@ -229,9 +251,14 @@ fun ClientChatTab(activity: MainActivity) {
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // Ensure transfers map contains transfer details for all messages with attachments
+    var lastProcessedSize by remember { mutableStateOf(0) }
     LaunchedEffect(messages.size) {
-        messages.forEach { activity.ensureClientAttachmentTransfer(it) }
+        if (messages.size > lastProcessedSize) {
+            for (i in lastProcessedSize until messages.size) {
+                activity.ensureClientAttachmentTransfer(messages[i])
+            }
+            lastProcessedSize = messages.size
+        }
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }

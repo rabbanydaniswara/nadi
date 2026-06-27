@@ -22,6 +22,10 @@ class HostViewModel(
     private val _sharedFiles = MutableStateFlow<List<TransferItem>>(emptyList())
     val sharedFiles: StateFlow<List<TransferItem>> = _sharedFiles
 
+    val connectedClients = MutableStateFlow<List<com.danis.nadi.model.ConnectedClient>>(emptyList())
+    val diagnosticsText = MutableStateFlow("")
+    val chatAttachmentStats = MutableStateFlow<com.danis.nadi.room.RoomManager.StorageStats?>(null)
+
     private var activeRoomId: String? = null
 
     fun loadRoomData(roomId: String) {

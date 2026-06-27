@@ -28,11 +28,17 @@ class RoomClient(
     } catch (_: Exception) {
         null
     }
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
-        .writeTimeout(20, TimeUnit.SECONDS)
-        .build()
+    companion object {
+        private val sharedHttpClient: OkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .writeTimeout(20, TimeUnit.SECONDS)
+                .build()
+        }
+    }
+
+    private val httpClient = sharedHttpClient
 
     private var webSocket: WebSocket? = null
     private var isClosed = false
@@ -378,8 +384,7 @@ class RoomClient(
 
     fun close() {
         isClosed = true
-        webSocket?.close(1000, "Client closed",)
-        httpClient.dispatcher.executorService.shutdown()
+        webSocket?.close(1000, "Client closed")
     }
 
     private fun runOnMain(action: () -> Unit) {

@@ -100,8 +100,8 @@ import com.danis.nadi.util.QrCodeGenerator
 @Composable
 fun HostDashboardScreen(activity: MainActivity) {
     var selectedTab by remember { mutableStateOf(0) }
-    val session = remember { activity.controller.roomManager.currentSession() }
-    val activeRoom = remember { activity.controller.currentActiveRoom() }
+    val session = activity.controller.roomManager.currentSession()
+    val activeRoom = activity.controller.currentActiveRoom()
 
     // Start/Stop polling automatically during the screen lifecycle
     DisposableEffect(Unit) {
@@ -219,7 +219,7 @@ fun RoomTab(activity: MainActivity, activeRoom: com.danis.nadi.room.ActiveRoom) 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -409,8 +409,7 @@ fun FilesTab(activity: MainActivity) {
 
 @Composable
 fun ParticipantsTab(activity: MainActivity) {
-    val snapshot = activity.controller.roomManager.snapshot()
-    val clients = snapshot.clients
+    val clients by activity.hostViewModel.connectedClients.collectAsState()
 
     Column(
         modifier = Modifier
@@ -433,9 +432,9 @@ fun ParticipantsTab(activity: MainActivity) {
             } else {
                 items(clients, key = { it.clientId }) { client ->
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                         modifier = Modifier.fillMaxWidth(),
+                         shape = RoundedCornerShape(10.dp),
+                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
@@ -557,8 +556,11 @@ fun AttachmentBubble(msg: ChatMessage, activity: MainActivity) {
                       it.endsWith(".jpg") || it.endsWith(".jpeg") || it.endsWith(".png") || it.endsWith(".webp")
                   } == true
 
+    val transfer = remember(msg.attachmentTransferId) {
+        msg.attachmentTransferId?.let { activity.controller.roomManager.transferById(it) }
+    }
+
     if (showLightbox && isImage) {
-        val transfer = msg.attachmentTransferId?.let { activity.controller.roomManager.transferById(it) }
         val uri = transfer?.localUri?.let { android.net.Uri.parse(it) }
         if (uri != null) {
             androidx.compose.ui.window.Dialog(
@@ -598,7 +600,6 @@ fun AttachmentBubble(msg: ChatMessage, activity: MainActivity) {
                 if (isImage) {
                     showLightbox = true
                 } else {
-                    val transfer = msg.attachmentTransferId?.let { activity.controller.roomManager.transferById(it) }
                     if (transfer != null) {
                         activity.openChatAttachment(transfer)
                     }
@@ -606,7 +607,6 @@ fun AttachmentBubble(msg: ChatMessage, activity: MainActivity) {
             }
     ) {
         if (isImage) {
-            val transfer = msg.attachmentTransferId?.let { activity.controller.roomManager.transferById(it) }
             val uri = transfer?.localUri?.let { android.net.Uri.parse(it) }
             if (uri != null) {
                 coil.compose.AsyncImage(
@@ -645,8 +645,9 @@ fun AttachmentBubble(msg: ChatMessage, activity: MainActivity) {
 
 @Composable
 fun DiagTab(activity: MainActivity) {
-    val diagText = remember { activity.controller.diagnostics().toDisplayText() }
-    val chatStats = remember { activity.controller.roomManager.chatAttachmentStorageStats() }
+    val diagText by activity.hostViewModel.diagnosticsText.collectAsState()
+    val chatStatsOpt by activity.hostViewModel.chatAttachmentStats.collectAsState()
+    val chatStats = chatStatsOpt ?: remember { activity.controller.roomManager.chatAttachmentStorageStats() }
 
     Column(
         modifier = Modifier

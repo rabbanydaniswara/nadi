@@ -29,6 +29,7 @@ class ClientViewModel(
     val selfNim = MutableStateFlow("")
     val selfName = MutableStateFlow("")
     val showPinDialog = MutableStateFlow(false)
+    val showExitDialog = MutableStateFlow(false)
     var pendingPinCallback: ((String) -> Unit)? = null
 
     private var activeRoomId: String? = null
