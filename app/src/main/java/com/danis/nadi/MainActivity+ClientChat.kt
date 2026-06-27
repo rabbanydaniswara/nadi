@@ -9,7 +9,9 @@ import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
 import com.danis.nadi.model.TransferStatus
 import com.danis.nadi.network.server.ServerFileRules
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 fun MainActivity.openClientChatAttachment(attachment: TransferItem) {
@@ -48,27 +50,35 @@ fun MainActivity.downloadClientAttachment(attachment: TransferItem) {
     val client = roomClient ?: return
     Toast.makeText(this, "Mengunduh ${attachment.fileName}...", Toast.LENGTH_SHORT).show()
     val tempDir = File(cacheDir, "downloads")
+    // onFinished callback dari RoomClient dijalankan di main thread (via runOnMain).
+    // Kita launch IO coroutine di sini untuk memindahkan saveRoomFile ke background.
     client.downloadFile(attachment.transferId, attachment.fileName, tempDir) { success, tempFile ->
         if (success && tempFile != null) {
-            try {
-                val saved = tempFile.inputStream().use { input ->
-                    controller.fileStore.saveRoomFile(
-                        fileName = attachment.fileName,
-                        mimeType = attachment.mimeType,
-                        inputStream = input,
-                        roomId = null,
-                        folderName = ServerFileRules.CHAT_DOWNLOADS_FOLDER,
-                        direction = TransferDirection.CHAT_ATTACHMENT,
-                        senderName = attachment.senderName
-                    )
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val saved = tempFile.inputStream().use { input ->
+                        controller.fileStore.saveRoomFile(
+                            fileName = attachment.fileName,
+                            mimeType = attachment.mimeType,
+                            inputStream = input,
+                            roomId = null,
+                            folderName = ServerFileRules.CHAT_DOWNLOADS_FOLDER,
+                            direction = TransferDirection.CHAT_ATTACHMENT,
+                            senderName = attachment.senderName
+                        )
+                    }
+                    tempFile.delete()
+                    withContext(Dispatchers.Main) {
+                        clientTransfersMap[attachment.transferId] = saved
+                        Toast.makeText(this@downloadClientAttachment, "Download selesai: ${attachment.fileName}", Toast.LENGTH_SHORT).show()
+                        fetchLatestClientChat()
+                    }
+                } catch (e: Exception) {
+                    tempFile.delete()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@downloadClientAttachment, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                tempFile.delete()
-                clientTransfersMap[attachment.transferId] = saved
-                Toast.makeText(this, "Download selesai: ${attachment.fileName}", Toast.LENGTH_SHORT).show()
-                fetchLatestClientChat()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(this, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
             }
         } else {
             Toast.makeText(this, "Gagal mengunduh file.", Toast.LENGTH_SHORT).show()
@@ -83,25 +93,31 @@ fun MainActivity.sendClientChatMessage(text: String) {
     if (text.isEmpty() && attachmentUri == null) return
 
     if (attachmentUri != null) {
-        val tempFile = copyUriToTempFile(attachmentUri)
-        if (tempFile == null) {
-            Toast.makeText(this, "Gagal memproses lampiran.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        Toast.makeText(this, "Mengirim lampiran...", Toast.LENGTH_SHORT).show()
-        client.uploadFile(tempFile, isAttachment = true, text = text, onProgress = { progress ->
-            // Attachment progress
-        }, onFinished = { success, _ ->
-            tempFile.delete()
-            if (success) {
-                clientPendingAttachmentUri = null
-                Toast.makeText(this, "Pesan lampiran terkirim.", Toast.LENGTH_SHORT).show()
-                fetchLatestClientChat()
-            } else {
-                Toast.makeText(this, "Gagal mengirim lampiran.", Toast.LENGTH_SHORT).show()
+        // copyUriToTempFile melakukan ContentResolver I/O — dipindahkan ke Dispatchers.IO
+        lifecycleScope.launch(Dispatchers.IO) {
+            val tempFile = copyUriToTempFile(attachmentUri)
+            if (tempFile == null) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@sendClientChatMessage, "Gagal memproses lampiran.", Toast.LENGTH_SHORT).show()
+                }
+                return@launch
             }
-        })
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@sendClientChatMessage, "Mengirim lampiran...", Toast.LENGTH_SHORT).show()
+                client.uploadFile(tempFile, isAttachment = true, text = text, onProgress = { _ ->
+                    // progress tidak ditampilkan saat ini
+                }, onFinished = { success, _ ->
+                    tempFile.delete()
+                    if (success) {
+                        clientPendingAttachmentUri = null
+                        Toast.makeText(this@sendClientChatMessage, "Pesan lampiran terkirim.", Toast.LENGTH_SHORT).show()
+                        fetchLatestClientChat()
+                    } else {
+                        Toast.makeText(this@sendClientChatMessage, "Gagal mengirim lampiran.", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+        }
     } else {
         val prefs = getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE)
         val senderId = prefs.getString("client_id", "").orEmpty()
@@ -120,7 +136,8 @@ fun MainActivity.sendClientChatMessage(text: String) {
             if (success) {
                 fetchLatestClientChat()
             } else {
-                lifecycleScope.launch {
+                // Hapus optimistic message di IO dispatcher
+                lifecycleScope.launch(Dispatchers.IO) {
                     database.chatMessageDao().deleteMessageById(optimisticMessage.messageId)
                 }
                 Toast.makeText(this, "Gagal mengirim pesan.", Toast.LENGTH_SHORT).show()

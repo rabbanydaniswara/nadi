@@ -15,3 +15,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Binary release files — gunakan GitHub Releases
+apk/
+
+# Tool eksternal — tidak relevan dengan proyek
+ponytail/

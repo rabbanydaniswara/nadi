@@ -3,6 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
 }
 
+import java.util.Properties
+
+val localProps = Properties().also { props ->
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { props.load(it) }
+}
+
 android {
     namespace = "com.danis.nadi"
     compileSdk {
@@ -24,15 +30,16 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("nadi-release.jks")
-            storePassword = "nadi123"
+            storePassword = localProps.getProperty("KEYSTORE_PASS") ?: System.getenv("KEYSTORE_PASS") ?: ""
             keyAlias = "nadi-key"
-            keyPassword = "nadi123"
+            keyPassword = localProps.getProperty("KEY_PASS") ?: System.getenv("KEY_PASS") ?: ""
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -53,13 +60,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.material)
     implementation(libs.nanohttpd)
     implementation(libs.nanohttpd.websocket)
     implementation(libs.zxing.core)
     implementation(libs.okhttp)
+    implementation(libs.material) // diperlukan untuk XML theme (Theme.Material3.DayNight.NoActionBar)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     annotationProcessor(libs.androidx.room.compiler)

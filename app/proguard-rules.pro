@@ -1,21 +1,40 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Nadi ProGuard Rules
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ─── Kotlin ───────────────────────────────────────────────────────────────────
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepclassmembers class kotlin.Metadata { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ─── Room ─────────────────────────────────────────────────────────────────────
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-keep @androidx.room.Dao interface *
+-keepclassmembers class * extends androidx.room.RoomDatabase {
+    abstract *;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ─── NanoHTTPD ────────────────────────────────────────────────────────────────
+-keep class fi.iki.elonen.** { *; }
+-keep class org.nanohttpd.** { *; }
+
+# ─── OkHttp & Okio ────────────────────────────────────────────────────────────
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+
+# ─── ZXing ────────────────────────────────────────────────────────────────────
+-keep class com.google.zxing.** { *; }
+
+# ─── Coil ─────────────────────────────────────────────────────────────────────
+-dontwarn coil.**
+
+# ─── Aplikasi Nadi ────────────────────────────────────────────────────────────
+# Preserve data/model classes (Room entities & domain models)
+-keep class com.danis.nadi.model.** { *; }
+-keep class com.danis.nadi.data.db.entity.** { *; }
+-keep class com.danis.nadi.history.** { *; }
+
+# Keep exception info for debugging
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

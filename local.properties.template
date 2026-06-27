@@ -1,0 +1,10 @@
+## Template ini TIDAK boleh berisi nilai nyata.
+## Salin file ini menjadi "local.properties" (sudah di-.gitignore),
+## lalu isi nilainya sesuai keystore Anda.
+
+sdk.dir=C\:\\Users\\Daniswara\\AppData\\Local\\Android\\Sdk
+
+KEYSTORE_PATH=app/nadi-release.jks
+KEYSTORE_PASS=GANTI_DENGAN_PASSWORD_KEYSTORE_ANDA
+KEY_ALIAS=nadi-key
+KEY_PASS=GANTI_DENGAN_PASSWORD_KEY_ANDA

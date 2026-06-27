@@ -7,7 +7,9 @@ import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.network.client.RoomClient
 import java.util.UUID
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
@@ -132,7 +134,9 @@ fun MainActivity.connectToRoomNatively(
         } else {
             if (errorMsg?.contains("invalid_token") == true || errorMsg?.contains("unauthorized") == true) {
                 clientViewModel.pendingPinCallback = { enteredPin ->
-                    client.pin = enteredPin
+                    // Tutup RoomClient lama sebelum membuat yang baru untuk mencegah memory/connection leak
+                    roomClient?.close()
+                    roomClient = null
                     connectToRoomNatively(cleanBaseUrl, token, enteredPin, clientId, name, nim)
                 }
                 clientViewModel.showPinDialog.value = true
@@ -178,28 +182,34 @@ fun MainActivity.startClientPolling() {
 
 fun MainActivity.handleClientFileUpload(uri: Uri, isAttachment: Boolean) {
     val client = roomClient ?: return
-    val tempFile = copyUriToTempFile(uri)
-    if (tempFile == null) {
-        Toast.makeText(this, "Gagal memproses file.", Toast.LENGTH_SHORT).show()
+    if (isAttachment) {
+        // Untuk attachment chat, cukup simpan URI — tidak perlu copy ke temp file
+        handleClientChatAttachmentSelected(uri)
         return
     }
-
-    if (isAttachment) {
-        handleClientChatAttachmentSelected(uri)
-        tempFile.delete()
-    } else {
-        Toast.makeText(this, "Mengirim ${tempFile.name}...", Toast.LENGTH_SHORT).show()
-        client.uploadFile(tempFile, isAttachment = false, text = null, onProgress = { progress ->
-            // Attachment progress
-        }, onFinished = { success, _ ->
-            tempFile.delete()
-            if (success) {
-                Toast.makeText(this, "File berhasil dikirim ke room.", Toast.LENGTH_SHORT).show()
-                client.fetchFiles()
-            } else {
-                Toast.makeText(this, "Gagal mengirim file.", Toast.LENGTH_SHORT).show()
+    // copyUriToTempFile melakukan ContentResolver I/O — dipindahkan ke Dispatchers.IO
+    lifecycleScope.launch(Dispatchers.IO) {
+        val tempFile = copyUriToTempFile(uri)
+        if (tempFile == null) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@handleClientFileUpload, "Gagal memproses file.", Toast.LENGTH_SHORT).show()
             }
-        })
+            return@launch
+        }
+        withContext(Dispatchers.Main) {
+            Toast.makeText(this@handleClientFileUpload, "Mengirim ${tempFile.name}...", Toast.LENGTH_SHORT).show()
+            client.uploadFile(tempFile, isAttachment = false, text = null, onProgress = { _ ->
+                // progress tidak ditampilkan saat ini
+            }, onFinished = { success, _ ->
+                tempFile.delete()
+                if (success) {
+                    Toast.makeText(this@handleClientFileUpload, "File berhasil dikirim ke room.", Toast.LENGTH_SHORT).show()
+                    client.fetchFiles()
+                } else {
+                    Toast.makeText(this@handleClientFileUpload, "Gagal mengirim file.", Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
     }
 }
 
@@ -212,26 +222,33 @@ fun MainActivity.downloadClientSharedFile(
     val client = roomClient ?: return
     Toast.makeText(this, "Mengunduh $fileName...", Toast.LENGTH_SHORT).show()
     val tempDir = File(cacheDir, "downloads")
+    // onFinished dipanggil di main thread; kita launch IO coroutine untuk saveRoomFile
     client.downloadFile(transferId, fileName, tempDir) { success, tempFile ->
         if (success && tempFile != null) {
-            try {
-                tempFile.inputStream().use { input ->
-                    controller.fileStore.saveRoomFile(
-                        fileName = fileName,
-                        mimeType = mimeType,
-                        inputStream = input,
-                        roomId = null,
-                        folderName = "received",
-                        direction = TransferDirection.DOWNLOAD,
-                        senderName = senderName
-                    )
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    tempFile.inputStream().use { input ->
+                        controller.fileStore.saveRoomFile(
+                            fileName = fileName,
+                            mimeType = mimeType,
+                            inputStream = input,
+                            roomId = null,
+                            folderName = "received",
+                            direction = TransferDirection.DOWNLOAD,
+                            senderName = senderName
+                        )
+                    }
+                    tempFile.delete()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@downloadClientSharedFile, "Unduhan selesai: $fileName", Toast.LENGTH_SHORT).show()
+                        client.fetchFiles()
+                    }
+                } catch (e: Exception) {
+                    tempFile.delete()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@downloadClientSharedFile, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                tempFile.delete()
-                Toast.makeText(this, "Unduhan selesai: $fileName", Toast.LENGTH_SHORT).show()
-                client.fetchFiles()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(this, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
             }
         } else {
             Toast.makeText(this, "Gagal mengunduh file.", Toast.LENGTH_SHORT).show()
