@@ -62,22 +62,14 @@ fun MainActivity.startHotspotThenActivate(preparingSession: RoomSession) {
         when (state) {
             HotspotState.Idle -> Unit
             HotspotState.Starting -> {
-                Toast.makeText(this, "Menyiapkan hotspot lokal...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Mencari jaringan hotspot...", Toast.LENGTH_SHORT).show()
             }
             is HotspotState.Active -> {
-                if (state.ssid.isNullOrBlank()) {
-                    Toast.makeText(this, getString(R.string.hotspot_ssid_unavailable_toast), Toast.LENGTH_LONG).show()
-                }
-                dashboardHandler.postDelayed(
-                    {
-                        activateRoom(
-                            preparingSession = preparingSession,
-                            mode = NetworkMode.HOTSPOT,
-                            hotspotSsid = state.ssid,
-                            hotspotPassword = state.password
-                        )
-                    },
-                    HOTSPOT_ADDRESS_SETTLE_DELAY_MS
+                activateRoom(
+                    preparingSession = preparingSession,
+                    mode = NetworkMode.HOTSPOT,
+                    hotspotSsid = state.ssid,
+                    hotspotPassword = state.password
                 )
             }
             is HotspotState.Failed -> {

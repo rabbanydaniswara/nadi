@@ -71,6 +71,9 @@ fun MainActivity.connectToRoomNatively(
     name: String,
     nim: String
 ) {
+    // Clear old client transfer maps to clean memory references
+    clientTransfersMap.clear()
+
     val client = RoomClient(
         baseUrl = cleanBaseUrl,
         token = token,
@@ -116,21 +119,27 @@ fun MainActivity.connectToRoomNatively(
             clientViewModel.selfNim.value = nim
             clientViewModel.selfName.value = name
 
-            client.startWebSocket()
-            client.fetchFiles()
-            client.fetchRoomInfo()
+            // Fetch room metadata first to obtain the unique sessionId
+            client.fetchRoomInfo { infoJson ->
+                val sessionId = infoJson?.optString("sessionId")?.takeIf { it.isNotBlank() } ?: cleanBaseUrl
 
-            clientViewModel.loadRoomData(cleanBaseUrl)
-            lifecycleScope.launch {
-                val cached = chatRepository.getMessagesForRoomOnce(cleanBaseUrl)
-                val lastTimestamp = cached.maxByOrNull { it.createdAt }?.createdAt ?: 0L
-                client.fetchChatHistory(after = lastTimestamp) { messages ->
-                    clientViewModel.addMessages(messages)
-                    messages.forEach { ensureClientAttachmentTransfer(it) }
+                // Load database messages for this unique session ID
+                clientViewModel.loadRoomData(sessionId)
+
+                client.startWebSocket()
+                client.fetchFiles()
+
+                lifecycleScope.launch {
+                    val cached = chatRepository.getMessagesForRoomOnce(sessionId)
+                    val lastTimestamp = cached.maxByOrNull { it.createdAt }?.createdAt ?: 0L
+                    client.fetchChatHistory(after = lastTimestamp) { messages ->
+                        clientViewModel.addMessages(messages)
+                        messages.forEach { ensureClientAttachmentTransfer(it) }
+                    }
                 }
-            }
 
-            startClientPolling()
+                startClientPolling()
+            }
         } else {
             if (errorMsg?.contains("invalid_token") == true || errorMsg?.contains("unauthorized") == true) {
                 clientViewModel.pendingPinCallback = { enteredPin ->

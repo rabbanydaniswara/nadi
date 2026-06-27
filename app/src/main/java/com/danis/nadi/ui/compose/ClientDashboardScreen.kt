@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.danis.nadi.MainActivity
+import com.danis.nadi.closeClientRoom
 import com.danis.nadi.confirmExitClientRoom
 import com.danis.nadi.downloadClientSharedFile
 import com.danis.nadi.ensureClientAttachmentTransfer

@@ -68,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -263,19 +264,28 @@ fun RoomTab(activity: MainActivity, activeRoom: com.danis.nadi.room.ActiveRoom) 
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Scan untuk Koneksi Wi-Fi Hotspot", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    wifiQrBitmap?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "Wifi QR Code",
-                            modifier = Modifier.size(160.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("SSID: ${activeRoom.hotspotSsid}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     if (!activeRoom.hotspotPassword.isNullOrBlank()) {
+                        Text("Scan untuk Koneksi Wi-Fi Hotspot", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        wifiQrBitmap?.let {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = "Wifi QR Code",
+                                modifier = Modifier.size(160.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("SSID: ${activeRoom.hotspotSsid}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         Text("Sandi: ${activeRoom.hotspotPassword}", fontSize = 12.sp)
+                    } else {
+                        Text("Koneksi Hotspot Pribadi Aktif", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Silakan hubungkan perangkat klien/komputer ke Hotspot Pribadi (Tethering) HP Anda terlebih dahulu.",
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
                     }
                 }
             }

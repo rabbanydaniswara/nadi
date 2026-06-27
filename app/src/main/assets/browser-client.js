@@ -124,6 +124,7 @@ function updateIdentityUi(locked) {
   identitySummary.textContent = complete ? (nim + " - " + name) : "";
   identitySummary.className = complete ? "identity-summary" : "identity-summary hidden";
   document.getElementById("activeIdentityText").textContent = complete ? (nim + " - " + name) : "Belum masuk";
+  document.getElementById("saveIdentityButton").disabled = false;
   document.querySelectorAll("button").forEach(button => {
     if (button.id !== "saveIdentityButton" && button.id !== "savePinButton") button.disabled = !complete;
   });

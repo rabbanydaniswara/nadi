@@ -24,7 +24,7 @@ class HostViewModel(
 
     val connectedClients = MutableStateFlow<List<com.danis.nadi.model.ConnectedClient>>(emptyList())
     val diagnosticsText = MutableStateFlow("")
-    val chatAttachmentStats = MutableStateFlow<com.danis.nadi.room.RoomManager.StorageStats?>(null)
+    val chatAttachmentStats = MutableStateFlow<com.danis.nadi.room.ChatAttachmentStorageStats?>(null)
 
     private var activeRoomId: String? = null
 
