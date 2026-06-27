@@ -52,6 +52,13 @@ import com.danis.nadi.ui.HostChatRenderer
 import com.danis.nadi.util.QrCodeGenerator
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.danis.nadi.data.db.NadiDatabase
+import com.danis.nadi.data.repository.ChatRepository
+import com.danis.nadi.data.repository.FileRepository
+import com.danis.nadi.ui.viewmodel.HostViewModel
+import com.danis.nadi.ui.viewmodel.ClientViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -60,6 +67,11 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
     internal lateinit var controller: RoomController
     internal lateinit var settingsStore: NadiSettingsStore
+    internal lateinit var database: NadiDatabase
+    internal lateinit var chatRepository: ChatRepository
+    internal lateinit var fileRepository: FileRepository
+    internal lateinit var hostViewModel: HostViewModel
+    internal lateinit var clientViewModel: ClientViewModel
     internal val dashboardHandler = Handler(Looper.getMainLooper())
     internal val historyTimeFormat = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
     internal var dashboardPolling = false
@@ -238,6 +250,26 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         controller = RoomRuntime.controller(applicationContext)
         settingsStore = NadiSettingsStore(applicationContext)
+        
+        database = NadiDatabase.getInstance(this)
+        chatRepository = ChatRepository(database.chatMessageDao())
+        fileRepository = FileRepository(database.sharedFileDao())
+
+        val factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(HostViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return HostViewModel(chatRepository, fileRepository) as T
+                }
+                if (modelClass.isAssignableFrom(ClientViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return ClientViewModel(chatRepository, fileRepository) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+        hostViewModel = ViewModelProvider(this, factory)[HostViewModel::class.java]
+        clientViewModel = ViewModelProvider(this, factory)[ClientViewModel::class.java]
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
@@ -269,6 +301,7 @@ class MainActivity : AppCompatActivity() {
         setupHostChatRenderer()
         setupWindowInsets()
         bindActions()
+        setupViewModelObservers()
         val activeRoom = controller.currentActiveRoom()
         if (activeRoom != null) {
             renderActiveRoom(activeRoom)

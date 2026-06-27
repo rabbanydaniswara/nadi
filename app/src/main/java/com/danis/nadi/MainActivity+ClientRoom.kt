@@ -10,6 +10,8 @@ import androidx.core.content.ContextCompat
 import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.network.client.RoomClient
 import java.util.UUID
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 fun MainActivity.pasteRoomUrl() {
     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -112,7 +114,8 @@ fun MainActivity.connectToRoomNatively(
     }
 
     client.onFilesChanged = { filesList ->
-        renderClientFiles(filesList)
+        val transferItems = filesList.map { it.toTransferItem() }
+        clientViewModel.addFiles(transferItems)
     }
 
     client.onRoomInfoChanged = { infoJson ->
@@ -140,12 +143,14 @@ fun MainActivity.connectToRoomNatively(
             client.fetchFiles()
             client.fetchRoomInfo()
 
-            client.fetchChatHistory(after = 0L) { messages ->
-                clientChatMessages.clear()
-                clientChatMessages.addAll(messages)
-                messages.forEach { ensureClientAttachmentTransfer(it) }
-                clientChatMessages.sortBy { it.createdAt }
-                clientChatRenderer.render(clientChatMessages)
+            clientViewModel.loadRoomData(cleanBaseUrl)
+            lifecycleScope.launch {
+                val cached = chatRepository.getMessagesForRoomOnce(cleanBaseUrl)
+                val lastTimestamp = cached.maxByOrNull { it.createdAt }?.createdAt ?: 0L
+                client.fetchChatHistory(after = lastTimestamp) { messages ->
+                    clientViewModel.addMessages(messages)
+                    messages.forEach { ensureClientAttachmentTransfer(it) }
+                }
             }
 
             startClientPolling()

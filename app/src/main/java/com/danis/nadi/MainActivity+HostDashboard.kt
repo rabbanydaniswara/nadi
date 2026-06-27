@@ -21,6 +21,7 @@ import java.util.Date
 
 fun MainActivity.renderActiveRoom(activeRoom: ActiveRoom) {
     val session = activeRoom.session
+    hostViewModel.loadRoomData(session.sessionId)
     val joinUrl = session.localUrl.orEmpty()
     val clientCount = controller.roomManager.snapshot().clients.size
     activeStatusText.text = buildStatusLine(activeRoom.mode, clientCount)
@@ -158,7 +159,10 @@ fun MainActivity.refreshHostDashboard() {
     renderParticipantList(snapshot.clients)
     renderTransferList(sharedFilesList, shared, getString(R.string.shared_files_empty))
     renderTransferList(receivedFilesList, received, getString(R.string.received_files_empty))
-    hostChatRenderer.render(messages)
+    
+    hostViewModel.addMessages(messages)
+    hostViewModel.addFiles(shared + received)
+
     val recent = controller.roomManager.recentTransfers()
     val history = controller.recentHistory()
     renderActiveHistoryList(recent, history)

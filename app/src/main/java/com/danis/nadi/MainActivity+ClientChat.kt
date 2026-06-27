@@ -165,20 +165,8 @@ fun MainActivity.sendClientChatMessage() {
 }
 
 fun MainActivity.addRealMessage(msg: ChatMessage) {
-    if (clientChatMessages.none { it.messageId == msg.messageId }) {
-        val matchingOpt = clientChatMessages.find {
-            it.messageId.startsWith("opt_") &&
-            it.senderId == msg.senderId &&
-            it.text == msg.text
-        }
-        if (matchingOpt != null) {
-            clientChatMessages.remove(matchingOpt)
-        }
-        clientChatMessages.add(msg)
-        ensureClientAttachmentTransfer(msg)
-        clientChatMessages.sortBy { it.createdAt }
-        clientChatRenderer.render(clientChatMessages)
-    }
+    clientViewModel.addMessage(msg)
+    ensureClientAttachmentTransfer(msg)
 }
 
 fun MainActivity.fetchLatestClientChat() {
@@ -187,17 +175,9 @@ fun MainActivity.fetchLatestClientChat() {
         .filter { !it.messageId.startsWith("opt_") }
         .maxByOrNull { it.createdAt }?.createdAt ?: 0L
     client.fetchChatHistory(after = lastTimestamp) { messages ->
-        var changed = false
-        for (msg in messages) {
-            if (clientChatMessages.none { it.messageId == msg.messageId }) {
-                addRealMessage(msg)
-                changed = true
-            }
-        }
-        if (changed) {
-            clientChatScrollView.post {
-                clientChatScrollView.fullScroll(View.FOCUS_DOWN)
-            }
+        if (messages.isNotEmpty()) {
+            clientViewModel.addMessages(messages)
+            messages.forEach { ensureClientAttachmentTransfer(it) }
         }
     }
 }
