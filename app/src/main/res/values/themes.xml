@@ -10,6 +10,8 @@
         <item name="colorPrimaryVariant">@color/nadi_deep_green</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/nadi_teal_flow</item>
+        <item name="colorSecondaryContainer">@color/nadi_chip_background</item>
+        <item name="colorOnSecondaryContainer">@color/nadi_green</item>
     </style>
 
     <style name="Theme.Nadi" parent="Base.Theme.Nadi" />

@@ -663,84 +663,6 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <LinearLayout
-        android:id="@+id/joinWebPanel"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="20dp"
-        android:background="@color/nadi_mist"
-        android:visibility="gone">
-
-        <!-- Header Information Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_outline_card"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_room"
-                    app:tint="@color/nadi_green"
-                    android:contentDescription="@string/joined_room_title" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="@string/joined_room_title"
-                    android:textColor="@color/nadi_graphite"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/joinedRoomUrlText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input_field"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="8dp"
-                android:textColor="@color/nadi_green"
-                android:textIsSelectable="true"
-                android:textSize="13sp"
-                tools:text="http://192.168.1.5:8080/?token=..." />
-        </LinearLayout>
-
-        <!-- WebView Area -->
-        <WebView
-            android:id="@+id/joinWebView"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="@color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/closeJoinedRoomButton"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="12dp"
-            android:text="@string/close_joined_room"
-            android:textAllCaps="false"
-            android:textColor="@color/nadi_green"
-            android:textStyle="bold"
-            app:cornerRadius="24dp"
-            app:strokeColor="@color/nadi_green" />
-    </LinearLayout>
-
     <!-- 2. Active Room Panel (full screen when active, stacks tab FrameLayout and BottomNav) -->
     <LinearLayout
         android:id="@+id/activeRoomPanel"
@@ -1505,11 +1427,10 @@
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:background="@color/nadi_surface"
-            app:itemIconTint="@color/nadi_green"
-            app:itemTextColor="@color/nadi_green"
-            app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
-            app:itemPaddingTop="8dp"
-            app:itemPaddingBottom="8dp"
+            app:itemIconTint="@color/nav_item_color"
+            app:itemTextColor="@color/nav_item_color"
+            app:itemPaddingTop="4dp"
+            app:itemPaddingBottom="4dp"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_active_room" />
     </LinearLayout>
@@ -1998,11 +1919,10 @@
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:background="@color/nadi_surface"
-            app:itemIconTint="@color/nadi_green"
-            app:itemTextColor="@color/nadi_green"
-            app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
-            app:itemPaddingTop="8dp"
-            app:itemPaddingBottom="8dp"
+            app:itemIconTint="@color/nav_item_color"
+            app:itemTextColor="@color/nav_item_color"
+            app:itemPaddingTop="4dp"
+            app:itemPaddingBottom="4dp"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_active_client_room" />
     </LinearLayout>
