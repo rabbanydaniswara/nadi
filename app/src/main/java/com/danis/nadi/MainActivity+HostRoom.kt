@@ -9,38 +9,43 @@ import com.danis.nadi.network.hotspot.HotspotState
 import com.danis.nadi.room.NetworkMode
 import com.danis.nadi.room.RoomLifecycleService
 import com.danis.nadi.room.RoomStartResult
+import com.danis.nadi.ui.compose.Screen
+import com.danis.nadi.room.ActiveRoom
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-fun MainActivity.startLocalRoom() {
-    val mode = if (networkModeGroup.checkedRadioButtonId == R.id.hotspotModeRadio) {
-        NetworkMode.HOTSPOT
-    } else {
-        NetworkMode.SAME_WIFI
-    }
+fun MainActivity.startLocalRoom(roomName: String, hostName: String, pin: String, mode: NetworkMode) {
     if (mode == NetworkMode.HOTSPOT && !hasHotspotPermissions()) {
         pendingHotspotStart = true
+        pendingRoomName = roomName
+        pendingHostName = hostName
+        pendingRoomPin = pin
+        pendingNetworkMode = mode
         hotspotPermissionLauncher.launch(requiredHotspotPermissions())
         return
     }
-    startLocalRoomWithMode(mode)
+    startLocalRoomWithMode(roomName, hostName, pin, mode)
 }
 
-fun MainActivity.startLocalRoomWithMode(mode: NetworkMode) {
+fun MainActivity.startLocalRoomWithMode(roomName: String, hostName: String, pin: String, mode: NetworkMode) {
     stopDashboardPolling()
-    val roomPin = roomPinInput.text?.toString().orEmpty().trim()
-    if (roomPin.isNotBlank() && !roomPin.isValidRoomPin()) {
+    val trimmedPin = pin.trim()
+    if (trimmedPin.isNotBlank() && !trimmedPin.isValidRoomPin()) {
         Toast.makeText(this, getString(R.string.room_pin_invalid), Toast.LENGTH_LONG).show()
         return
     }
     val startResult = controller.prepareRoom(
-        roomName = roomNameInput.text?.toString().orEmpty(),
-        hostName = hostNameInput.text?.toString().orEmpty(),
+        roomName = roomName,
+        hostName = hostName,
         mode = mode,
-        pin = roomPin
+        pin = trimmedPin
     )
     when (startResult) {
         is RoomStartResult.Failed -> {
             Toast.makeText(this, startResult.message, Toast.LENGTH_LONG).show()
-            showSetup()
+            currentScreenState.value = Screen.Setup
         }
         is RoomStartResult.Prepared -> {
             if (mode == NetworkMode.HOTSPOT) {
@@ -53,7 +58,6 @@ fun MainActivity.startLocalRoomWithMode(mode: NetworkMode) {
 }
 
 fun MainActivity.startHotspotThenActivate(preparingSession: RoomSession) {
-    activeRoomCopyText.text = getString(R.string.preparing_hotspot)
     controller.hotspotManager.start { state ->
         when (state) {
             HotspotState.Idle -> Unit
@@ -103,17 +107,25 @@ fun MainActivity.activateRoom(
     )
     requestNotificationPermissionIfNeeded()
     RoomLifecycleService.start(this)
-    activeRoomDestinationId = R.id.active_room_tab_room
     renderActiveRoom(activeRoom)
     startDashboardPolling()
 }
 
+fun MainActivity.renderActiveRoom(activeRoom: ActiveRoom) {
+    hostViewModel.loadRoomData(activeRoom.session.sessionId)
+    currentScreenState.value = Screen.HostDashboard
+}
+
 fun MainActivity.stopActiveRoom() {
     stopDashboardPolling()
-    controller.stopActiveRoom()
-    RoomLifecycleService.stop(this)
-    Toast.makeText(this, "Ruang sudah ditutup.", Toast.LENGTH_SHORT).show()
-    showHome()
+    lifecycleScope.launch {
+        withContext(Dispatchers.IO) {
+            controller.stopActiveRoom()
+        }
+        RoomLifecycleService.stop(this@stopActiveRoom)
+        Toast.makeText(this@stopActiveRoom, "Ruang sudah ditutup.", Toast.LENGTH_SHORT).show()
+        showHome()
+    }
 }
 
 fun MainActivity.startDashboardPolling() {
@@ -183,10 +195,22 @@ fun MainActivity.buildJoinInstructions(): String {
 }
 
 fun MainActivity.copyJoinUrl() {
-    val url = joinUrlText.text?.toString().orEmpty()
+    val url = controller.roomManager.currentSession()?.localUrl.orEmpty()
     if (url.isBlank()) return
     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("Nadi room URL", url))
     Toast.makeText(this, "URL ruang disalin.", Toast.LENGTH_SHORT).show()
+}
+
+fun MainActivity.buildWifiQrPayload(ssid: String, password: String): String {
+    return "WIFI:T:WPA;S:${ssid.escapeWifiQr()};P:${password.escapeWifiQr()};;"
+}
+
+fun String.escapeWifiQr(): String {
+    return replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace(":", "\\:")
+        .replace("\"", "\\\"")
 }
 

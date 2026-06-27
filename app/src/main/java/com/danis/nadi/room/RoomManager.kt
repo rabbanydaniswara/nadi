@@ -112,18 +112,15 @@ class RoomManager(
         userAgent: String,
         ipAddress: String
     ): ConnectedClient? = synchronized(lock) {
-        val current = session ?: return@synchronized null
-        if (current.status != RoomStatus.ACTIVE) return@synchronized null
+        if (session?.status != RoomStatus.ACTIVE) return@synchronized null
 
         val now = clock()
         pruneStaleClients(now)
         val cleanName = displayName.trim().ifBlank { "Browser" }
         val existingIndex = clients.indexOfFirst { it.ipAddress == ipAddress && it.userAgent == userAgent }
-        val client = if (existingIndex >= 0) {
-            clients[existingIndex].copy(
-                displayName = cleanName,
-                lastSeenAt = now
-            )
+        
+        return@synchronized if (existingIndex >= 0) {
+            clients[existingIndex].copy(displayName = cleanName, lastSeenAt = now).also { clients[existingIndex] = it }
         } else {
             ConnectedClient(
                 clientId = tokenGenerator.newSessionId(12),
@@ -132,14 +129,8 @@ class RoomManager(
                 lastSeenAt = now,
                 userAgent = userAgent,
                 ipAddress = ipAddress
-            )
+            ).also { clients.add(it) }
         }
-        if (existingIndex >= 0) {
-            clients[existingIndex] = client
-        } else {
-            clients.add(client)
-        }
-        client
     }
 
     fun touchIdentifiedClient(
@@ -149,8 +140,7 @@ class RoomManager(
         userAgent: String,
         ipAddress: String
     ): ConnectedClient? = synchronized(lock) {
-        val current = session ?: return@synchronized null
-        if (current.status != RoomStatus.ACTIVE) return@synchronized null
+        if (session?.status != RoomStatus.ACTIVE) return@synchronized null
 
         val identity = IdentityValidator.validate(nim, name) ?: return@synchronized null
         val now = clock()
@@ -158,28 +148,24 @@ class RoomManager(
         val cleanClientId = clientId.cleanClientId().ifBlank { tokenGenerator.newSessionId(12) }
         val lockedIdentity = identifiedClients[cleanClientId]
             ?: clients.firstOrNull { it.clientId == cleanClientId && it.nim.isNotBlank() }
-        val client = if (lockedIdentity != null) {
-            val existing = lockedIdentity
-            existing.copy(
-                lastSeenAt = now,
-                userAgent = userAgent,
-                ipAddress = ipAddress
-            )
-        } else {
-            ConnectedClient(
-                clientId = cleanClientId,
-                displayName = identity.displayName,
-                joinedAt = now,
-                lastSeenAt = now,
-                userAgent = userAgent,
-                ipAddress = ipAddress,
-                nim = identity.nim,
-                name = identity.name
-            )
+            
+        return@synchronized (lockedIdentity?.copy(
+            lastSeenAt = now,
+            userAgent = userAgent,
+            ipAddress = ipAddress
+        ) ?: ConnectedClient(
+            clientId = cleanClientId,
+            displayName = identity.displayName,
+            joinedAt = now,
+            lastSeenAt = now,
+            userAgent = userAgent,
+            ipAddress = ipAddress,
+            nim = identity.nim,
+            name = identity.name
+        )).also {
+            identifiedClients[cleanClientId] = it
+            upsertActiveClient(it)
         }
-        identifiedClients[cleanClientId] = client
-        upsertActiveClient(client)
-        client
     }
 
     fun clientById(clientId: String?): ConnectedClient? = synchronized(lock) {

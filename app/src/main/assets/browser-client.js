@@ -265,7 +265,7 @@ function attachmentMarkup(message) {
     const preview = expired
       ? `<strong>${esc(name)}</strong>`
       : `<button type="button" class="imagePreviewButton image-preview-button" data-src="${esc(url)}" data-name="${esc(name)}"><img class="chat-image" src="${esc(url)}" alt="Preview ${esc(name)}" loading="lazy"></button>`;
-    return `<div class="attachment-card${expired ? " expired" : ""}">${preview}<p class="muted">${esc(name)} - ${meta}</p>${statusBadge}<div class="attachment-actions">${downloadButton}</div></div>`;
+    return `<div class="attachment-card${expired ? " expired" : ""} image-only-card">${preview}</div>`;
   }
   const cardClass = expired ? "attachment-card expired" : "attachment-card chatAttachmentCard";
   const role = expired ? "" : ` role="button" tabindex="0"`;

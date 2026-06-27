@@ -68,7 +68,10 @@
     <string name="file_room_summary">Dibagikan: %1$d file - Diterima: %2$d file</string>
     <string name="file_room_location">Lokasi folder saat ini:\n%1$s</string>
     <string name="file_room_location_pending">Lokasi folder akan muncul saat room aktif.</string>
-    <string name="chat_attachments_cleared">Lampiran chat dibersihkan: %1$d file.</string>
+    <plurals name="chat_attachments_cleared">
+        <item quantity="one">Lampiran chat dibersihkan: %1$d file.</item>
+        <item quantity="other">Lampiran chat dibersihkan: %1$d file.</item>
+    </plurals>
     <string name="chat_attachments_empty">Tidak ada lampiran chat aktif untuk dibersihkan.</string>
     <string name="folder_open_unsupported">File manager perangkat ini tidak mendukung buka folder langsung dari aplikasi.</string>
     <string name="shared_files_empty">Belum ada file yang dibagikan. Tekan Tambah File untuk menaruh materi di File Room.</string>
@@ -101,7 +104,10 @@
     <string name="participants_title">Peserta Room</string>
     <string name="participants_copy">Identitas NIM dan Nama menjadi jejak utama untuk chat dan file selama room berjalan.</string>
     <string name="participants_summary_empty">0 peserta aktif</string>
-    <string name="participants_summary">%1$d peserta aktif</string>
+    <plurals name="participants_summary">
+        <item quantity="one">%1$d peserta aktif</item>
+        <item quantity="other">%1$d peserta aktif</item>
+    </plurals>
     <string name="participants_identity_policy">Identitas peserta dikunci selama room aktif. Jika ada identitas yang salah, minta peserta keluar dan bergabung ulang dengan data yang benar.</string>
     <string name="participants_empty">Belum ada peserta. Bagikan QR atau instruksi join agar peserta masuk dengan NIM dan Nama.</string>
     <string name="participant_status_active">Status: aktif di room ini</string>

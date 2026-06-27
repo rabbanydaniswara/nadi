@@ -5,18 +5,11 @@ import android.app.Dialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
-import android.view.Gravity
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
@@ -179,71 +172,7 @@ fun MainActivity.openFileRoomFolderPicker() {
     fileRoomFolderPicker.launch(intent)
 }
 
-fun MainActivity.showImageAttachmentPreview(attachment: TransferItem) {
-    val activity = this
-    val imageUri = attachment.previewUri() ?: return
-    Dialog(activity).apply {
-        requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-        val frame = FrameLayout(activity).apply {
-            setBackgroundColor(Color.BLACK)
-            setOnClickListener { dismiss() }
-        }
-        val imageView = ImageView(activity).apply {
-            adjustViewBounds = true
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = attachment.fileName
-            setImageURI(imageUri)
-            setOnClickListener { }
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            ).apply {
-                setMargins(12.dp(), 56.dp(), 12.dp(), 56.dp())
-                gravity = Gravity.CENTER
-            }
-        }
-        val closeText = TextView(activity).apply {
-            text = getString(R.string.close)
-            setTextColor(Color.WHITE)
-            textSize = 16f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(16.dp(), 10.dp(), 16.dp(), 10.dp())
-            setOnClickListener { dismiss() }
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.END
-                setMargins(0, 18.dp(), 14.dp(), 0)
-            }
-        }
-        val titleText = TextView(activity).apply {
-            text = attachment.fileName
-            setTextColor(Color.WHITE)
-            textSize = 13f
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding(16.dp(), 10.dp(), 96.dp(), 10.dp())
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.START
-                setMargins(0, 18.dp(), 0, 0)
-            }
-        }
-        frame.addView(imageView)
-        frame.addView(titleText)
-        frame.addView(closeText)
-        setContentView(frame)
-        show()
-        window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
-        window?.setLayout(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            android.view.WindowManager.LayoutParams.MATCH_PARENT
-        )
-    }
-}
+
 
 fun MainActivity.openChatAttachment(attachment: TransferItem) {
     val uri = openableUri(attachment) ?: run {
@@ -334,7 +263,7 @@ fun MainActivity.clearChatAttachments() {
     val cleared = controller.clearChatAttachments()
     refreshHostDashboard()
     val message = if (cleared > 0) {
-        getString(R.string.chat_attachments_cleared, cleared)
+        resources.getQuantityString(R.plurals.chat_attachments_cleared, cleared, cleared)
     } else {
         getString(R.string.chat_attachments_empty)
     }

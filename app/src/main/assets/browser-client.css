@@ -464,6 +464,12 @@ progress {
   transition: var(--transition);
 }
 
+.image-only-card {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 .attachment-card.expired {
   border-color: rgba(220, 38, 38, 0.2);
   background: #FFF5F5;

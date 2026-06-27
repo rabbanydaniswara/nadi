@@ -5,7 +5,7 @@ import android.widget.Toast
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.network.server.ServerFileRules
 
-fun MainActivity.sendHostChatAttachment(uri: Uri) {
+fun MainActivity.sendHostChatAttachment(uri: Uri, text: String) {
     val session = controller.roomManager.currentSession()
     if (session == null) {
         Toast.makeText(this, "Room belum aktif.", Toast.LENGTH_SHORT).show()
@@ -45,18 +45,15 @@ fun MainActivity.sendHostChatAttachment(uri: Uri) {
     controller.roomManager.addMessage(
         senderId = currentHostId(),
         senderName = hostName,
-        text = hostChatInput.text?.toString().orEmpty(),
+        text = text,
         attachment = transfer
     )
-    hostChatInput.text?.clear()
     controller.persistRecentTransfers()
-    hostChatRenderer.forceScrollToBottom = true
     refreshHostDashboard()
     Toast.makeText(this, "Lampiran chat terkirim.", Toast.LENGTH_SHORT).show()
 }
 
-fun MainActivity.sendHostMessage() {
-    val text = hostChatInput.text?.toString().orEmpty()
+fun MainActivity.sendHostMessage(text: String) {
     val hostName = controller.roomManager.currentSession()?.hostName ?: getString(R.string.host_name_default)
     val message = controller.roomManager.addMessage(
         senderId = currentHostId(),
@@ -67,7 +64,5 @@ fun MainActivity.sendHostMessage() {
         Toast.makeText(this, "Pesan masih kosong.", Toast.LENGTH_SHORT).show()
         return
     }
-    hostChatInput.text?.clear()
-    hostChatRenderer.forceScrollToBottom = true
     refreshHostDashboard()
 }

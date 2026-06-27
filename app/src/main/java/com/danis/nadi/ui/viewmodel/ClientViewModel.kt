@@ -22,6 +22,15 @@ class ClientViewModel(
     private val _sharedFiles = MutableStateFlow<List<TransferItem>>(emptyList())
     val sharedFiles: StateFlow<List<TransferItem>> = _sharedFiles
 
+    val connectionStatus = MutableStateFlow("Terputus")
+    val roomName = MutableStateFlow("-")
+    val hostName = MutableStateFlow("-")
+    val clientCount = MutableStateFlow(0)
+    val selfNim = MutableStateFlow("")
+    val selfName = MutableStateFlow("")
+    val showPinDialog = MutableStateFlow(false)
+    var pendingPinCallback: ((String) -> Unit)? = null
+
     private var activeRoomId: String? = null
 
     fun loadRoomData(roomId: String) {

@@ -1,37 +1,22 @@
 package com.danis.nadi
 
-import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
-import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.network.client.RoomClient
 import java.util.UUID
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import java.io.File
+import com.danis.nadi.model.TransferDirection
+import com.danis.nadi.model.TransferItem
+import com.danis.nadi.model.TransferStatus
+import com.danis.nadi.ui.compose.Screen
+import org.json.JSONObject
+import android.content.ClipboardManager
 
-fun MainActivity.pasteRoomUrl() {
-    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val text = clipboard.primaryClip
-        ?.takeIf { it.itemCount > 0 }
-        ?.getItemAt(0)
-        ?.coerceToText(this)
-        ?.toString()
-        .orEmpty()
-        .trim()
-    if (text.isBlank()) {
-        Toast.makeText(this, "Clipboard belum berisi URL room.", Toast.LENGTH_SHORT).show()
-        return
-    }
-    roomUrlInput.setText(text)
-    roomUrlInput.setSelection(text.length)
-}
-
-fun MainActivity.openJoinedRoom() {
-    val url = roomUrlInput.text?.toString().orEmpty().trim()
+fun MainActivity.openJoinedRoom(url: String) {
     val uri = runCatching { Uri.parse(url) }.getOrNull()
     val valid = uri != null &&
         (uri.scheme == "http" || uri.scheme == "https") &&
@@ -41,20 +26,16 @@ fun MainActivity.openJoinedRoom() {
         return
     }
     clientRoomUrl = url
-    showJoinIdentityScreen()
+    currentScreenState.value = Screen.ClientJoinIdentity
 }
 
-fun MainActivity.submitClientIdentity() {
-    val nim = clientNimInput.text.toString().trim()
-    val name = clientNameInput.text.toString().trim()
+fun MainActivity.submitClientIdentity(nim: String, name: String) {
     if (nim.isEmpty()) {
-        clientNimInput.error = "NIM tidak boleh kosong"
-        clientNimInput.requestFocus()
+        Toast.makeText(this, "NIM tidak boleh kosong", Toast.LENGTH_SHORT).show()
         return
     }
     if (name.isEmpty()) {
-        clientNameInput.error = "Nama tidak boleh kosong"
-        clientNameInput.requestFocus()
+        Toast.makeText(this, "Nama tidak boleh kosong", Toast.LENGTH_SHORT).show()
         return
     }
 
@@ -76,7 +57,6 @@ fun MainActivity.submitClientIdentity() {
     val token = uri.getQueryParameter("token")
     val pin = uri.getQueryParameter("pin")
 
-    clientJoinButton.isEnabled = false
     Toast.makeText(this, "Menghubungkan ke room...", Toast.LENGTH_SHORT).show()
     connectToRoomNatively(cleanBaseUrl, token, pin, clientId, name, nim)
 }
@@ -101,12 +81,7 @@ fun MainActivity.connectToRoomNatively(
 
     // Setup callbacks
     client.onConnectionStatusChanged = { status ->
-        clientInfoStatusText.text = status
-        if (status == "Terhubung") {
-            clientInfoStatusText.setTextColor(ContextCompat.getColor(this, R.color.nadi_green))
-        } else {
-            clientInfoStatusText.setTextColor(ContextCompat.getColor(this, R.color.nadi_error))
-        }
+        clientViewModel.connectionStatus.value = status
     }
 
     client.onMessageReceived = { message ->
@@ -122,8 +97,9 @@ fun MainActivity.connectToRoomNatively(
         val roomName = infoJson.optString("roomName", "-")
         val hostName = infoJson.optString("hostName", "-")
         val clientCount = infoJson.optInt("clientCount", 0)
-        clientInfoRoomNameText.text = roomName
-        clientInfoHostNameText.text = "Host: $hostName | Peserta: $clientCount"
+        clientViewModel.roomName.value = roomName
+        clientViewModel.hostName.value = hostName
+        clientViewModel.clientCount.value = clientCount
     }
 
     client.onReconnected = {
@@ -132,12 +108,11 @@ fun MainActivity.connectToRoomNatively(
 
     // Authenticate
     client.authenticate { success, errorMsg ->
-        clientJoinButton.isEnabled = true
         if (success) {
-            setupClientChatRenderer()
-            showActiveClientRoom()
+            currentScreenState.value = Screen.ClientDashboard
 
-            clientInfoSelfIdentityText.text = "$nim - $name"
+            clientViewModel.selfNim.value = nim
+            clientViewModel.selfName.value = name
 
             client.startWebSocket()
             client.fetchFiles()
@@ -156,46 +131,16 @@ fun MainActivity.connectToRoomNatively(
             startClientPolling()
         } else {
             if (errorMsg?.contains("invalid_token") == true || errorMsg?.contains("unauthorized") == true) {
-                promptClientForPin { enteredPin ->
+                clientViewModel.pendingPinCallback = { enteredPin ->
                     client.pin = enteredPin
-                    clientJoinButton.isEnabled = false
                     connectToRoomNatively(cleanBaseUrl, token, enteredPin, clientId, name, nim)
                 }
+                clientViewModel.showPinDialog.value = true
             } else {
                 Toast.makeText(this, errorMsg ?: "Gagal masuk ke room", Toast.LENGTH_LONG).show()
             }
         }
     }
-}
-
-fun MainActivity.promptClientForPin(onPinEntered: (String) -> Unit) {
-    val input = EditText(this).apply {
-        inputType = android.text.InputType.TYPE_CLASS_NUMBER
-        hint = "Masukkan PIN Room"
-        setPadding(24.dp(), 16.dp(), 24.dp(), 16.dp())
-    }
-    val container = FrameLayout(this).apply {
-        addView(input, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            setMargins(20.dp(), 8.dp(), 20.dp(), 8.dp())
-        })
-    }
-    androidx.appcompat.app.AlertDialog.Builder(this)
-        .setTitle("PIN Diperlukan")
-        .setMessage("Room ini dilindungi PIN. Silakan masukkan PIN room:")
-        .setView(container)
-        .setPositiveButton("Masuk") { _, _ ->
-            val pin = input.text.toString().trim()
-            if (pin.isNotEmpty()) {
-                onPinEntered(pin)
-            } else {
-                Toast.makeText(this, "PIN tidak boleh kosong", Toast.LENGTH_SHORT).show()
-            }
-        }
-        .setNegativeButton("Batal", null)
-        .show()
 }
 
 fun MainActivity.confirmExitClientRoom() {
@@ -211,10 +156,10 @@ fun MainActivity.closeClientRoom() {
     roomClient?.close()
     roomClient = null
     clientPollHandler.removeCallbacksAndMessages(null)
-    clientChatMessages.clear()
+    clientViewModel.clearRoomData()
     clientTransfersMap.clear()
     clientPendingAttachmentUri = null
-    showJoin()
+    currentScreenState.value = Screen.Join
 }
 
 fun MainActivity.startClientPolling() {
@@ -229,4 +174,82 @@ fun MainActivity.startClientPolling() {
     }
     clientPollRunnable = runnable
     clientPollHandler.post(runnable)
+}
+
+fun MainActivity.handleClientFileUpload(uri: Uri, isAttachment: Boolean) {
+    val client = roomClient ?: return
+    val tempFile = copyUriToTempFile(uri)
+    if (tempFile == null) {
+        Toast.makeText(this, "Gagal memproses file.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    if (isAttachment) {
+        handleClientChatAttachmentSelected(uri)
+        tempFile.delete()
+    } else {
+        Toast.makeText(this, "Mengirim ${tempFile.name}...", Toast.LENGTH_SHORT).show()
+        client.uploadFile(tempFile, isAttachment = false, text = null, onProgress = { progress ->
+            // Attachment progress
+        }, onFinished = { success, _ ->
+            tempFile.delete()
+            if (success) {
+                Toast.makeText(this, "File berhasil dikirim ke room.", Toast.LENGTH_SHORT).show()
+                client.fetchFiles()
+            } else {
+                Toast.makeText(this, "Gagal mengirim file.", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+}
+
+fun MainActivity.downloadClientSharedFile(
+    transferId: String,
+    fileName: String,
+    mimeType: String?,
+    senderName: String
+) {
+    val client = roomClient ?: return
+    Toast.makeText(this, "Mengunduh $fileName...", Toast.LENGTH_SHORT).show()
+    val tempDir = File(cacheDir, "downloads")
+    client.downloadFile(transferId, fileName, tempDir) { success, tempFile ->
+        if (success && tempFile != null) {
+            try {
+                tempFile.inputStream().use { input ->
+                    controller.fileStore.saveRoomFile(
+                        fileName = fileName,
+                        mimeType = mimeType,
+                        inputStream = input,
+                        roomId = null,
+                        folderName = "received",
+                        direction = TransferDirection.DOWNLOAD,
+                        senderName = senderName
+                    )
+                }
+                tempFile.delete()
+                Toast.makeText(this, "Unduhan selesai: $fileName", Toast.LENGTH_SHORT).show()
+                client.fetchFiles()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Gagal mengunduh file.", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+fun JSONObject.toTransferItem(): TransferItem {
+    return TransferItem(
+        transferId = getString("transferId"),
+        fileName = getString("fileName"),
+        mimeType = optString("mimeType").takeIf { it.isNotEmpty() },
+        sizeBytes = getLong("sizeBytes"),
+        direction = TransferDirection.DOWNLOAD,
+        status = TransferStatus.PENDING,
+        progress = 0,
+        createdAt = optLong("createdAt", System.currentTimeMillis()),
+        localUri = null,
+        senderName = optString("senderName", "Host")
+    )
 }

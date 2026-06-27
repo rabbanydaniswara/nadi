@@ -24,4 +24,7 @@ public interface ChatMessageDao {
 
     @Query("DELETE FROM chat_messages WHERE roomId = :roomId")
     void deleteMessagesForRoom(String roomId);
+
+    @Query("DELETE FROM chat_messages WHERE messageId = :messageId")
+    void deleteMessageById(String messageId);
 }

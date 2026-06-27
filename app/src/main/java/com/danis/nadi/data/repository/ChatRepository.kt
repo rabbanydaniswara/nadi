@@ -32,4 +32,8 @@ class ChatRepository(private val chatMessageDao: ChatMessageDao) {
     suspend fun clearMessagesForRoom(roomId: String) = withContext(Dispatchers.IO) {
         chatMessageDao.deleteMessagesForRoom(roomId)
     }
+
+    suspend fun deleteMessage(messageId: String) = withContext(Dispatchers.IO) {
+        chatMessageDao.deleteMessageById(messageId)
+    }
 }

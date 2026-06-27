@@ -2,29 +2,15 @@ package com.danis.nadi
 
 import android.content.Context
 import android.net.Uri
-import android.view.View
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.model.TransferDirection
 import com.danis.nadi.model.TransferItem
 import com.danis.nadi.model.TransferStatus
 import com.danis.nadi.network.server.ServerFileRules
-import com.danis.nadi.ui.HostChatRenderer
+import kotlinx.coroutines.launch
 import java.io.File
-
-fun MainActivity.setupClientChatRenderer() {
-    clientChatRenderer = HostChatRenderer(
-        context = this,
-        scrollView = clientChatScrollView,
-        container = clientChatMessagesContainer,
-        hostIdProvider = { getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE).getString("client_id", "").orEmpty() },
-        hostNameProvider = { getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE).getString("client_name", "").orEmpty() },
-        roomIdProvider = { roomClient?.token ?: roomClient?.pin ?: "client_room" },
-        attachmentProvider = { transferId -> clientTransfersMap[transferId] },
-        onPreviewImage = ::showImageAttachmentPreview,
-        onOpenAttachment = ::openClientChatAttachment
-    )
-}
 
 fun MainActivity.openClientChatAttachment(attachment: TransferItem) {
     val localFile = File(attachment.localUri ?: "")
@@ -78,8 +64,8 @@ fun MainActivity.downloadClientAttachment(attachment: TransferItem) {
                 }
                 tempFile.delete()
                 clientTransfersMap[attachment.transferId] = saved
-                clientChatRenderer.render(clientChatMessages)
                 Toast.makeText(this, "Download selesai: ${attachment.fileName}", Toast.LENGTH_SHORT).show()
+                fetchLatestClientChat()
             } catch (e: Exception) {
                 e.printStackTrace()
                 Toast.makeText(this, "Gagal menyimpan file.", Toast.LENGTH_SHORT).show()
@@ -90,38 +76,25 @@ fun MainActivity.downloadClientAttachment(attachment: TransferItem) {
     }
 }
 
-fun MainActivity.sendClientChatMessage() {
+fun MainActivity.sendClientChatMessage(text: String) {
     val client = roomClient ?: return
-    val text = clientChatInput.text.toString().trim()
     val attachmentUri = clientPendingAttachmentUri
 
     if (text.isEmpty() && attachmentUri == null) return
-
-    clientChatInput.isEnabled = false
-    clientSendChatButton.isEnabled = false
-    clientAttachButton.isEnabled = false
 
     if (attachmentUri != null) {
         val tempFile = copyUriToTempFile(attachmentUri)
         if (tempFile == null) {
             Toast.makeText(this, "Gagal memproses lampiran.", Toast.LENGTH_SHORT).show()
-            clientChatInput.isEnabled = true
-            clientSendChatButton.isEnabled = true
-            clientAttachButton.isEnabled = true
             return
         }
 
-        clientAttachmentStatus.text = "Mengirim lampiran..."
+        Toast.makeText(this, "Mengirim lampiran...", Toast.LENGTH_SHORT).show()
         client.uploadFile(tempFile, isAttachment = true, text = text, onProgress = { progress ->
-            clientAttachmentStatus.text = "Mengirim lampiran: $progress%"
+            // Attachment progress
         }, onFinished = { success, _ ->
             tempFile.delete()
-            clientChatInput.isEnabled = true
-            clientSendChatButton.isEnabled = true
-            clientAttachButton.isEnabled = true
-            clientAttachmentStatus.text = ""
             if (success) {
-                clientChatInput.setText("")
                 clientPendingAttachmentUri = null
                 Toast.makeText(this, "Pesan lampiran terkirim.", Toast.LENGTH_SHORT).show()
                 fetchLatestClientChat()
@@ -141,23 +114,15 @@ fun MainActivity.sendClientChatMessage() {
             createdAt = System.currentTimeMillis(),
             status = "sent"
         )
-        clientChatMessages.add(optimisticMessage)
-        clientChatMessages.sortBy { it.createdAt }
-        clientChatRenderer.render(clientChatMessages)
-        clientChatInput.setText("")
-        clientChatScrollView.post {
-            clientChatScrollView.fullScroll(View.FOCUS_DOWN)
-        }
+        clientViewModel.addMessage(optimisticMessage)
 
         client.sendChatMessage(text) { success ->
-            clientChatInput.isEnabled = true
-            clientSendChatButton.isEnabled = true
-            clientAttachButton.isEnabled = true
             if (success) {
                 fetchLatestClientChat()
             } else {
-                clientChatMessages.removeAll { it.messageId == optimisticMessage.messageId }
-                clientChatRenderer.render(clientChatMessages)
+                lifecycleScope.launch {
+                    database.chatMessageDao().deleteMessageById(optimisticMessage.messageId)
+                }
                 Toast.makeText(this, "Gagal mengirim pesan.", Toast.LENGTH_SHORT).show()
             }
         }
@@ -171,7 +136,7 @@ fun MainActivity.addRealMessage(msg: ChatMessage) {
 
 fun MainActivity.fetchLatestClientChat() {
     val client = roomClient ?: return
-    val lastTimestamp = clientChatMessages
+    val lastTimestamp = clientViewModel.chatMessages.value
         .filter { !it.messageId.startsWith("opt_") }
         .maxByOrNull { it.createdAt }?.createdAt ?: 0L
     client.fetchChatHistory(after = lastTimestamp) { messages ->
@@ -185,5 +150,5 @@ fun MainActivity.fetchLatestClientChat() {
 fun MainActivity.handleClientChatAttachmentSelected(uri: Uri) {
     clientPendingAttachmentUri = uri
     val (name, _) = getUriMetadata(uri)
-    clientAttachmentStatus.text = "Lampiran: $name"
+    Toast.makeText(this, "Lampiran dipilih: $name", Toast.LENGTH_SHORT).show()
 }
