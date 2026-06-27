@@ -122,6 +122,7 @@ fun MainActivity.showActiveClientRoom() {
     joinIdentityPanel.gone()
 
     activeClientRoomPanel.visible()
+    activeClientRoomNavigation.visible()
     activeClientRoomNavigation.selectedItemId = R.id.client_tab_files
     showActiveClientRoomSection(R.id.client_tab_files)
 }
