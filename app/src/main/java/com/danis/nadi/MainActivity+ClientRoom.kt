@@ -17,9 +17,22 @@ import com.danis.nadi.model.TransferStatus
 import com.danis.nadi.ui.compose.Screen
 import org.json.JSONObject
 import android.content.ClipboardManager
+import com.danis.nadi.util.NetworkBinder
 
 fun MainActivity.openJoinedRoom(url: String) {
-    val uri = runCatching { Uri.parse(url) }.getOrNull()
+    val trimmed = url.trim()
+    if (trimmed.isBlank()) {
+        Toast.makeText(this, "Masukkan tautan room.", Toast.LENGTH_SHORT).show()
+        return
+    }
+    
+    // Auto-preprocess IP addresses or simple hosts
+    val processedUrl = when {
+        trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true) -> trimmed
+        else -> "http://$trimmed"
+    }
+
+    val uri = runCatching { Uri.parse(processedUrl) }.getOrNull()
     val valid = uri != null &&
         (uri.scheme == "http" || uri.scheme == "https") &&
         uri.host?.isNotBlank() == true
@@ -27,7 +40,12 @@ fun MainActivity.openJoinedRoom(url: String) {
         Toast.makeText(this, "Masukkan URL room Nadi yang valid.", Toast.LENGTH_SHORT).show()
         return
     }
-    clientRoomUrl = url
+    
+    // Bind process to Wi-Fi early and clear connection pool to prevent routing races
+    NetworkBinder.bindToWifi(this)
+    RoomClient.evictConnectionPool()
+
+    clientRoomUrl = processedUrl
     currentScreenState.value = Screen.ClientJoinIdentity
 }
 
@@ -71,6 +89,10 @@ fun MainActivity.connectToRoomNatively(
     name: String,
     nim: String
 ) {
+    // Bind network process to Wi-Fi to bypass cellular fallback in offline mode
+    NetworkBinder.bindToWifi(this)
+    RoomClient.evictConnectionPool()
+
     // Clear old client transfer maps to clean memory references
     clientTransfersMap.clear()
 
@@ -151,6 +173,7 @@ fun MainActivity.connectToRoomNatively(
                 clientViewModel.showPinDialog.value = true
             } else {
                 Toast.makeText(this, errorMsg ?: "Gagal masuk ke room", Toast.LENGTH_LONG).show()
+                NetworkBinder.unbind(this@connectToRoomNatively)
             }
         }
     }
@@ -161,13 +184,14 @@ fun MainActivity.confirmExitClientRoom() {
 }
 
 fun MainActivity.closeClientRoom() {
+    NetworkBinder.unbind(this)
     roomClient?.close()
     roomClient = null
     clientPollHandler.removeCallbacksAndMessages(null)
     clientViewModel.clearRoomData()
     clientViewModel.showExitDialog.value = false
     clientTransfersMap.clear()
-    clientPendingAttachmentUri = null
+    clientPendingAttachmentUri.value = null
     currentScreenState.value = Screen.Join
 }
 

@@ -28,14 +28,19 @@ class HostViewModel(
 
     private var activeRoomId: String? = null
 
+    private var chatJob: kotlinx.coroutines.Job? = null
+    private var fileJob: kotlinx.coroutines.Job? = null
+
     fun loadRoomData(roomId: String) {
         activeRoomId = roomId
-        viewModelScope.launch {
+        chatJob?.cancel()
+        chatJob = viewModelScope.launch {
             chatRepository.getMessagesForRoom(roomId).collectLatest {
                 _chatMessages.value = it
             }
         }
-        viewModelScope.launch {
+        fileJob?.cancel()
+        fileJob = viewModelScope.launch {
             fileRepository.getFilesForRoom(roomId).collectLatest {
                 _sharedFiles.value = it
             }

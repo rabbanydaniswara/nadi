@@ -631,69 +631,71 @@ async function refreshChat() {
 }
 async function sendChat() {
   const input = document.getElementById("chatInput");
+  const attachmentInput = document.getElementById("chatAttachmentInput");
   const text = input.value.trim();
-  if (!text) return;
+  const hasAttachment = attachmentInput.files.length > 0;
+  
+  if (!text && !hasAttachment) return;
+  
   if (!hasIdentity()) {
     identityStatus.textContent = "Isi identitas dulu sebelum chat.";
     identityStatus.className = "error";
     updateIdentityUi(true);
     return;
   }
-  const body = new URLSearchParams({ clientId: clientId(), text });
-  const response = await fetch("/api/chat?" + accessQuery(), {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
-  });
-  if (response.ok) {
-    input.value = "";
-    forceChatScrollToBottom = true;
-    refreshChat();
-  }
-}
-function sendChatAttachment() {
-  const input = document.getElementById("chatAttachmentInput");
-  if (!hasIdentity()) {
-    attachmentStatus.textContent = "Isi identitas dulu sebelum mengirim lampiran.";
-    attachmentStatus.className = "error";
-    updateIdentityUi(true);
-    return;
-  }
-  if (!input.files.length) {
-    attachmentStatus.textContent = "Pilih file lampiran dulu.";
-    attachmentStatus.className = "error";
-    return;
-  }
-  const data = new FormData();
-  const file = input.files[0];
-  if (file.size > maxChatAttachmentBytes) {
-    attachmentStatus.textContent = "Lampiran chat maksimal 10 MB.";
-    attachmentStatus.className = "error";
-    return;
-  }
-  data.append("clientId", clientId());
-  data.append("text", document.getElementById("chatInput").value.trim());
-  data.append("file", file, file.name);
-  attachmentStatus.textContent = "Mengirim lampiran...";
-  attachmentStatus.className = "muted";
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/api/chat-attachment?" + accessQuery());
-  xhr.onload = () => {
-    const ok = xhr.status >= 200 && xhr.status < 300;
-    attachmentStatus.textContent = ok ? "Lampiran terkirim di chat." : xhrErrorMessage(xhr, "Lampiran ditolak. Gunakan gambar/dokumen kecil.");
-    attachmentStatus.className = ok ? "success" : "error";
-    if (ok) {
+  
+  if (hasAttachment) {
+    const data = new FormData();
+    const file = attachmentInput.files[0];
+    if (file.size > maxChatAttachmentBytes) {
+      attachmentStatus.textContent = "Lampiran chat maksimal 10 MB.";
+      attachmentStatus.className = "error";
+      return;
+    }
+    data.append("clientId", clientId());
+    data.append("text", text);
+    data.append("file", file, file.name);
+    attachmentStatus.textContent = "Mengirim lampiran...";
+    attachmentStatus.className = "muted";
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/chat-attachment?" + accessQuery());
+    xhr.onload = () => {
+      const ok = xhr.status >= 200 && xhr.status < 300;
+      attachmentStatus.textContent = ok ? "Pesan terkirim di chat." : xhrErrorMessage(xhr, "Lampiran ditolak. Gunakan gambar/dokumen kecil.");
+      attachmentStatus.className = ok ? "success" : "error";
+      if (ok) {
+        attachmentInput.value = "";
+        clearAttachmentPreview();
+        input.value = "";
+        forceChatScrollToBottom = true;
+        refreshChat();
+      }
+    };
+    xhr.onerror = () => {
+      attachmentStatus.textContent = "Jaringan lokal terputus saat mengirim pesan.";
+      attachmentStatus.className = "error";
+    };
+    xhr.send(data);
+  } else {
+    const body = new URLSearchParams({ clientId: clientId(), text });
+    const response = await fetch("/api/chat?" + accessQuery(), {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (response.ok) {
       input.value = "";
-      document.getElementById("chatInput").value = "";
       forceChatScrollToBottom = true;
       refreshChat();
     }
-  };
-  xhr.onerror = () => {
-    attachmentStatus.textContent = "Jaringan lokal terputus saat mengirim lampiran.";
-    attachmentStatus.className = "error";
-  };
-  xhr.send(data);
+  }
+}
+
+function clearAttachmentPreview() {
+  document.getElementById("chatAttachmentInput").value = "";
+  document.getElementById("selectedAttachmentInfo").classList.add("hidden");
+  document.getElementById("selectedAttachmentName").textContent = "";
 }
 function showLocked() {
   document.getElementById("locked").style.display = "block";
@@ -707,7 +709,14 @@ document.getElementById("savePinButton").addEventListener("click", savePin);
 document.getElementById("saveIdentityButton").addEventListener("click", registerIdentity);
 document.getElementById("uploadButton").addEventListener("click", uploadFile);
 document.getElementById("sendButton").addEventListener("click", sendChat);
-document.getElementById("sendAttachmentButton").addEventListener("click", sendChatAttachment);
+document.getElementById("chatAttachmentInput").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if (file) {
+    document.getElementById("selectedAttachmentName").textContent = file.name;
+    document.getElementById("selectedAttachmentInfo").classList.remove("hidden");
+  }
+});
+document.getElementById("clearAttachmentButton").addEventListener("click", clearAttachmentPreview);
 document.getElementById("chatInput").addEventListener("keydown", event => { if (event.key === "Enter") sendChat(); });
 document.getElementById("closeImageLightbox").addEventListener("click", closeImageLightbox);
 document.getElementById("imageLightbox").addEventListener("click", event => {

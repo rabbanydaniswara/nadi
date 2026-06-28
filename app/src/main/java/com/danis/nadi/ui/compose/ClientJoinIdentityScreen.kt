@@ -36,7 +36,12 @@ import androidx.compose.ui.unit.sp
 import com.danis.nadi.MainActivity
 import com.danis.nadi.ui.theme.NadiBackground
 import com.danis.nadi.ui.theme.NadiGreen
-
+import android.widget.Toast
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientJoinIdentityScreen(activity: MainActivity) {
@@ -45,6 +50,9 @@ fun ClientJoinIdentityScreen(activity: MainActivity) {
     val prefs = remember { activity.getSharedPreferences("nadi_client_prefs", Context.MODE_PRIVATE) }
     var nim by remember { mutableStateOf(prefs.getString("client_nim", "").orEmpty()) }
     var name by remember { mutableStateOf(prefs.getString("client_name", "").orEmpty()) }
+
+    val showPinDialog by activity.clientViewModel.showPinDialog.collectAsState()
+    var pinValue by remember { mutableStateOf("") }
 
     Scaffold(
         containerColor = NadiBackground,
@@ -130,5 +138,52 @@ fun ClientJoinIdentityScreen(activity: MainActivity) {
                 }
             }
         }
+    }
+
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { activity.clientViewModel.showPinDialog.value = false },
+            title = { Text("PIN Diperlukan", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Room ini dilindungi oleh PIN. Silakan masukkan PIN room untuk melanjutkan:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = pinValue,
+                        onValueChange = { if (it.length <= 8) pinValue = it },
+                        label = { Text("PIN Room") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val pin = pinValue.trim()
+                        if (pin.isNotEmpty()) {
+                            activity.clientViewModel.showPinDialog.value = false
+                            activity.clientViewModel.pendingPinCallback?.invoke(pin)
+                            pinValue = ""
+                        } else {
+                            Toast.makeText(activity, "PIN tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("Masuk", color = NadiGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        activity.clientViewModel.showPinDialog.value = false
+                        pinValue = ""
+                    }
+                ) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 }

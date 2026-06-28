@@ -88,7 +88,7 @@ fun MainActivity.downloadClientAttachment(attachment: TransferItem) {
 
 fun MainActivity.sendClientChatMessage(text: String) {
     val client = roomClient ?: return
-    val attachmentUri = clientPendingAttachmentUri
+    val attachmentUri = clientPendingAttachmentUri.value
 
     if (text.isEmpty() && attachmentUri == null) return
 
@@ -109,7 +109,7 @@ fun MainActivity.sendClientChatMessage(text: String) {
                 }, onFinished = { success, _ ->
                     tempFile.delete()
                     if (success) {
-                        clientPendingAttachmentUri = null
+                        clientPendingAttachmentUri.value = null
                         Toast.makeText(this@sendClientChatMessage, "Pesan lampiran terkirim.", Toast.LENGTH_SHORT).show()
                         fetchLatestClientChat()
                     } else {
@@ -133,13 +133,13 @@ fun MainActivity.sendClientChatMessage(text: String) {
         clientViewModel.addMessage(optimisticMessage)
 
         client.sendChatMessage(text) { success ->
+            // Hapus optimistic message agar tidak bertumpuk menjadi double di UI
+            lifecycleScope.launch(Dispatchers.IO) {
+                database.chatMessageDao().deleteMessageById(optimisticMessage.messageId)
+            }
             if (success) {
                 fetchLatestClientChat()
             } else {
-                // Hapus optimistic message di IO dispatcher
-                lifecycleScope.launch(Dispatchers.IO) {
-                    database.chatMessageDao().deleteMessageById(optimisticMessage.messageId)
-                }
                 Toast.makeText(this, "Gagal mengirim pesan.", Toast.LENGTH_SHORT).show()
             }
         }
@@ -165,7 +165,7 @@ fun MainActivity.fetchLatestClientChat() {
 }
 
 fun MainActivity.handleClientChatAttachmentSelected(uri: Uri) {
-    clientPendingAttachmentUri = uri
+    clientPendingAttachmentUri.value = uri
     val (name, _) = getUriMetadata(uri)
     Toast.makeText(this, "Lampiran dipilih: $name", Toast.LENGTH_SHORT).show()
 }

@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
     internal var roomClient: RoomClient? = null
     internal var clientRoomUrl: String? = null
     internal val clientTransfersMap = HashMap<String, TransferItem>()
-    internal var clientPendingAttachmentUri: Uri? = null
+    internal var clientPendingAttachmentUri = mutableStateOf<Uri?>(null)
     internal val clientPollHandler = Handler(Looper.getMainLooper())
     internal var clientPollRunnable: Runnable? = null
 
@@ -100,11 +100,13 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Folder File Room disimpan.", Toast.LENGTH_SHORT).show()
     }
 
+    internal var hostPendingAttachmentUri = mutableStateOf<Uri?>(null)
+
     internal val hostChatAttachmentPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
         val uri = result.data?.data ?: return@registerForActivityResult
         persistReadPermissionIfPossible(uri, result.data)
-        sendHostChatAttachment(uri, "")
+        hostPendingAttachmentUri.value = uri
     }
 
     internal val hotspotPermissionLauncher = registerForActivityResult(

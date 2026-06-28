@@ -15,7 +15,11 @@ import com.danis.nadi.network.server.ServerFileRules
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Close
+import com.danis.nadi.getUriMetadata
+import com.danis.nadi.sendHostChatMessage
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
@@ -89,7 +93,6 @@ import com.danis.nadi.openFileRoomLocation
 import com.danis.nadi.openHostChatAttachmentPicker
 import com.danis.nadi.regenerateJoinLink
 import com.danis.nadi.room.NetworkMode
-import com.danis.nadi.sendHostMessage
 import com.danis.nadi.stopActiveRoom
 import com.danis.nadi.ui.theme.NadiBackground
 import com.danis.nadi.ui.theme.NadiGreen
@@ -525,6 +528,22 @@ fun ChatTab(activity: MainActivity) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        if (activity.hostPendingAttachmentUri.value != null) {
+            val (name, _) = activity.getUriMetadata(activity.hostPendingAttachmentUri.value!!)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.Icon(Icons.Default.Info, contentDescription = "Lampiran", modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Terpilih: $name", fontSize = 12.sp, color = NadiGreen)
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { activity.hostPendingAttachmentUri.value = null }, modifier = Modifier.size(24.dp)) {
+                    androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = "Batal", modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -544,8 +563,9 @@ fun ChatTab(activity: MainActivity) {
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
-                    if (inputText.trim().isNotEmpty()) {
-                        activity.sendHostMessage(inputText.trim())
+                    val trimmed = inputText.trim()
+                    if (trimmed.isNotEmpty() || activity.hostPendingAttachmentUri.value != null) {
+                        activity.sendHostChatMessage(trimmed)
                         inputText = ""
                     }
                 },

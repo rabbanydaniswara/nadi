@@ -73,6 +73,8 @@ class RoomManager(
         session = stopped
         clients.clear()
         identifiedClients.clear()
+        transfers.clear()
+        messages.clear()
         stopped
     }
 
@@ -286,7 +288,7 @@ class RoomManager(
                 messageId = tokenGenerator.newSessionId(16),
                 senderId = senderId.trim().ifBlank { "unknown" },
                 senderName = senderName.trim().ifBlank { "Nadi" },
-                text = cleanText.ifBlank { attachment?.fileName ?: "" },
+                text = cleanText,
                 createdAt = createdAt,
                 status = "sent",
                 attachmentTransferId = attachment?.transferId,

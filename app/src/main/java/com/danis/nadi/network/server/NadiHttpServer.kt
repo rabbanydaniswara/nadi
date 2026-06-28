@@ -314,7 +314,7 @@ class NadiHttpServer(
         val message = roomManager.addMessage(
             senderId = client.clientId,
             senderName = client.displayName,
-            text = text.ifBlank { "Mengirim lampiran ${transfer.fileName}" },
+            text = text,
             attachment = transfer
         ) ?: return json(Response.Status.BAD_REQUEST, """{"error":"message_required"}""")
         return json(Response.Status.OK, """{"message":${NadiJson.message(message)},"file":${NadiJson.transfer(transfer)}}""")

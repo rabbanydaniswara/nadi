@@ -1,5 +1,6 @@
 package com.danis.nadi.util
 
+import android.content.Context
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -74,6 +75,21 @@ object NetworkAddress {
     }
 
     private val HOTSPOT_INTERFACE_NAMES = listOf("wlan1", "ap0", "swlan0", "softap0")
+
+    fun detectWifiGatewayIp(context: Context): String? {
+        return try {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val dhcpInfo = wifiManager.dhcpInfo ?: return null
+            val gateway = dhcpInfo.gateway
+            if (gateway == 0) return null
+            (gateway and 0xFF).toString() + "." +
+                    ((gateway shr 8) and 0xFF) + "." +
+                    ((gateway shr 16) and 0xFF) + "." +
+                    ((gateway shr 24) and 0xFF)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
 
 internal data class NetworkAddressCandidate(

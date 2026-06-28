@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -58,6 +59,7 @@ import com.danis.nadi.ensureClientAttachmentTransfer
 import com.danis.nadi.file.FileSizeFormatter
 import com.danis.nadi.model.ChatMessage
 import com.danis.nadi.openClientChatAttachment
+import com.danis.nadi.getUriMetadata
 import com.danis.nadi.selectClientChatAttachment
 import com.danis.nadi.selectClientUploadFile
 import com.danis.nadi.sendClientChatMessage
@@ -67,6 +69,7 @@ import com.danis.nadi.ui.theme.NadiGreenLight
 import com.danis.nadi.ui.theme.NadiMineGreen
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Info
@@ -310,6 +313,22 @@ fun ClientChatTab(activity: MainActivity) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        if (activity.clientPendingAttachmentUri.value != null) {
+            val (name, _) = activity.getUriMetadata(activity.clientPendingAttachmentUri.value!!)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.Icon(Icons.Default.Info, contentDescription = "Lampiran", modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Terpilih: $name", fontSize = 12.sp, color = NadiGreen)
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { activity.clientPendingAttachmentUri.value = null }, modifier = Modifier.size(24.dp)) {
+                    androidx.compose.material3.Icon(Icons.Default.Close, contentDescription = "Batal", modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -330,7 +349,7 @@ fun ClientChatTab(activity: MainActivity) {
             Button(
                 onClick = {
                     val trimmed = inputText.trim()
-                    if (trimmed.isNotEmpty()) {
+                    if (trimmed.isNotEmpty() || activity.clientPendingAttachmentUri.value != null) {
                         // In the original client code, clientSendChatButton click calls sendClientChatMessage
                         // which reads from clientChatInput. Let's parameterize it in MainActivity+ClientChat or
                         // simply write to activity's property first and trigger it.
@@ -359,9 +378,13 @@ fun ClientAttachmentBubble(msg: ChatMessage, activity: MainActivity) {
                       it.endsWith(".jpg") || it.endsWith(".jpeg") || it.endsWith(".png") || it.endsWith(".webp")
                   } == true
 
+    val previewUrl = msg.attachmentTransferId?.let { id ->
+        activity.roomClient?.buildUrl("/api/download/$id")?.let { "$it&preview=1" }
+    }
+    val imageUri: Any? = transfer?.localUri?.let { android.net.Uri.parse(it) } ?: previewUrl
+
     if (showLightbox && isImage) {
-        val uri = transfer?.localUri?.let { android.net.Uri.parse(it) }
-        if (uri != null) {
+        if (imageUri != null) {
             androidx.compose.ui.window.Dialog(
                 onDismissRequest = { showLightbox = false },
                 properties = androidx.compose.ui.window.DialogProperties(
@@ -378,7 +401,7 @@ fun ClientAttachmentBubble(msg: ChatMessage, activity: MainActivity) {
                     contentAlignment = Alignment.Center
                 ) {
                     coil.compose.AsyncImage(
-                        model = uri,
+                        model = imageUri,
                         contentDescription = msg.attachmentFileName,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
@@ -406,10 +429,9 @@ fun ClientAttachmentBubble(msg: ChatMessage, activity: MainActivity) {
             }
     ) {
         if (isImage) {
-            val uri = transfer?.localUri?.let { android.net.Uri.parse(it) }
-            if (uri != null) {
+            if (imageUri != null) {
                 coil.compose.AsyncImage(
-                    model = uri,
+                    model = imageUri,
                     contentDescription = msg.attachmentFileName,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

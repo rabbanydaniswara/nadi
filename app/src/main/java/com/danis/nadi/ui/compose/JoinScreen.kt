@@ -43,15 +43,14 @@ import androidx.compose.ui.unit.sp
 import com.danis.nadi.MainActivity
 import com.danis.nadi.ui.theme.NadiBackground
 import com.danis.nadi.ui.theme.NadiGreen
+import com.danis.nadi.util.NetworkAddress
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinScreen(activity: MainActivity) {
     val scrollState = rememberScrollState()
-    var roomUrl by remember { mutableStateOf("") }
-
-    val showPinDialog by activity.clientViewModel.showPinDialog.collectAsState()
-    var pinValue by remember { mutableStateOf("") }
+    val gatewayIp = remember { NetworkAddress.detectWifiGatewayIp(activity) }
+    var roomUrl by remember { mutableStateOf(gatewayIp?.let { "http://$it:8080" } ?: "") }
 
     Scaffold(
         containerColor = NadiBackground,
@@ -141,50 +140,5 @@ fun JoinScreen(activity: MainActivity) {
         }
     }
 
-    if (showPinDialog) {
-        AlertDialog(
-            onDismissRequest = { activity.clientViewModel.showPinDialog.value = false },
-            title = { Text("PIN Diperlukan", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text("Room ini dilindungi oleh PIN. Silakan masukkan PIN room untuk melanjutkan:")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = pinValue,
-                        onValueChange = { if (it.length <= 8) pinValue = it },
-                        label = { Text("PIN Room") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val pin = pinValue.trim()
-                        if (pin.isNotEmpty()) {
-                            activity.clientViewModel.showPinDialog.value = false
-                            activity.clientViewModel.pendingPinCallback?.invoke(pin)
-                            pinValue = ""
-                        } else {
-                            Toast.makeText(activity, "PIN tidak boleh kosong", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                ) {
-                    Text("Masuk", color = NadiGreen, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        activity.clientViewModel.showPinDialog.value = false
-                        pinValue = ""
-                    }
-                ) {
-                    Text("Batal")
-                }
-            }
-        )
-    }
+
 }

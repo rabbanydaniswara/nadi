@@ -110,6 +110,7 @@ fun MainActivity.renderActiveRoom(activeRoom: ActiveRoom) {
 
 fun MainActivity.stopActiveRoom() {
     stopDashboardPolling()
+    hostPendingAttachmentUri.value = null
     lifecycleScope.launch {
         withContext(Dispatchers.IO) {
             controller.stopActiveRoom()

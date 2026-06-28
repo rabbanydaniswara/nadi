@@ -36,6 +36,14 @@ class RoomClient(
                 .writeTimeout(20, TimeUnit.SECONDS)
                 .build()
         }
+
+        fun evictConnectionPool() {
+            try {
+                sharedHttpClient.connectionPool.evictAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private val httpClient = sharedHttpClient
@@ -365,9 +373,10 @@ class RoomClient(
                     runOnMain { onFinished(false, null) }
                     return
                 }
+                var outputFile: File? = null
                 try {
                     if (!outputDir.exists()) outputDir.mkdirs()
-                    val outputFile = File(outputDir, fileName)
+                    outputFile = File(outputDir, fileName)
                     response.body?.byteStream()?.use { input ->
                         FileOutputStream(outputFile).use { output ->
                             input.copyTo(output)
@@ -376,6 +385,7 @@ class RoomClient(
                     runOnMain { onFinished(true, outputFile) }
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    try { outputFile?.delete() } catch (_: Exception) {}
                     runOnMain { onFinished(false, null) }
                 }
             }
