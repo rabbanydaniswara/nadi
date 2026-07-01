@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.danis.nadi.MainActivity
@@ -219,6 +220,16 @@ fun SettingsScreen(activity: MainActivity) {
             ) {
                 Text("Simpan Pengaturan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Aplikasi Nadi v1.0\nPembuat: Daniswara Rabbany (NIM: 231011402591)\nUniversitas Pamulang (UNPAM)\nTugas Akhir Mobile Programming",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                lineHeight = 16.sp
+            )
         }
     }
 }

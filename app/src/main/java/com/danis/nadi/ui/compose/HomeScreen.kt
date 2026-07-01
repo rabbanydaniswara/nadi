@@ -79,6 +79,14 @@ fun HomeScreen(activity: MainActivity) {
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Developer: Daniswara Rabbany (NIM: 231011402591)",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = NadiGreen.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
             Spacer(modifier = Modifier.height(36.dp))
 
             // Hosting card
